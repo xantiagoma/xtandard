@@ -1,1 +1,1 @@
-export const name = "xantiagoma";
+export { tryCatch, tryCatchSync } from "./try-catch.ts";
