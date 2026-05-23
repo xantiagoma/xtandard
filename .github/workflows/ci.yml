@@ -21,7 +21,7 @@ jobs:
       - name: Lint
         run: bun run lint
       - name: Format check
-        run: bun run format --check
+        run: bun run format:check
       - name: Type check
         run: npx tsc --noEmit
       - name: Build
