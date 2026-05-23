@@ -203,6 +203,22 @@ These are libraries we use and recommend. They're not re-exported — install th
 | [currency.js](https://github.com/scurker/currency.js)                      | Safe currency arithmetic            |
 | [thumbhash](https://github.com/evanw/thumbhash)                            | Image placeholder algorithm         |
 | [noble-hashes](https://github.com/paulmillr/noble-hashes)                  | Audited crypto hashes (pure TS)     |
+| [better-all](https://github.com/shuding/better-all)                        | Better Promise.all with named keys  |
+| [better-result](https://github.com/dmmulroy/better-result)                 | Rust-like Result type for TS        |
+| [fuse.js](https://www.fusejs.io/)                                          | Lightweight fuzzy search            |
+| [files-sdk](https://github.com/haydenbleasel/files-sdk)                    | Unified file storage SDK            |
+| [streamdown](https://github.com/vercel/streamdown)                         | Stream Markdown rendering           |
+| [ai-elements](https://github.com/vercel/ai-elements)                       | AI-powered UI components            |
+| [tiptap](https://tiptap.dev/)                                              | Headless rich text editor           |
+| [better-notify](https://github.com/better-notify/better-notify)            | Notification management             |
+| [@vercel/chat](https://github.com/vercel/chat)                             | Chat UI components                  |
+| [@vercel/workflow](https://github.com/vercel/workflow)                     | Durable workflow engine             |
+| [trigger.dev](https://trigger.dev/)                                        | Background jobs platform            |
+| [temporal](https://temporal.io/)                                           | Durable workflow orchestration      |
+| [@vercel/sandbox](https://github.com/vercel/sandbox)                       | Code sandbox execution              |
+| [reactflow](https://reactflow.dev/)                                        | Node-based graph editor (React)     |
+| [date-fns](https://date-fns.org/)                                          | Modern date utility library         |
+| [cheerio](https://cheerio.js.org/)                                         | Fast HTML parsing + manipulation    |
 
 ## See Also
 
