@@ -20,8 +20,8 @@ pnpm add xantiagoma
 
 ## Utilities
 
-| Utility | Description | Docs |
-| --- | --- | --- |
+| Utility                     | Description                                                    | Docs                       |
+| --------------------------- | -------------------------------------------------------------- | -------------------------- |
 | `tryCatch` / `tryCatchSync` | Convert promises or sync functions into `[data, error]` tuples | [docs](./src/try-catch.ts) |
 
 ## Quick Examples
