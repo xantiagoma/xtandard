@@ -1,4 +1,8 @@
-# xantiagoma
+<p align="center">
+  <img src="./assets/logo.png" alt="xantiagoma" width="120" />
+</p>
+
+<h1 align="center">xantiagoma</h1>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/xantiagoma"><img src="https://img.shields.io/npm/v/xantiagoma?color=blue" alt="npm version" /></a>
