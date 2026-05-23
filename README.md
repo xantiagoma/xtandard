@@ -149,6 +149,7 @@ These are libraries we use and recommend. They're not re-exported — install th
 | [hono](https://hono.dev/)                                                  | Lightweight web framework           |
 | [inngest](https://www.inngest.com/)                                        | Background jobs + durable functions |
 | [stripe](https://stripe.com/)                                              | Payment processing                  |
+| [paykit](https://github.com/getpaykit/paykit)                              | Payment toolkit for Stripe          |
 | [@tanstack/react-query](https://tanstack.com/query)                        | Async state management (React)      |
 | [@tanstack/react-table](https://tanstack.com/table)                        | Headless table (React)              |
 | [@tanstack/react-form](https://tanstack.com/form)                          | Form management (React)             |
@@ -166,6 +167,42 @@ These are libraries we use and recommend. They're not re-exported — install th
 | [citty](https://github.com/unjs/citty)                                     | CLI framework                       |
 | [evlog](https://www.npmjs.com/package/evlog)                               | Event logging                       |
 | [@electric-sql/pglite](https://pglite.dev/)                                | In-memory PostgreSQL                |
+| [neverthrow](https://github.com/supermacro/neverthrow)                     | Type-safe Result type               |
+| [ts-pattern](https://github.com/gvergnaud/ts-pattern)                      | Exhaustive pattern matching         |
+| [nanoid](https://github.com/ai/nanoid)                                     | Tiny unique ID generator            |
+| [superjson](https://github.com/flightcontrolhq/superjson)                  | Serialize Date, Map, Set via JSON   |
+| [destr](https://github.com/unjs/destr)                                     | Safe, fast JSON.parse alternative   |
+| [dequal](https://github.com/lukeed/dequal)                                 | Tiny deep equality check            |
+| [klona](https://github.com/lukeed/klona)                                   | Tiny deep clone                     |
+| [mutative](https://github.com/unadlib/mutative)                            | Fast immutable updates (like Immer) |
+| [ofetch](https://github.com/unjs/ofetch)                                   | Better fetch with retries + parsing |
+| [ky](https://github.com/sindresorhus/ky)                                   | Tiny fetch-based HTTP client        |
+| [consola](https://github.com/unjs/consola)                                 | Elegant structured logger           |
+| [p-queue](https://github.com/sindresorhus/p-queue)                         | Promise queue with concurrency      |
+| [croner](https://github.com/Hexagon/croner)                                | Cron scheduler (Node + browser)     |
+| [oslo](https://github.com/pilcrowonpaper/oslo)                             | Auth utilities (TOTP, JWT, hashing) |
+| [arctic](https://github.com/pilcrowonpaper/arctic)                         | OAuth 2.0 provider integrations     |
+| [casl](https://github.com/stalniy/casl)                                    | Isomorphic authorization            |
+| [unctx](https://github.com/unjs/unctx)                                     | Composables via AsyncLocalStorage   |
+| [execa](https://github.com/sindresorhus/execa)                             | Better child_process                |
+| [knip](https://github.com/webpro-nl/knip)                                  | Find unused code + dependencies     |
+| [clack](https://github.com/bombshell-dev/clack)                            | Beautiful CLI prompts + spinners    |
+| [sonner](https://github.com/emilkowalski/sonner)                           | Toast notifications (React)         |
+| [vaul](https://github.com/emilkowalski/vaul)                               | Drawer component (React)            |
+| [cmdk](https://github.com/pacocoursey/cmdk)                                | Command menu (React)                |
+| [embla-carousel](https://github.com/davidjerleke/embla-carousel)           | Lightweight carousel                |
+| [dnd-kit](https://github.com/clauderic/dnd-kit)                            | Drag and drop toolkit (React)       |
+| [nuqs](https://github.com/47ng/nuqs)                                       | Type-safe URL search params (React) |
+| [react-error-boundary](https://github.com/bvaughn/react-error-boundary)    | Error boundary component (React)    |
+| [react-hotkeys-hook](https://github.com/JohannesKlauss/react-hotkeys-hook) | Keyboard shortcuts hook (React)     |
+| [auto-animate](https://github.com/formkit/auto-animate)                    | Zero-config DOM animations          |
+| [satori](https://github.com/vercel/satori)                                 | JSX/HTML to SVG (OG images)         |
+| [orama](https://github.com/oramasearch/orama)                              | In-memory full-text + vector search |
+| [gql.tada](https://github.com/0no-co/gql.tada)                             | Typed GraphQL documents at compile  |
+| [kysely](https://github.com/kysely-org/kysely)                             | Type-safe SQL query builder         |
+| [currency.js](https://github.com/scurker/currency.js)                      | Safe currency arithmetic            |
+| [thumbhash](https://github.com/evanw/thumbhash)                            | Image placeholder algorithm         |
+| [noble-hashes](https://github.com/paulmillr/noble-hashes)                  | Audited crypto hashes (pure TS)     |
 
 ## See Also
 
