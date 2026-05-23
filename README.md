@@ -1,34 +1,37 @@
 # xantiagoma
 
-Personal utilities by [Santiago Montoya](https://github.com/xantiagoma).
+<p align="center">
+  <a href="https://www.npmjs.com/package/xantiagoma"><img src="https://img.shields.io/npm/v/xantiagoma?color=blue" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/xantiagoma"><img src="https://img.shields.io/npm/dm/xantiagoma" alt="npm downloads" /></a>
+  <a href="https://github.com/xantiagoma/xantiagoma-lib/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/xantiagoma" alt="license" /></a>
+</p>
+
+A collection of lightweight, type-safe utilities for TypeScript/JavaScript.
 
 ## Install
 
 ```bash
 npm install xantiagoma
+# or
+bun add xantiagoma
+# or
+pnpm add xantiagoma
 ```
 
-## `tryCatch` / `tryCatchSync`
+## Utilities
 
-Convert promises or sync functions into `[data, error]` tuples — no `try/catch` needed.
+| Utility | Description | Docs |
+| --- | --- | --- |
+| `tryCatch` / `tryCatchSync` | Convert promises or sync functions into `[data, error]` tuples | [docs](./src/try-catch.ts) |
+
+## Quick Examples
 
 ```ts
 import { tryCatch, tryCatchSync } from "xantiagoma";
 
-// Async
 const [user, error] = await tryCatch(fetch("/api/me").then((r) => r.json()));
-if (error) {
-  // handle error
-}
 
-// With async function
-const [data, err] = await tryCatch(async () => {
-  const res = await fetch("/api/data");
-  return res.json();
-});
-
-// Sync
-const [parsed, parseErr] = tryCatchSync(() => JSON.parse(rawString));
+const [parsed, err] = tryCatchSync(() => JSON.parse(rawString));
 ```
 
 ## See Also
