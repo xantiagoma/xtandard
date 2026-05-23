@@ -219,6 +219,7 @@ These are libraries we use and recommend. They're not re-exported — install th
 | [reactflow](https://reactflow.dev/)                                        | Node-based graph editor (React)     |
 | [date-fns](https://date-fns.org/)                                          | Modern date utility library         |
 | [cheerio](https://cheerio.js.org/)                                         | Fast HTML parsing + manipulation    |
+| [dexie](https://dexie.org/)                                                | IndexedDB wrapper with clean API    |
 
 ## See Also
 
