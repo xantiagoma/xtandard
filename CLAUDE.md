@@ -1,0 +1,78 @@
+# xantiagoma
+
+Lightweight, type-safe TypeScript utilities with zero deps for the core.
+
+## Tooling
+
+- **Package manager**: Bun (`bun install`, `bun run <script>`)
+- **Toolchain**: Vite+ (`vp`) — test, lint, fmt, build
+- **Node**: Managed via mise (requires >= 22.18.0 for TS config support)
+
+## Scripts
+
+- `bun run test` — run tests (vitest via `vp test run`, node + browser projects)
+- `bun run test:coverage` — tests with v8 coverage report
+- `bun run test:coverage:open` — same + opens in browser
+- `bun run lint` — lint (oxlint via `vp lint`)
+- `bun run format` — format (oxfmt via `vp fmt`)
+- `bun run check` — lint + format check + typecheck
+- `bun run build` — build library (tsdown via `vp pack`, outputs CJS + ESM + DTS to `dist/`)
+- `bun run release` — bump version, update changelog, tag, push (CI publishes)
+
+## Config
+
+All tool configuration lives in `vite.config.ts` (vite-plus unified config).
+Do NOT create separate config files for vitest, oxlint, or oxfmt.
+
+## Testing
+
+- Import from `vitest`, not `bun:test`
+- Node tests: `test/**/*.test.ts` — run in node environment with MSW for HTTP mocking
+- React/browser tests: `test/**/*.test.tsx` — run in Chromium via playwright + vitest-browser-react
+- MSW setup in `test/setup-msw.ts` (node project only)
+
+## Entry Points
+
+```
+xantiagoma              → isomorphic core (zero deps)
+xantiagoma/web          → browser/FormData + fetchWithProgress (peer: up-fetch)
+xantiagoma/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
+xantiagoma/sonner       → toastStream (peer: sonner, react)
+xantiagoma/ulid         → ULID generation + helpers (peer: ulid)
+xantiagoma/temporal     → datetime + duration (peer: temporal-polyfill, itty-time)
+xantiagoma/dataloader   → createLoader factory (peer: dataloader)
+xantiagoma/unstorage    → withCache, createCache (peer: unstorage, ohash)
+xantiagoma/valibot      → TimeZone validation (peer: valibot)
+```
+
+All sub-entry deps are optional peer dependencies.
+
+## Project Structure
+
+```
+src/
+  index.ts              — main barrel (isomorphic, zero deps)
+  entry-web.ts          — web entry point
+  entry-react.ts        — React entry point
+  entry-sonner.ts       — sonner entry point
+  entry-ulid.ts         — ulid entry point
+  entry-temporal.ts     — temporal entry point
+  entry-dataloader.ts   — dataloader entry point
+  entry-unstorage.ts    — unstorage entry point
+  entry-valibot.ts      — valibot entry point
+  types.ts              — shared types (MaybePromise)
+  try-catch.ts, wait.ts, range.ts, ...  — individual utils
+  *-utils.ts            — dep-based implementations (renamed to avoid entry conflicts)
+test/
+  *.test.ts             — node tests (vitest)
+  *.test.tsx            — browser tests (vitest-browser-react + playwright)
+  setup-msw.ts          — MSW server setup for node tests
+```
+
+## Key Patterns
+
+- Entry files named `entry-*.ts` to avoid conflicts with implementation files
+- Dep-based implementations named `*-utils.ts` (e.g. `ulid-utils.ts`)
+- `up-fetch` captured lazily (not at import time) so MSW can intercept
+- Browser tests use `vitest-browser-react` with `vite-plus/test/browser-playwright`
+- All optional peer deps in `peerDependenciesMeta` with `optional: true`

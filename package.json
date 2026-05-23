@@ -1,8 +1,13 @@
 {
   "name": "xantiagoma",
   "version": "0.0.1",
-  "description": "Santiago Montoya's utilities and tools",
+  "description": "Lightweight, type-safe TypeScript utilities",
   "keywords": [
+    "async",
+    "disposable",
+    "iterable",
+    "try-catch",
+    "typescript",
     "utilities",
     "xantiagoma"
   ],
@@ -36,6 +41,86 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./web": {
+      "import": {
+        "types": "./dist/entry-web.d.mts",
+        "default": "./dist/entry-web.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-web.d.cts",
+        "default": "./dist/entry-web.cjs"
+      }
+    },
+    "./ulid": {
+      "import": {
+        "types": "./dist/entry-ulid.d.mts",
+        "default": "./dist/entry-ulid.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-ulid.d.cts",
+        "default": "./dist/entry-ulid.cjs"
+      }
+    },
+    "./temporal": {
+      "import": {
+        "types": "./dist/entry-temporal.d.mts",
+        "default": "./dist/entry-temporal.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-temporal.d.cts",
+        "default": "./dist/entry-temporal.cjs"
+      }
+    },
+    "./dataloader": {
+      "import": {
+        "types": "./dist/entry-dataloader.d.mts",
+        "default": "./dist/entry-dataloader.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-dataloader.d.cts",
+        "default": "./dist/entry-dataloader.cjs"
+      }
+    },
+    "./unstorage": {
+      "import": {
+        "types": "./dist/entry-unstorage.d.mts",
+        "default": "./dist/entry-unstorage.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-unstorage.d.cts",
+        "default": "./dist/entry-unstorage.cjs"
+      }
+    },
+    "./valibot": {
+      "import": {
+        "types": "./dist/entry-valibot.d.mts",
+        "default": "./dist/entry-valibot.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-valibot.d.cts",
+        "default": "./dist/entry-valibot.cjs"
+      }
+    },
+    "./sonner": {
+      "import": {
+        "types": "./dist/entry-sonner.d.mts",
+        "default": "./dist/entry-sonner.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-sonner.d.cts",
+        "default": "./dist/entry-sonner.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/entry-react.d.mts",
+        "default": "./dist/entry-react.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-react.d.cts",
+        "default": "./dist/entry-react.cjs"
+      }
     }
   },
   "publishConfig": {
@@ -44,17 +129,85 @@
   "scripts": {
     "build": "vp pack",
     "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
+    "test:coverage:open": "vp test run --coverage && open coverage/index.html",
     "lint": "vp lint",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "check": "vp lint && vp fmt --check && tsc --noEmit",
-    "release": "changelogen --release --push"
+    "release": "changelogen --release --push",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.100.13",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "4.1.6",
     "changelogen": "^0.6.2",
-    "vite-plus": "^0.1.22"
+    "dataloader": "^2.2.3",
+    "husky": "^9.1.7",
+    "itty-time": "^1.0.6",
+    "msw": "^2.14.6",
+    "ohash": "^2.0.11",
+    "playwright": "^1.60.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "sonner": "^2.0.7",
+    "temporal-polyfill": "^0.3.0",
+    "ulid": "^2.3.0",
+    "unstorage": "^1.14.4",
+    "up-fetch": "^2.6.0",
+    "valibot": "^1.0.0",
+    "vite-plus": "^0.1.22",
+    "vitest-browser-react": "^2.2.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "@tanstack/react-query": "^5.0.0",
+    "dataloader": "^2.2.3",
+    "itty-time": "^1.0.6",
+    "ohash": "^2.0.11",
+    "react": "^18.0.0 || ^19.0.0",
+    "sonner": "^2.0.0",
+    "temporal-polyfill": "^0.3.0",
+    "typescript": "^5",
+    "ulid": "^2.3.0",
+    "unstorage": "^1.14.4",
+    "up-fetch": "^2.6.0",
+    "valibot": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ulid": {
+      "optional": true
+    },
+    "temporal-polyfill": {
+      "optional": true
+    },
+    "dataloader": {
+      "optional": true
+    },
+    "unstorage": {
+      "optional": true
+    },
+    "ohash": {
+      "optional": true
+    },
+    "valibot": {
+      "optional": true
+    },
+    "itty-time": {
+      "optional": true
+    },
+    "up-fetch": {
+      "optional": true
+    },
+    "sonner": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    }
   }
 }
