@@ -1,4 +1,6 @@
 export { useStream, StreamRenderer } from "./stream-renderer.tsx";
+export { Providers, provider } from "./providers.tsx";
+export type { ProviderSpec, ProvidersProps } from "./providers.tsx";
 export type {
   StreamState,
   DelayConfig,
