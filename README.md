@@ -34,7 +34,7 @@ npm install xantiagoma
 | `xantiagoma/unstorage`  | Cache helpers with unstorage           | `unstorage`, `ohash`             |
 | `xantiagoma/valibot`    | TimeZone validation schema             | `valibot`                        |
 | `xantiagoma/sonner`     | Toast streaming for iterables          | `sonner`, `react`                |
-| `xantiagoma/react`      | StreamRenderer + useStream hook        | `react`, `@tanstack/react-query` |
+| `xantiagoma/react`      | React hooks + components               | `react`, `@tanstack/react-query` |
 
 Sub-entry dependencies are **optional peer deps** — only install what you use.
 
@@ -42,75 +42,84 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 
 ### Error Handling
 
-| Export                       | Description                                       |
-| ---------------------------- | ------------------------------------------------- |
-| `tryCatch(promise)`          | Async `[data, error]` tuple — no try/catch needed |
-| `tryCatchSync(fn)`           | Sync `[data, error]` tuple                        |
-| `assertNotNull(value)`       | Throws if null/undefined, narrows type            |
-| `valueOrThrow(value, error)` | Returns value or throws                           |
-| `AssertError`                | Custom error class for assertions                 |
+| Export                      | Description                            | Source                          | Tests                                   |
+| --------------------------- | -------------------------------------- | ------------------------------- | --------------------------------------- |
+| `tryCatch` / `tryCatchSync` | `[data, error]` tuples — no try/catch  | [src](./src/try-catch.ts)       | [tests](./test/try-catch.test.ts)       |
+| `assertNotNull`             | Throws if null/undefined, narrows type | [src](./src/assert-not-null.ts) | [tests](./test/assert-not-null.test.ts) |
+| `valueOrThrow`              | Returns value or throws                | [src](./src/error.ts)           | [tests](./test/error.test.ts)           |
+| `AssertError`               | Custom error class                     | [src](./src/errors.ts)          | [tests](./test/errors.test.ts)          |
 
 ### Async
 
-| Export                       | Description                               |
-| ---------------------------- | ----------------------------------------- |
-| `wait(ms)`                   | Typed setTimeout delay                    |
-| `Completer`                  | Externally resolvable Promise (like Dart) |
-| `collect(iterable)`          | Drain `AsyncIterable<T>` into `T[]`       |
-| `asyncOf(...values)`         | Create `AsyncGenerator` from values       |
-| `AsyncChannel`               | Push-based `AsyncIterable` with modes     |
-| `resolveMaybePromise(value)` | Resolve `T \| Promise<T>` → `Promise<T>`  |
+| Export                | Description                              | Source                                | Tests                                         |
+| --------------------- | ---------------------------------------- | ------------------------------------- | --------------------------------------------- |
+| `wait`                | Typed setTimeout delay                   | [src](./src/wait.ts)                  | [tests](./test/wait.test.ts)                  |
+| `Completer`           | Externally resolvable Promise            | [src](./src/completer.ts)             | [tests](./test/completer.test.ts)             |
+| `collect`             | Drain `AsyncIterable<T>` into `T[]`      | [src](./src/collect.ts)               | [tests](./test/collect.test.ts)               |
+| `asyncOf`             | Create `AsyncGenerator` from values      | [src](./src/async-of.ts)              | [tests](./test/async-of.test.ts)              |
+| `AsyncChannel`        | Push-based `AsyncIterable` with modes    | [src](./src/async-channel.ts)         | [tests](./test/async-channel.test.ts)         |
+| `resolveMaybePromise` | Resolve `T \| Promise<T>` → `Promise<T>` | [src](./src/resolve-maybe-promise.ts) | [tests](./test/resolve-maybe-promise.test.ts) |
 
 ### Iterables & Generators
 
-| Export                         | Description                                |
-| ------------------------------ | ------------------------------------------ |
-| `range(start, end, step?)`     | Numeric range as array                     |
-| `rangeLazy(start, end, step?)` | Numeric range as generator                 |
-| `enumerate(iterable)`          | `[index, value]` tuples (sync)             |
-| `enumerateAsync(iterable)`     | `[index, value]` tuples (async)            |
-| `toIterator(iterable)`         | Normalize to `Iterator`                    |
-| `toAsyncIterable(source)`      | Normalize any iterable to `AsyncGenerator` |
+| Export                         | Description                       | Source                            | Tests                                     |
+| ------------------------------ | --------------------------------- | --------------------------------- | ----------------------------------------- |
+| `range` / `rangeLazy`          | Numeric range (array / generator) | [src](./src/range.ts)             | [tests](./test/range.test.ts)             |
+| `enumerate` / `enumerateAsync` | `[index, value]` tuples           | [src](./src/enumerate.ts)         | [tests](./test/enumerate.test.ts)         |
+| `toIterator`                   | Normalize to `Iterator`           | [src](./src/to-iterator.ts)       | [tests](./test/to-iterator.test.ts)       |
+| `toAsyncIterable`              | Normalize to `AsyncGenerator`     | [src](./src/to-async-iterable.ts) | [tests](./test/to-async-iterable.test.ts) |
 
 ### Type Guards
 
-| Export                     | Description                                 |
-| -------------------------- | ------------------------------------------- |
-| `isPromise(value)`         | Check for promise-like                      |
-| `isIterable(value)`        | Check for `Iterable`                        |
-| `isAsyncIterable(value)`   | Check for `AsyncIterable`                   |
-| `isIterator(value)`        | Check for `Iterator`                        |
-| `isGenerator(value)`       | Check for `Generator`                       |
-| `isAsyncGenerator(value)`  | Check for `AsyncGenerator`                  |
-| `isDisposable(value)`      | Check for `Disposable` or `AsyncDisposable` |
-| `isAsyncDisposable(value)` | Check for `AsyncDisposable`                 |
-| `isSyncDisposable(value)`  | Check for `Disposable`                      |
+| Export                                                    | Description            | Source                             | Tests                                      |
+| --------------------------------------------------------- | ---------------------- | ---------------------------------- | ------------------------------------------ |
+| `isPromise`                                               | Promise-like check     | [src](./src/is-promise.ts)         | [tests](./test/is-promise.test.ts)         |
+| `isIterable`                                              | `Iterable` check       | [src](./src/is-iterable.ts)        | [tests](./test/is-iterable.test.ts)        |
+| `isAsyncIterable`                                         | `AsyncIterable` check  | [src](./src/is-async-iterable.ts)  | [tests](./test/is-async-iterable.test.ts)  |
+| `isIterator`                                              | `Iterator` check       | [src](./src/is-iterator.ts)        | [tests](./test/is-iterator.test.ts)        |
+| `isGenerator`                                             | `Generator` check      | [src](./src/is-generator.ts)       | [tests](./test/is-generator.test.ts)       |
+| `isAsyncGenerator`                                        | `AsyncGenerator` check | [src](./src/is-async-generator.ts) | [tests](./test/is-async-generator.test.ts) |
+| `isDisposable` / `isAsyncDisposable` / `isSyncDisposable` | Disposable checks      | [src](./src/is-disposable.ts)      | [tests](./test/is-disposable.test.ts)      |
 
 ### Disposable Utilities
 
-| Export                | Description                             |
-| --------------------- | --------------------------------------- |
-| `defer(fn)`           | Cancellable `await using` disposable    |
-| `deferSync(fn)`       | Cancellable `using` disposable          |
-| `makeDisposable(obj)` | Add `Symbol.asyncDispose` to any object |
+| Export                | Description                             | Source                          | Tests                                   |
+| --------------------- | --------------------------------------- | ------------------------------- | --------------------------------------- |
+| `defer` / `deferSync` | Cancellable `using`/`await using`       | [src](./src/defer.ts)           | [tests](./test/defer.test.ts)           |
+| `makeDisposable`      | Add `Symbol.asyncDispose` to any object | [src](./src/make-disposable.ts) | [tests](./test/make-disposable.test.ts) |
 
 ### Strings
 
-| Export                      | Description                   |
-| --------------------------- | ----------------------------- |
-| `ensureString(value)`       | Coerce to string              |
-| `naturalSortCompare(a, b)`  | Natural sort comparator       |
-| `jaroWinklerDistance(a, b)` | Fuzzy string similarity (0-1) |
+| Export                                                        | Description      | Source                 | Tests                          |
+| ------------------------------------------------------------- | ---------------- | ---------------------- | ------------------------------ |
+| `ensureString` / `naturalSortCompare` / `jaroWinklerDistance` | String utilities | [src](./src/string.ts) | [tests](./test/string.test.ts) |
 
 ### Misc
 
-| Export                                      | Description                             |
-| ------------------------------------------- | --------------------------------------- |
-| `cast<T>(value)`                            | Unsafe `as T` type cast                 |
-| `log(value)`                                | `console.log` that returns its argument |
-| `prepareLoaderResult(rows, keys)`           | Map DB rows to DataLoader key order     |
-| `resolveStreamSource(source)`               | Resolve `StreamSource<T>`               |
-| `secondsToMs` / `minutesToMs` / `hoursToMs` | Time unit converters                    |
+| Export                                      | Description                             | Source                                | Tests                                         |
+| ------------------------------------------- | --------------------------------------- | ------------------------------------- | --------------------------------------------- |
+| `cast<T>`                                   | Unsafe `as T` type cast                 | [src](./src/cast.ts)                  | [tests](./test/cast.test.ts)                  |
+| `log`                                       | `console.log` that returns its argument | [src](./src/log.ts)                   | [tests](./test/log.test.ts)                   |
+| `prepareLoaderResult`                       | Map DB rows to DataLoader key order     | [src](./src/prepare-loader-result.ts) | [tests](./test/prepare-loader-result.test.ts) |
+| `resolveStreamSource`                       | Resolve `StreamSource<T>`               | [src](./src/stream-source.ts)         | [tests](./test/stream-source.test.ts)         |
+| `secondsToMs` / `minutesToMs` / `hoursToMs` | Time unit converters                    | [src](./src/time-convert.ts)          | [tests](./test/time-convert.test.ts)          |
+
+## Web Utilities (`xantiagoma/web`)
+
+| Export                  | Description                         | Source                                    | Tests                                       |
+| ----------------------- | ----------------------------------- | ----------------------------------------- | ------------------------------------------- |
+| `formDataToObject`      | `FormData` → plain object           | [src](./src/form-data-to-object-utils.ts) | [tests](./test/form-data-to-object.test.ts) |
+| `fetchWithProgress`     | Fetch with upload/download progress | [src](./src/fetch-with-progress.ts)       | [tests](./test/fetch-with-progress.test.ts) |
+| `createHttpInterceptor` | Intercept fetch + XHR with rules    | [src](./src/intercept-http.ts)            | [tests](./test/intercept-http.test.tsx)     |
+
+## React Utilities (`xantiagoma/react`)
+
+| Export                         | Description                         | Source                                 | Tests                                           |
+| ------------------------------ | ----------------------------------- | -------------------------------------- | ----------------------------------------------- |
+| `Providers` / `provider`       | Compose providers without nesting   | [src](./src/providers.tsx)             | [tests](./test/providers.test.tsx)              |
+| `usePreventAutoFocus`          | Prevent auto-focus in modals        | [src](./src/use-prevent-auto-focus.ts) | [tests](./test/use-prevent-auto-focus.test.tsx) |
+| `useDynamicRefs`               | Dynamic ref registry by key         | [src](./src/use-dynamic-refs.ts)       | [tests](./test/use-dynamic-refs.test.tsx)       |
+| `useStream` / `StreamRenderer` | Stream consumption hook + component | [src](./src/stream-renderer.tsx)       | [tests](./test/stream-renderer.test.tsx)        |
 
 ## Recommended Libraries
 
