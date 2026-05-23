@@ -6,15 +6,15 @@
     "xantiagoma",
     "utilities"
   ],
-  "homepage": "https://github.com/xantiagoma/xantiagoma#readme",
+  "homepage": "https://github.com/xantiagoma/xantiagoma-lib#readme",
   "bugs": {
-    "url": "https://github.com/xantiagoma/xantiagoma/issues"
+    "url": "https://github.com/xantiagoma/xantiagoma-lib/issues"
   },
   "license": "MIT",
   "author": "Santiago Montoya <xantiagoma@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xantiagoma/xantiagoma.git"
+    "url": "https://github.com/xantiagoma/xantiagoma-lib.git"
   },
   "files": [
     "dist",
