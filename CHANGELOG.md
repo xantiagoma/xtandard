@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.3
+
+[compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.1.2...v0.1.3)
+
+### 🚀 Enhancements
+
+- Add pagination utilities ([d6eddcf](https://github.com/xantiagoma/xantiagoma-lib/commit/d6eddcf))
+
+### 🩹 Fixes
+
+- Skip GitHub Release if already exists ([801bd43](https://github.com/xantiagoma/xantiagoma-lib/commit/801bd43))
+
+### ❤️ Contributors
+
+- Santiago Montoya ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.1.2
 
 [compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.1.1...v0.1.2)
