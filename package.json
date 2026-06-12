@@ -23,6 +23,7 @@
   },
   "files": [
     "dist",
+    "docs",
     "LICENSE",
     "README.md"
   ],
@@ -50,6 +51,66 @@
       "require": {
         "types": "./dist/entry-web.d.cts",
         "default": "./dist/entry-web.cjs"
+      }
+    },
+    "./pagination": {
+      "import": {
+        "types": "./dist/entry-pagination.d.mts",
+        "default": "./dist/entry-pagination.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination.d.cts",
+        "default": "./dist/entry-pagination.cjs"
+      }
+    },
+    "./pagination/knex": {
+      "import": {
+        "types": "./dist/entry-pagination-knex.d.mts",
+        "default": "./dist/entry-pagination-knex.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-knex.d.cts",
+        "default": "./dist/entry-pagination-knex.cjs"
+      }
+    },
+    "./pagination/kysely": {
+      "import": {
+        "types": "./dist/entry-pagination-kysely.d.mts",
+        "default": "./dist/entry-pagination-kysely.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-kysely.d.cts",
+        "default": "./dist/entry-pagination-kysely.cjs"
+      }
+    },
+    "./pagination/prisma": {
+      "import": {
+        "types": "./dist/entry-pagination-prisma.d.mts",
+        "default": "./dist/entry-pagination-prisma.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-prisma.d.cts",
+        "default": "./dist/entry-pagination-prisma.cjs"
+      }
+    },
+    "./pagination/mongo": {
+      "import": {
+        "types": "./dist/entry-pagination-mongo.d.mts",
+        "default": "./dist/entry-pagination-mongo.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-mongo.d.cts",
+        "default": "./dist/entry-pagination-mongo.cjs"
+      }
+    },
+    "./pagination/drizzle": {
+      "import": {
+        "types": "./dist/entry-pagination-drizzle.d.mts",
+        "default": "./dist/entry-pagination-drizzle.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-drizzle.d.cts",
+        "default": "./dist/entry-pagination-drizzle.cjs"
       }
     },
     "./ulid": {
@@ -145,8 +206,10 @@
     "@vitest/coverage-v8": "4.1.6",
     "changelogen": "^0.6.2",
     "dataloader": "^2.2.3",
+    "drizzle-orm": "^0.45.2",
     "husky": "^9.1.7",
     "itty-time": "^1.0.6",
+    "kysely": "^0.29.2",
     "msw": "^2.14.6",
     "ohash": "^2.0.11",
     "playwright": "^1.60.0",
@@ -164,7 +227,9 @@
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
     "dataloader": "^2.2.3",
+    "drizzle-orm": "^0.45.0",
     "itty-time": "^1.0.6",
+    "kysely": "^0.29.0",
     "ohash": "^2.0.11",
     "react": "^18.0.0 || ^19.0.0",
     "sonner": "^2.0.0",
@@ -185,6 +250,9 @@
     "dataloader": {
       "optional": true
     },
+    "drizzle-orm": {
+      "optional": true
+    },
     "unstorage": {
       "optional": true
     },
@@ -195,6 +263,9 @@
       "optional": true
     },
     "itty-time": {
+      "optional": true
+    },
+    "kysely": {
       "optional": true
     },
     "up-fetch": {

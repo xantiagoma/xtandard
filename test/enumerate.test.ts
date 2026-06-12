@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { collect } from "../src/collect";
 import { enumerate, enumerateAsync } from "../src/enumerate";
@@ -21,6 +21,25 @@ describe("enumerate", () => {
 
   test("empty iterable", () => {
     expect([...enumerate([])]).toEqual([]);
+  });
+
+  test("adapts to async iterables (returns AsyncGenerator)", async () => {
+    async function* gen(): AsyncGenerator<string> {
+      yield "a";
+      yield "b";
+    }
+    const result = enumerate(gen());
+    expectTypeOf(result).toEqualTypeOf<AsyncGenerator<[number, string]>>();
+    expect(await collect(result)).toEqual([
+      [0, "a"],
+      [1, "b"],
+    ]);
+  });
+
+  test("sync iterable yields a plain Generator", () => {
+    const result = enumerate(["a"]);
+    expectTypeOf(result).toEqualTypeOf<Generator<[number, string]>>();
+    expect(typeof result[Symbol.iterator]).toBe("function");
   });
 });
 

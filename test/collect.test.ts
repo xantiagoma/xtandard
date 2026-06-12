@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { asyncOf } from "../src/async-of";
 import { collect } from "../src/collect";
@@ -32,5 +32,27 @@ describe("collect", () => {
   test("returns a Promise", () => {
     const result = collect(asyncOf());
     expect(result).toBeInstanceOf(Promise);
+  });
+});
+
+describe("collect — sync sources (adaptive)", () => {
+  test("collects a sync iterable synchronously, no await needed", () => {
+    const result = collect(new Set([1, 2, 3]));
+    expectTypeOf(result).toEqualTypeOf<number[]>();
+    expect(result).not.toBeInstanceOf(Promise);
+    expect(result).toEqual([1, 2, 3]);
+  });
+
+  test("collects strings and generators", () => {
+    expect(collect("abc")).toEqual(["a", "b", "c"]);
+    function* gen() {
+      yield 1;
+      yield 2;
+    }
+    expect(collect(gen())).toEqual([1, 2]);
+  });
+
+  test("await still works on the sync result", async () => {
+    expect(await collect([1, 2])).toEqual([1, 2]);
   });
 });

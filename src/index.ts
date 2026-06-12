@@ -16,7 +16,7 @@ export { Completer } from "./completer.ts";
 export { collect } from "./collect.ts";
 export { asyncOf } from "./async-of.ts";
 export { AsyncChannel } from "./async-channel.ts";
-export { resolveMaybePromise } from "./resolve-maybe-promise.ts";
+export { resolveMaybePromise, chainMaybePromise } from "./resolve-maybe-promise.ts";
 
 // Iterables & generators
 export { range, rangeLazy } from "./range.ts";

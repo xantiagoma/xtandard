@@ -44,6 +44,12 @@ export default defineConfig({
   pack: {
     entry: [
       "src/index.ts",
+      "src/entry-pagination.ts",
+      "src/entry-pagination-drizzle.ts",
+      "src/entry-pagination-kysely.ts",
+      "src/entry-pagination-knex.ts",
+      "src/entry-pagination-mongo.ts",
+      "src/entry-pagination-prisma.ts",
       "src/entry-web.ts",
       "src/entry-ulid.ts",
       "src/entry-temporal.ts",

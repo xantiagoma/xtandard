@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
+import { isPromise } from "../src/is-promise.ts";
 import { tryCatch, tryCatchSync } from "../src/try-catch.ts";
 
 describe("tryCatch", () => {
@@ -41,6 +42,41 @@ describe("tryCatch", () => {
     const [data, error] = await tryCatch<number, string>(Promise.reject("string error"));
     expect(data).toBeNull();
     expect(error).toBe("string error");
+  });
+});
+
+describe("tryCatch — sync functions (adaptive)", () => {
+  test("returns the tuple synchronously, no await needed", () => {
+    const result = tryCatch((): number => 42);
+    expectTypeOf(result).toEqualTypeOf<[number, null] | [null, Error]>();
+    expect(isPromise(result)).toBe(false);
+    expect(result).toEqual([42, null]);
+  });
+
+  test("`any`-returning functions stay destructurable (JSON.parse)", () => {
+    const [data, error] = tryCatch(() => JSON.parse('{"ok":true}'));
+    expect(data).toEqual({ ok: true });
+    expect(error).toBeNull();
+  });
+
+  test("catches sync throws synchronously", () => {
+    const result = tryCatch((): number => {
+      throw new Error("boom");
+    });
+    expect(isPromise(result)).toBe(false);
+    const [data, error] = result;
+    expect(data).toBeNull();
+    expect(error!.message).toBe("boom");
+  });
+
+  test("async functions still produce a Promise", () => {
+    const result = tryCatch(async () => "hello");
+    expectTypeOf(result).toEqualTypeOf<Promise<[string, null] | [null, Error]>>();
+    expect(isPromise(result)).toBe(true);
+  });
+
+  test("promise inputs still produce a Promise", () => {
+    expect(isPromise(tryCatch(Promise.resolve(1)))).toBe(true);
   });
 });
 

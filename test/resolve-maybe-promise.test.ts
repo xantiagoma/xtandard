@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { resolveMaybePromise } from "../src/resolve-maybe-promise";
+import { chainMaybePromise, resolveMaybePromise } from "../src/resolve-maybe-promise";
+import { isPromise } from "../src/is-promise";
 
 describe("resolveMaybePromise", () => {
   test("resolves a sync value", async () => {
@@ -34,5 +35,24 @@ describe("resolveMaybePromise", () => {
   test("returns a Promise regardless of input", () => {
     const result = resolveMaybePromise(42);
     expect(result).toBeInstanceOf(Promise);
+  });
+});
+
+describe("chainMaybePromise", () => {
+  test("stays synchronous for plain values", () => {
+    const result = chainMaybePromise(1, (n) => n + 1);
+    expect(isPromise(result)).toBe(false);
+    expect(result).toBe(2);
+  });
+
+  test("chains Promises", async () => {
+    const result = chainMaybePromise(Promise.resolve(1), (n) => n + 1);
+    expect(isPromise(result)).toBe(true);
+    expect(await result).toBe(2);
+  });
+
+  test("flattens a Promise-returning fn over a sync value", async () => {
+    const result = chainMaybePromise(1, (n) => Promise.resolve(n + 1));
+    expect(await result).toBe(2);
   });
 });

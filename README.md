@@ -24,17 +24,23 @@ npm install xantiagoma
 
 ## Entry Points
 
-| Import                  | Description                            | Dependencies                     |
-| ----------------------- | -------------------------------------- | -------------------------------- |
-| `xantiagoma`            | Core utilities (isomorphic, zero deps) | none                             |
-| `xantiagoma/web`        | Browser/FormData utilities             | none                             |
-| `xantiagoma/ulid`       | Prefixed ULID generation + helpers     | `ulid`                           |
-| `xantiagoma/temporal`   | Date/time/duration with Temporal API   | `temporal-polyfill`, `itty-time` |
-| `xantiagoma/dataloader` | DataLoader factory                     | `dataloader`                     |
-| `xantiagoma/unstorage`  | Cache helpers with unstorage           | `unstorage`, `ohash`             |
-| `xantiagoma/valibot`    | TimeZone validation schema             | `valibot`                        |
-| `xantiagoma/sonner`     | Toast streaming for iterables          | `sonner`, `react`                |
-| `xantiagoma/react`      | React hooks + components               | `react`, `@tanstack/react-query` |
+| Import                          | Description                            | Dependencies                     |
+| ------------------------------- | -------------------------------------- | -------------------------------- |
+| `xantiagoma`                    | Core utilities (isomorphic, zero deps) | none                             |
+| `xantiagoma/pagination`         | Pagination + keyset helpers            | none                             |
+| `xantiagoma/pagination/drizzle` | Drizzle adapter for pagination keysets | `drizzle-orm`                    |
+| `xantiagoma/pagination/kysely`  | Kysely adapter for pagination keysets  | `kysely`                         |
+| `xantiagoma/pagination/knex`    | Knex adapter for pagination keysets    | none                             |
+| `xantiagoma/pagination/mongo`   | Mongo/Mongoose adapter for keysets     | none                             |
+| `xantiagoma/pagination/prisma`  | Prisma adapter for pagination keysets  | none                             |
+| `xantiagoma/web`                | Browser/FormData utilities             | none                             |
+| `xantiagoma/ulid`               | Prefixed ULID generation + helpers     | `ulid`                           |
+| `xantiagoma/temporal`           | Date/time/duration with Temporal API   | `temporal-polyfill`, `itty-time` |
+| `xantiagoma/dataloader`         | DataLoader factory                     | `dataloader`                     |
+| `xantiagoma/unstorage`          | Cache helpers with unstorage           | `unstorage`, `ohash`             |
+| `xantiagoma/valibot`            | TimeZone validation schema             | `valibot`                        |
+| `xantiagoma/sonner`             | Toast streaming for iterables          | `sonner`, `react`                |
+| `xantiagoma/react`              | React hooks + components               | `react`, `@tanstack/react-query` |
 
 Sub-entry dependencies are **optional peer deps** — only install what you use.
 
@@ -42,12 +48,13 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 
 ### Error Handling
 
-| Export                      | Description                            | Source                          | Tests                                   |
-| --------------------------- | -------------------------------------- | ------------------------------- | --------------------------------------- |
-| `tryCatch` / `tryCatchSync` | `[data, error]` tuples — no try/catch  | [src](./src/try-catch.ts)       | [tests](./test/try-catch.test.ts)       |
-| `assertNotNull`             | Throws if null/undefined, narrows type | [src](./src/assert-not-null.ts) | [tests](./test/assert-not-null.test.ts) |
-| `valueOrThrow`              | Returns value or throws                | [src](./src/error.ts)           | [tests](./test/error.test.ts)           |
-| `AssertError`               | Custom error class                     | [src](./src/errors.ts)          | [tests](./test/errors.test.ts)          |
+| Export                      | Description                                  | Source                          | Tests                                   |
+| --------------------------- | -------------------------------------------- | ------------------------------- | --------------------------------------- |
+| `tryCatch`                  | `[data, error]` tuples — sync/async adaptive | [src](./src/try-catch.ts)       | [tests](./test/try-catch.test.ts)       |
+| `tryCatchSync` (deprecated) | Use `tryCatch` — kept for backwards compat   | [src](./src/try-catch.ts)       | [tests](./test/try-catch.test.ts)       |
+| `assertNotNull`             | Throws if null/undefined, narrows type       | [src](./src/assert-not-null.ts) | [tests](./test/assert-not-null.test.ts) |
+| `valueOrThrow`              | Returns value or throws                      | [src](./src/error.ts)           | [tests](./test/error.test.ts)           |
+| `AssertError`               | Custom error class                           | [src](./src/errors.ts)          | [tests](./test/errors.test.ts)          |
 
 ### Async
 
@@ -55,19 +62,20 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 | --------------------- | ---------------------------------------- | ------------------------------------- | --------------------------------------------- |
 | `wait`                | Typed setTimeout delay                   | [src](./src/wait.ts)                  | [tests](./test/wait.test.ts)                  |
 | `Completer`           | Externally resolvable Promise            | [src](./src/completer.ts)             | [tests](./test/completer.test.ts)             |
-| `collect`             | Drain `AsyncIterable<T>` into `T[]`      | [src](./src/collect.ts)               | [tests](./test/collect.test.ts)               |
+| `collect`             | Drain any iterable into `T[]` (adaptive) | [src](./src/collect.ts)               | [tests](./test/collect.test.ts)               |
 | `asyncOf`             | Create `AsyncGenerator` from values      | [src](./src/async-of.ts)              | [tests](./test/async-of.test.ts)              |
 | `AsyncChannel`        | Push-based `AsyncIterable` with modes    | [src](./src/async-channel.ts)         | [tests](./test/async-channel.test.ts)         |
 | `resolveMaybePromise` | Resolve `T \| Promise<T>` → `Promise<T>` | [src](./src/resolve-maybe-promise.ts) | [tests](./test/resolve-maybe-promise.test.ts) |
 
 ### Iterables & Generators
 
-| Export                         | Description                       | Source                            | Tests                                     |
-| ------------------------------ | --------------------------------- | --------------------------------- | ----------------------------------------- |
-| `range` / `rangeLazy`          | Numeric range (array / generator) | [src](./src/range.ts)             | [tests](./test/range.test.ts)             |
-| `enumerate` / `enumerateAsync` | `[index, value]` tuples           | [src](./src/enumerate.ts)         | [tests](./test/enumerate.test.ts)         |
-| `toIterator`                   | Normalize to `Iterator`           | [src](./src/to-iterator.ts)       | [tests](./test/to-iterator.test.ts)       |
-| `toAsyncIterable`              | Normalize to `AsyncGenerator`     | [src](./src/to-async-iterable.ts) | [tests](./test/to-async-iterable.test.ts) |
+| Export                | Description                                         | Source                            | Tests                                     |
+| --------------------- | --------------------------------------------------- | --------------------------------- | ----------------------------------------- |
+| `range` / `rangeLazy` | Numeric range (array / generator)                   | [src](./src/range.ts)             | [tests](./test/range.test.ts)             |
+| `enumerate`           | `[index, value]` tuples — sync/async adaptive       | [src](./src/enumerate.ts)         | [tests](./test/enumerate.test.ts)         |
+| `enumerateAsync`      | Always-async; awaits Promise values in sync sources | [src](./src/enumerate.ts)         | [tests](./test/enumerate.test.ts)         |
+| `toIterator`          | Normalize to `Iterator`                             | [src](./src/to-iterator.ts)       | [tests](./test/to-iterator.test.ts)       |
+| `toAsyncIterable`     | Normalize to `AsyncGenerator`                       | [src](./src/to-async-iterable.ts) | [tests](./test/to-async-iterable.test.ts) |
 
 ### Type Guards
 
@@ -103,6 +111,58 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 | `prepareLoaderResult`                       | Map DB rows to DataLoader key order     | [src](./src/prepare-loader-result.ts) | [tests](./test/prepare-loader-result.test.ts) |
 | `resolveStreamSource`                       | Resolve `StreamSource<T>`               | [src](./src/stream-source.ts)         | [tests](./test/stream-source.test.ts)         |
 | `secondsToMs` / `minutesToMs` / `hoursToMs` | Time unit converters                    | [src](./src/time-convert.ts)          | [tests](./test/time-convert.test.ts)          |
+
+## Pagination Utilities (`xantiagoma/pagination`)
+
+Source-agnostic pagination: import from `xantiagoma/pagination`, provide fetchers for your data source (SQL, Drizzle, Prisma, Mongoose, HTTP...), and the paginator handles input styles (`page`/`pageSize`, `limit`/`offset`, cursor), `hasNextPage` lookahead, backward (scroll-up) pagination, and a uniform result envelope. **Full guide: [docs/PAGINATION.md](./docs/PAGINATION.md)** — backend recipes for SQL drivers, ORMs/query builders, Mongo, Firestore, DynamoDB, Redis sorted sets, Elasticsearch/OpenSearch, analytics warehouses, HTTP APIs, REST/GraphQL endpoints, cursor codecs, and frontend integration.
+
+Sync/async adaptive: pass all-sync fetchers and codec (e.g. an in-memory array) and `paginate()` returns plain values — no `await` needed; any async piece (even just an async cursor encoder) makes results Promises, reflected in the types. The pattern is documented in [docs/sync-async-adaptive.md](./docs/sync-async-adaptive.md).
+
+| Import                          | Export                      | Description                                                                | Source                             | Tests                                      |
+| ------------------------------- | --------------------------- | -------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
+| `xantiagoma/pagination`         | `createPaginator`           | Paginator over user-provided fetchers; `pages()`/`items()` async iteration | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
+| `xantiagoma/pagination`         | `toOffsetWindow`            | Page/offset input → `{ limit, offset }`                                    | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
+| `xantiagoma/pagination`         | `createCursorCodec`         | Pluggable opaque-cursor codec (JSON + base64url)                           | [src](./src/cursor-codec.ts)       | [tests](./test/cursor-codec.test.ts)       |
+| `xantiagoma/pagination`         | `createKeysetSpec`          | Portable keyset `where()`/`orderBy()` AST                                  | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `xantiagoma/pagination`         | `keysetSqlExpression`       | Mark server-owned computed SQL expressions for raw keyset helpers          | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `xantiagoma/pagination`         | `toKeysetWhereSql`          | Keyset `WHERE` → parameterized SQL + params                                | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `xantiagoma/pagination`         | `toKeysetOrderBySql`        | Keyset order → SQL `ORDER BY` fragment                                     | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `xantiagoma/pagination/drizzle` | `toDrizzleKeyset`           | Keyset AST → Drizzle `where`/`orderBy` helpers                             | [src](./src/pagination-drizzle.ts) | [tests](./test/pagination-drizzle.test.ts) |
+| `xantiagoma/pagination/kysely`  | `toKyselyKeyset`            | Keyset AST → Kysely `where`/`orderBy` helpers                              | [src](./src/pagination-kysely.ts)  | [tests](./test/pagination-kysely.test.ts)  |
+| `xantiagoma/pagination/knex`    | `applyKeysetToKnex`         | Apply keyset AST to Knex `whereRaw`/`orderByRaw`                           | [src](./src/pagination-knex.ts)    | [tests](./test/pagination-knex.test.ts)    |
+| `xantiagoma/pagination/mongo`   | `toMongoKeyset`             | Keyset AST → Mongo/Mongoose `filter`/`sort` objects                        | [src](./src/pagination-mongo.ts)   | [tests](./test/pagination-mongo.test.ts)   |
+| `xantiagoma/pagination/prisma`  | `toPrismaKeyset`            | Keyset AST → Prisma `where`/`orderBy` objects                              | [src](./src/pagination-prisma.ts)  | [tests](./test/pagination-prisma.test.ts)  |
+| `xantiagoma/pagination`         | `parsePaginationParams`     | Query params → `PaginationInput` (with clamping)                           | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
+| `xantiagoma/pagination`         | `fromRelayArgs`             | Relay `first`/`after`/`last`/`before` → input                              | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
+| `xantiagoma/pagination`         | `toRelayConnection`         | Result → Relay connection (`edges`, `pageInfo`)                            | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+| `xantiagoma/pagination`         | `toRestEnvelope`            | Result → `{ data, meta }` REST envelope                                    | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+| `xantiagoma/pagination`         | `infinitePaginationOptions` | TanStack `useInfiniteQuery` config (dep-free)                              | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+
+```ts
+import {
+  createPaginator,
+  fromRelayArgs,
+  parsePaginationParams,
+  toRestEnvelope,
+} from "xantiagoma/pagination";
+
+const paginator = createPaginator({
+  fetchOffset: ({ limit, offset }) => ({ items: db.query(/* LIMIT/OFFSET */) }),
+  fetchCursor: ({ limit, cursor, direction }) => ({ items: db.query(/* keyset */) }),
+  cursor: { fromItem: (u) => ({ id: u.id }) }, // codec optional — defaults to JSON + base64url
+  maxLimit: 100,
+});
+
+// REST route
+const result = await paginator.paginate(parsePaginationParams(url.searchParams));
+return Response.json(toRestEnvelope(result));
+
+// GraphQL/Relay resolver
+const result = await paginator.paginate(fromRelayArgs(args));
+return toRelayConnection(result, paginator.cursorFor);
+```
+
+Cursor tokens are produced by a two-stage codec (`serializer` + `encoder`, both replaceable) signature-compatible with [drizzle-cursor](https://github.com/xantiagoma/drizzle-cursor), so the same custom encoder/decoder (encryption, signing...) can be shared between both.
 
 ## Web Utilities (`xantiagoma/web`)
 

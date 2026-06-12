@@ -35,6 +35,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 
 ```
 xantiagoma              → isomorphic core (zero deps)
+xantiagoma/pagination   → pagination, keyset helpers + raw SQL adapters
 xantiagoma/web          → browser/FormData + fetchWithProgress (peer: up-fetch)
 xantiagoma/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
 xantiagoma/sonner       → toastStream (peer: sonner, react)
@@ -76,3 +77,9 @@ test/
 - `up-fetch` captured lazily (not at import time) so MSW can intercept
 - Browser tests use `vitest-browser-react` with `vite-plus/test/browser-playwright`
 - All optional peer deps in `peerDependenciesMeta` with `optional: true`
+- Factories/combinators that accept user callbacks are sync/async-adaptive
+  (all-sync inputs → sync results, typed via overloads; see
+  `docs/sync-async-adaptive.md` for the full pattern: rules, recipes, testing
+  checklist). Used by `createCursorCodec`, `createPaginator`, `tryCatch`,
+  `collect`, `enumerate`. Structural-protocol variants stay explicit
+  (`defer`/`deferSync` — `await using` vs `using`)
