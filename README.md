@@ -22,6 +22,8 @@
 npm install xantiagoma
 ```
 
+Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
+
 ## Entry Points
 
 | Import                          | Description                            | Dependencies                     |

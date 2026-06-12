@@ -19,6 +19,12 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 - `bun run build` — build library (tsdown via `vp pack`, outputs CJS + ESM + DTS to `dist/`)
 - `bun run release` — bump version, update changelog, tag, push (CI publishes)
 
+## Release Process
+
+See `docs/RELEASING.md` before releasing. For planned pre-1.0 minor releases,
+use an explicit version (`bunx changelogen --release -r 0.2.0 --push --no-open`)
+instead of `--minor`; changelogen may otherwise bump `0.1.2` to `0.1.3`.
+
 ## Config
 
 All tool configuration lives in `vite.config.ts` (vite-plus unified config).
