@@ -338,18 +338,43 @@ async function consumeStream<TYield, TReturn>(
 /**
  * Like `toast.promise` but for iterables/generators/streams.
  *
- * Handles: loading → streaming → success/error
+ * Blocking/awaitable API: waits until the stream completes and resolves to
+ * `{ items, returnValue }`. Use this when the caller should wait for all
+ * streamed values before continuing.
+ *
+ * Handles: loading → streaming → success/error.
  *
  * Supports sync and async sources. Captures generator return values.
  * Accepts either an instance or a factory function.
  *
- * @example
- * ```tsx
- * // Pass generator function directly (recommended)
- * await toastStream(fetchData, { ... });
+ * @example Async generator with progress and return value
+ * ```ts
+ * import { toastStream } from "xantiagoma/sonner";
  *
- * // Or pass the result of calling it
- * await toastStream(fetchData(), { ... });
+ * async function* importUsers() {
+ *   yield { id: 1, name: "Ada" };
+ *   yield { id: 2, name: "Grace" };
+ *   return { imported: 2 };
+ * }
+ *
+ * const { items, returnValue } = await toastStream(importUsers, {
+ *   loading: "Importing users...",
+ *   streaming: ({ count, latest }) => `Imported ${count}: ${latest.name}`,
+ *   success: ({ count, returnValue }) =>
+ *     `Imported ${count} users (${returnValue.imported} confirmed)`,
+ *   error: (error, partial) =>
+ *     `Import failed after ${partial.count} users: ${String(error)}`,
+ * });
+ * ```
+ *
+ * @example Sync iterable with artificial delay
+ * ```ts
+ * const result = await toastStream(["parse", "validate", "save"], {
+ *   loading: "Starting...",
+ *   streaming: ({ latest }) => `Running ${latest}`,
+ *   success: ({ count }) => `Completed ${count} steps`,
+ *   delay: { first: 300, items: 200, result: 150 },
+ * });
  * ```
  */
 export function toastStream<TYield, TReturn>(
@@ -477,13 +502,38 @@ type ToastStreamReturn<TYield, TReturn> = (string | number) & {
 
 /**
  * Non-blocking version that returns immediately like `toast.promise`.
- * Returns toast ID with `unwrap()` method to await the result.
+ * Returns the toast ID with an `unwrap()` method to await the result later.
  * Accepts either an instance or a factory function.
+ *
+ * Use this when the UI should continue immediately while the toast tracks the
+ * stream in the background.
  *
  * @example
  * ```ts
- * const { unwrap } = toastStreamAsync(fetchData, { loading: "..." });
- * const { items, returnValue } = await unwrap();
+ * import { toastStreamAsync } from "xantiagoma/sonner";
+ *
+ * const toastId = toastStreamAsync(importUsers, {
+ *   loading: "Importing users...",
+ *   streaming: ({ count }) => `Imported ${count}`,
+ *   success: ({ count }) => `Imported ${count} users`,
+ * });
+ *
+ * // The caller continues immediately; await only if/when the result matters.
+ * const { items, returnValue } = await toastId.unwrap();
+ * ```
+ *
+ * @example Fire-and-track with error handling
+ * ```ts
+ * const toastId = toastStreamAsync(uploadFiles(files), {
+ *   loading: "Uploading...",
+ *   streaming: ({ count }) => `${count} files uploaded`,
+ *   error: (error, partial) =>
+ *     `Upload failed after ${partial.count} files: ${String(error)}`,
+ * });
+ *
+ * toastId.unwrap().catch((error) => {
+ *   reportError(error);
+ * });
  * ```
  */
 export function toastStreamAsync<TYield, TReturn>(
