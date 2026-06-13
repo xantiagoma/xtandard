@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.2.1
+
+[compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.2.0...v0.2.1)
+
+### 🩹 Fixes
+
+- Export toastStreamAsync from sonner entry ([19d0606](https://github.com/xantiagoma/xantiagoma-lib/commit/19d0606))
+
+### 📖 Documentation
+
+- Document release process ([4bdd3f8](https://github.com/xantiagoma/xantiagoma-lib/commit/4bdd3f8))
+
+### ❤️ Contributors
+
+- Santiago Montoya ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.2.0
 
 [compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.1.2...v0.2.0)
