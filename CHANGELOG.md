@@ -11,6 +11,7 @@
 ### 📖 Documentation
 
 - Document release process ([4bdd3f8](https://github.com/xantiagoma/xantiagoma-lib/commit/4bdd3f8))
+- Add toast stream TSDoc examples ([4338e57](https://github.com/xantiagoma/xantiagoma-lib/commit/4338e57))
 
 ### ❤️ Contributors
 
