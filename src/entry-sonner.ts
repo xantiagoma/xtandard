@@ -1,1 +1,1 @@
-export { toastStream } from "./toast-stream.ts";
+export { toastStream, toastStreamAsync } from "./toast-stream.ts";

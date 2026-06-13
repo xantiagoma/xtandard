@@ -174,6 +174,37 @@ Cursor tokens are produced by a two-stage codec (`serializer` + `encoder`, both 
 | `fetchWithProgress`     | Fetch with upload/download progress | [src](./src/fetch-with-progress.ts)       | [tests](./test/fetch-with-progress.test.ts) |
 | `createHttpInterceptor` | Intercept fetch + XHR with rules    | [src](./src/intercept-http.ts)            | [tests](./test/intercept-http.test.tsx)     |
 
+## Sonner Utilities (`xantiagoma/sonner`)
+
+Toast helpers for streaming iterables/generators through [Sonner](https://sonner.emilkowal.ski/).
+
+| Export             | Description                                                             | Source                       | Tests                                |
+| ------------------ | ----------------------------------------------------------------------- | ---------------------------- | ------------------------------------ |
+| `toastStream`      | Blocking/awaitable stream toast; resolves to `{ items, returnValue }`   | [src](./src/toast-stream.ts) | [tests](./test/toast-stream.test.ts) |
+| `toastStreamAsync` | Non-blocking stream toast; returns toast id immediately with `unwrap()` | [src](./src/toast-stream.ts) | [tests](./test/toast-stream.test.ts) |
+
+Use `toastStream` when the caller should wait for completion:
+
+```ts
+import { toastStream } from "xantiagoma/sonner";
+
+const { items, returnValue } = await toastStream(source, {
+  loading: "Loading...",
+  streaming: ({ count }) => `Received ${count}`,
+  success: ({ count }) => `Done: ${count} items`,
+});
+```
+
+Use `toastStreamAsync` when the caller should continue immediately, matching
+Sonner's `toast.promise(...).unwrap()` style:
+
+```ts
+import { toastStreamAsync } from "xantiagoma/sonner";
+
+const toastId = toastStreamAsync(source, { loading: "Loading..." });
+const { items, returnValue } = await toastId.unwrap();
+```
+
 ## React Utilities (`xantiagoma/react`)
 
 | Export                         | Description                         | Source                                 | Tests                                           |

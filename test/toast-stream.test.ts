@@ -12,11 +12,15 @@ vi.mock("sonner", () => ({
   ),
 }));
 
-import { toastStream } from "../src/toast-stream.ts";
+import { toastStream, toastStreamAsync } from "../src/entry-sonner.ts";
 
 describe("toastStream", () => {
   test("is a function", () => {
     expect(typeof toastStream).toBe("function");
+  });
+
+  test("exports toastStreamAsync from the sonner entry", () => {
+    expect(typeof toastStreamAsync).toBe("function");
   });
 
   test("handles async generator", async () => {
