@@ -6,7 +6,7 @@
 
 ### 🚀 Enhancements
 
-- ⚠️  Generic Interval<T> with ordered domains + 8 new entry points ([#1](https://github.com/xantiagoma/xantiagoma-lib/pull/1))
+- ⚠️ Generic Interval<T> with ordered domains + 8 new entry points ([#1](https://github.com/xantiagoma/xantiagoma-lib/pull/1))
 
 ### 📖 Documentation
 
@@ -14,7 +14,7 @@
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Generic Interval<T> with ordered domains + 8 new entry points ([#1](https://github.com/xantiagoma/xantiagoma-lib/pull/1))
+- ⚠️ Generic Interval<T> with ordered domains + 8 new entry points ([#1](https://github.com/xantiagoma/xantiagoma-lib/pull/1))
 
 ### ❤️ Contributors
 
