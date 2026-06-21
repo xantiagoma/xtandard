@@ -243,6 +243,16 @@
         "default": "./dist/entry-filters-drizzle.cjs"
       }
     },
+    "./filters/drizzle-rqb": {
+      "import": {
+        "types": "./dist/entry-filters-drizzle-rqb.d.mts",
+        "default": "./dist/entry-filters-drizzle-rqb.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-drizzle-rqb.d.cts",
+        "default": "./dist/entry-filters-drizzle-rqb.cjs"
+      }
+    },
     "./filters/kysely": {
       "import": {
         "types": "./dist/entry-filters-kysely.d.mts",
@@ -341,6 +351,16 @@
       "require": {
         "types": "./dist/entry-pagination-drizzle.d.cts",
         "default": "./dist/entry-pagination-drizzle.cjs"
+      }
+    },
+    "./pagination/drizzle-rqb": {
+      "import": {
+        "types": "./dist/entry-pagination-drizzle-rqb.d.mts",
+        "default": "./dist/entry-pagination-drizzle-rqb.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-drizzle-rqb.d.cts",
+        "default": "./dist/entry-pagination-drizzle-rqb.cjs"
       }
     },
     "./ulid": {
