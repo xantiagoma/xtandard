@@ -55,7 +55,9 @@ not in `spec`, or whose filter kind mismatches, is dropped. `CompiledWhere` is a
 `and`/`or`/`not` tree of normalized leaf conditions (`{ field, op, value/… }`).
 
 Lowering rules: the `date` preset is resolved to `gte`/`lt` (`Date` bounds) via
-the injected `resolveDate`; text-match ops stay **semantic** (each adapter
+the injected `resolveDate`; `between` → `gte AND lte` and `notBetween` → `lt OR
+gt` (we never emit SQL `BETWEEN` — its inclusive upper bound is a footgun,
+especially for timestamps); text-match ops stay **semantic** (each adapter
 renders `contains`→`ilike`/`$regex`/`contains`-mode natively).
 
 You rarely call `compileFilters` directly — the adapters do, via their typed
@@ -136,6 +138,62 @@ the adapter **throws a clear error** rather than emitting something wrong:
   `contains`/`startsWith`/`endsWith` instead.
 - Mongo maps `like`→case-sensitive regex, `ilike`→case-insensitive, by
   translating the SQL `LIKE` pattern (`%`→`.*`, `_`→`.`).
+
+## End-to-end: a REST list endpoint
+
+Combine validation + filters + sort + pagination (all from `@xtandard/lib`):
+
+```ts
+import * as v from "valibot";
+import { FiltersRequestSchema, SortSchema } from "@xtandard/lib/filters/valibot";
+import { parseSortParam, parsePaginationParams, toRestEnvelope } from "@xtandard/lib/filters";
+import {
+  buildWhere,
+  buildOrderBy,
+  dateField,
+  textField,
+  enumField,
+} from "@xtandard/lib/filters/drizzle";
+
+// one allow-list, reused for WHERE + ORDER BY columns:
+const spec = {
+  name: textField({ column: tasks.name }),
+  status: enumField({ column: tasks.status }),
+  createdAt: dateField({ column: tasks.createdAt }),
+};
+const columns = { name: tasks.name, status: tasks.status, createdAt: tasks.createdAt };
+
+export async function listTasks(req: Request) {
+  const url = new URL(req.url);
+  const filters = v.parse(
+    FiltersRequestSchema,
+    JSON.parse(url.searchParams.get("filters") ?? "[]"),
+  );
+  const { sort } = parseSortParam({ value: url.searchParams.get("sort") });
+  const page = parsePaginationParams(url.searchParams);
+
+  const { where } = buildWhere({ spec, filters, resolveDate });
+  const { orderBy } = buildOrderBy({
+    sort,
+    columns,
+    defaultSort: [{ field: "createdAt", dir: "desc" }],
+  });
+
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(where)
+    .orderBy(...orderBy)
+    .limit(page.pageSize ?? 20);
+  return Response.json(
+    toRestEnvelope({ items: rows, pageInfo: { hasNextPage: false, hasPreviousPage: false } }),
+  );
+}
+```
+
+Swap the adapter import (`/drizzle` → `/kysely` `/knex` `/mongo` `/prisma`) and
+the `spec` column type to target a different store — the validation, sort
+parsing, and pagination stay identical.
 
 ## Frontend helpers
 

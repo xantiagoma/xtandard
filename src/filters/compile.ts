@@ -4,8 +4,24 @@
  * validation library, no driver — pure data in, pure data out.
  *
  * Lowering rules: a non-allow-listed (or kind-mismatched) field is dropped; the
- * `date` preset is resolved to `gte`/`lt` via the injected `resolveDate`; text
- * `contains`/`startsWith`/`endsWith` become `ilike` with an escaped pattern.
+ * `date` preset is resolved to a half-open `[gte, lt)` window via the injected
+ * `resolveDate`; `between` → `gte AND lte`, `notBetween` → `lt OR gt` (we never
+ * emit SQL `BETWEEN`). Text-match ops stay SEMANTIC — each adapter renders
+ * `contains`/`ilike`/… natively (SQL `ILIKE`, Mongo `$regex`, Prisma contains-mode).
+ *
+ * @example
+ * ```ts
+ * import { compileFilters } from "@xtandard/lib/filters";
+ *
+ * const { where } = compileFilters({
+ *   spec: { status: "enum", amount: "number" }, // field → kind allow-list
+ *   filters: [
+ *     { field: "status", filter: { kind: "enum", operator: "inArray", values: ["open"] } },
+ *     { field: "secret", filter: { kind: "text", operator: "eq", value: "x" } }, // dropped
+ *   ],
+ * });
+ * // where → { type: "cond", cond: { field: "status", op: "inArray", values: ["open"] } }
+ * ```
  */
 
 import type {
@@ -57,52 +73,75 @@ export function sqlTextOp(
   }
 }
 
-function condsForField(input: {
+const leaf = (cond: CompiledCond): CompiledWhere => ({ type: "cond", cond });
+
+const allOf = (nodes: CompiledWhere[]): CompiledWhere | null =>
+  nodes.length === 0 ? null : nodes.length === 1 ? (nodes[0] ?? null) : { type: "and", nodes };
+
+/**
+ * Lower one column filter to a {@link CompiledWhere} sub-expression (or `null`).
+ * Property-presence narrowing handles the `kind × variant` unions. `between`
+ * becomes `gte AND lte` and `notBetween` becomes `lt OR gt` — we never emit SQL
+ * `BETWEEN` (its inclusive upper bound is a footgun, especially for timestamps;
+ * see https://wiki.postgresql.org/wiki/Don't_Do_This). The `date` preset is
+ * resolved to a half-open `[gte, lt)` window via the injected resolver.
+ */
+function fieldWhere(input: {
   field: string;
   filter: FieldFilter;
   resolveDate: DateFilterResolver | undefined;
-}): CompiledCond[] {
+}): CompiledWhere | null {
   const { field, filter, resolveDate } = input;
 
-  // Narrow by property presence (reliable across the kind × variant unions);
-  // the `*Unary` variants (isNull/isNotNull) have none of value/values/from.
   switch (filter.kind) {
     case "text": {
-      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
+      if ("values" in filter) return leaf({ field, op: filter.operator, values: filter.values });
       if ("value" in filter) {
         // eq/ne are scalar; contains/startsWith/endsWith/like/ilike/notIlike stay
         // SEMANTIC in the AST (each adapter renders them natively).
         if (filter.operator === "eq" || filter.operator === "ne") {
-          return [{ field, op: filter.operator, value: filter.value }];
+          return leaf({ field, op: filter.operator, value: filter.value });
         }
 
-        return [{ field, op: filter.operator, value: filter.value }];
+        return leaf({ field, op: filter.operator, value: filter.value });
       }
 
-      return [{ field, op: filter.operator }];
+      return leaf({ field, op: filter.operator });
     }
     case "number": {
-      if ("from" in filter)
-        return [{ field, op: filter.operator, from: filter.from, to: filter.to }];
-      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
-      if ("value" in filter) return [{ field, op: filter.operator, value: filter.value }];
-      return [{ field, op: filter.operator }];
+      if ("from" in filter) {
+        return filter.operator === "between"
+          ? allOf([
+              leaf({ field, op: "gte", value: filter.from }),
+              leaf({ field, op: "lte", value: filter.to }),
+            ])
+          : {
+              type: "or",
+              nodes: [
+                leaf({ field, op: "lt", value: filter.from }),
+                leaf({ field, op: "gt", value: filter.to }),
+              ],
+            };
+      }
+      if ("values" in filter) return leaf({ field, op: filter.operator, values: filter.values });
+      if ("value" in filter) return leaf({ field, op: filter.operator, value: filter.value });
+      return leaf({ field, op: filter.operator });
     }
     case "enum": {
-      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
-      if ("value" in filter) return [{ field, op: filter.operator, value: filter.value }];
-      return [{ field, op: filter.operator }];
+      if ("values" in filter) return leaf({ field, op: filter.operator, values: filter.values });
+      if ("value" in filter) return leaf({ field, op: filter.operator, value: filter.value });
+      return leaf({ field, op: filter.operator });
     }
     case "boolean": {
-      if ("value" in filter) return [{ field, op: filter.operator, value: filter.value }];
-      return [{ field, op: filter.operator }];
+      if ("value" in filter) return leaf({ field, op: filter.operator, value: filter.value });
+      return leaf({ field, op: filter.operator });
     }
     case "array": {
-      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
-      return [{ field, op: filter.operator }];
+      if ("values" in filter) return leaf({ field, op: filter.operator, values: filter.values });
+      return leaf({ field, op: filter.operator });
     }
     case "date": {
-      if (!("anchor" in filter)) return [{ field, op: filter.operator }];
+      if (!("anchor" in filter)) return leaf({ field, op: filter.operator });
 
       if (!resolveDate) {
         throw new Error(
@@ -111,27 +150,17 @@ function condsForField(input: {
       }
 
       const { start, end } = resolveDate({ value: filter });
-      const out: CompiledCond[] = [];
-      if (start) out.push({ field, op: "gte", value: start });
-      if (end) out.push({ field, op: "lt", value: end });
+      const nodes: CompiledWhere[] = [];
+      if (start) nodes.push(leaf({ field, op: "gte", value: start }));
+      if (end) nodes.push(leaf({ field, op: "lt", value: end }));
 
-      return out;
+      return allOf(nodes);
     }
   }
 }
 
 function kindOf(spec: FieldKindSpec, field: string): FieldKind | undefined {
   return spec[field];
-}
-
-function asWhere(conds: CompiledCond[]): CompiledWhere | null {
-  if (conds.length === 0) return null;
-  if (conds.length === 1) {
-    const only = conds[0];
-    if (only) return { type: "cond", cond: only };
-  }
-
-  return { type: "and", nodes: conds.map((cond) => ({ type: "cond", cond })) };
 }
 
 /**
@@ -145,15 +174,16 @@ export function compileFilters(input: {
   filters: ColumnFilter[];
   resolveDate?: DateFilterResolver;
 }): { where: CompiledWhere | null } {
-  const conds: CompiledCond[] = [];
+  const nodes: CompiledWhere[] = [];
 
   for (const { field, filter } of input.filters) {
     if (kindOf(input.spec, field) !== filter.kind) continue; // not allow-listed / kind mismatch
 
-    conds.push(...condsForField({ field, filter, resolveDate: input.resolveDate }));
+    const where = fieldWhere({ field, filter, resolveDate: input.resolveDate });
+    if (where) nodes.push(where);
   }
 
-  return { where: asWhere(conds) };
+  return { where: allOf(nodes) };
 }
 
 function nodeToWhere(
@@ -165,7 +195,7 @@ function nodeToWhere(
     case "column": {
       if (kindOf(spec, node.field) !== node.filter.kind) return null;
 
-      return asWhere(condsForField({ field: node.field, filter: node.filter, resolveDate }));
+      return fieldWhere({ field: node.field, filter: node.filter, resolveDate });
     }
     case "and": {
       const nodes = node.nodes

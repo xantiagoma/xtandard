@@ -74,11 +74,14 @@ describe("mongo adapter", () => {
     deletedAt: mongo.dateField({ path: "deletedAt" }),
   };
 
-  test("contains → $regex, between → $gte/$lte, under $and", () => {
+  test("contains → $regex, between → half-open $gte/$lte (no $and-flatten)", () => {
     const { filter } = mongo.buildFilter({ spec, filters });
 
     expect(filter).toEqual({
-      $and: [{ name: { $regex: "ab", $options: "i" } }, { amount: { $gte: 1, $lte: 9 } }],
+      $and: [
+        { name: { $regex: "ab", $options: "i" } },
+        { $and: [{ amount: { $gte: 1 } }, { amount: { $lte: 9 } }] },
+      ],
     });
   });
 
@@ -103,19 +106,34 @@ describe("prisma adapter", () => {
     amount: prisma.numberField({ field: "amount" }),
   };
 
-  test("contains → insensitive mode, between → gte/lte, under AND", () => {
+  test("contains → insensitive mode, between → half-open gte/lte", () => {
     const { where } = prisma.buildWhere({ spec, filters });
 
     expect(where).toEqual({
-      AND: [{ name: { contains: "ab", mode: "insensitive" } }, { amount: { gte: 1, lte: 9 } }],
+      AND: [
+        { name: { contains: "ab", mode: "insensitive" } },
+        { AND: [{ amount: { gte: 1 } }, { amount: { lte: 9 } }] },
+      ],
     });
   });
 
-  test("raw like throws (no Prisma equivalent)", () => {
+  test("reducible ilike patterns map to contains/startsWith/endsWith", () => {
+    const at = (value: string) =>
+      prisma.buildWhere({
+        spec,
+        filters: [{ field: "name", filter: { kind: "text", operator: "ilike", value } }],
+      }).where;
+
+    expect(at("%a%")).toEqual({ name: { contains: "a", mode: "insensitive" } });
+    expect(at("a%")).toEqual({ name: { startsWith: "a", mode: "insensitive" } });
+    expect(at("%a")).toEqual({ name: { endsWith: "a", mode: "insensitive" } });
+  });
+
+  test("an irreducible like pattern (internal wildcard) throws", () => {
     expect(() =>
       prisma.buildWhere({
         spec,
-        filters: [{ field: "name", filter: { kind: "text", operator: "like", value: "a%" } }],
+        filters: [{ field: "name", filter: { kind: "text", operator: "like", value: "a%b" } }],
       }),
     ).toThrow();
   });
@@ -127,11 +145,11 @@ describe("knex adapter", () => {
     amount: knex.numberField({ column: "amount" }),
   };
 
-  test("renders parameterized SQL with ILIKE + BETWEEN", () => {
+  test("renders parameterized SQL with ILIKE + half-open range (no BETWEEN)", () => {
     const fragment = knex.buildWhereSql({ spec, filters });
 
     expect(fragment).not.toBeNull();
-    expect(fragment?.sql).toBe('("name" ILIKE ? AND "amount" BETWEEN ? AND ?)');
+    expect(fragment?.sql).toBe('("name" ILIKE ? AND ("amount" >= ? AND "amount" <= ?))');
     expect(fragment?.bindings).toEqual(["%ab%", 1, 9]);
   });
 

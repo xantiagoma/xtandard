@@ -1,12 +1,23 @@
 /**
  * Prisma adapter — renders the portable filter AST to a plain Prisma `where`
- * object. No driver dependency (returns plain objects). Text ops map to Prisma's
- * case-insensitive `contains`/`startsWith`/`endsWith`; `between` → `gte`/`lte`;
+ * object (no driver dependency). Text ops map to Prisma's case-insensitive
+ * `contains`/`startsWith`/`endsWith`; `between` (lowered upstream) → `gte`/`lte`;
  * `inArray` → `in`; scalar-list array ops → `hasEvery`/`hasSome`.
  *
- * Raw SQL `like`/`ilike`/`notIlike` (arbitrary `%`/`_` patterns) and
- * `arrayContained` have no Prisma equivalent and throw with a clear message —
- * use `contains`/`startsWith`/`endsWith` instead.
+ * `like`/`ilike`/`notIlike` are reduced to `contains`/`startsWith`/`endsWith`
+ * when the pattern allows (`%x%`/`x%`/`%x`); only genuinely arbitrary patterns
+ * (internal `%`, any `_`) — which Prisma's `where` can't express — throw (use
+ * `$queryRaw`). `arrayContained` (array ⊆ values) also has no Prisma operator.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, textField, numberField } from "@xtandard/lib/filters/prisma";
+ *
+ * const spec = { name: textField({ field: "name" }), amount: numberField({ field: "amount" }) };
+ * const { where } = buildWhere({ spec, filters });
+ * // where → { AND: [{ name: { contains: "ab", mode: "insensitive" } }, … ] }
+ * await prisma.user.findMany({ where });
+ * ```
  */
 
 import { compileFilterNode, compileFilters, type DateFilterResolver } from "./compile.ts";
@@ -26,6 +37,50 @@ export const numberField = make("number");
 export const enumField = make("enum");
 export const booleanField = make("boolean");
 export const arrayField = make("array");
+
+// Reduce a SQL LIKE pattern to a Prisma string filter, if possible. Returns
+// `null` for patterns Prisma's `where` can't express (internal `%`, any `_`).
+function likeToPrisma(
+  pattern: string,
+):
+  | { contains: string }
+  | { startsWith: string }
+  | { endsWith: string }
+  | { equals: string }
+  | null {
+  const tokens: ({ lit: string } | { wild: "%" | "_" })[] = [];
+  for (let i = 0; i < pattern.length; i += 1) {
+    const c = pattern[i];
+    if (c === "\\" && i + 1 < pattern.length) {
+      tokens.push({ lit: pattern[i + 1] ?? "" });
+      i += 1;
+    } else if (c === "%" || c === "_") {
+      tokens.push({ wild: c });
+    } else {
+      tokens.push({ lit: c ?? "" });
+    }
+  }
+
+  if (tokens.some((t) => "wild" in t && t.wild === "_")) return null; // single-char wildcard
+
+  let start = 0;
+  let end = tokens.length;
+  const lead = tokens[start] && "wild" in tokens[start]!;
+  if (lead) start += 1;
+  const trail = end > start && tokens[end - 1] && "wild" in tokens[end - 1]!;
+  if (trail) end -= 1;
+
+  const mid = tokens.slice(start, end);
+  if (mid.some((t) => "wild" in t)) return null; // internal `%`
+
+  const value = mid.map((t) => ("lit" in t ? t.lit : "")).join("");
+
+  if (lead && trail) return { contains: value };
+  if (lead) return { endsWith: value };
+  if (trail) return { startsWith: value };
+
+  return { equals: value };
+}
 
 function condWhere(cond: CompiledCond): unknown {
   switch (cond.op) {
@@ -49,18 +104,26 @@ function condWhere(cond: CompiledCond): unknown {
       return { endsWith: cond.value, mode: "insensitive" };
     case "like":
     case "ilike":
-    case "notIlike":
-      throw new Error(
-        `toPrismaWhere: \`${cond.op}\` (raw SQL pattern) has no Prisma equivalent — use contains/startsWith/endsWith.`,
-      );
+    case "notIlike": {
+      // Prisma's `where` has no raw LIKE, but most patterns reduce to
+      // contains/startsWith/endsWith (`%x%`/`x%`/`%x`). Only genuinely arbitrary
+      // patterns (internal `%` or any `_`) are irreducible → throw.
+      const reduced = likeToPrisma(cond.value);
+      if (!reduced) {
+        throw new Error(
+          `toPrismaWhere: \`${cond.op}\` pattern "${cond.value}" has internal "%"/"_" wildcards — Prisma's where has no raw LIKE; use $queryRaw or contains/startsWith/endsWith.`,
+        );
+      }
+
+      const insensitive = cond.op === "ilike" || cond.op === "notIlike";
+      const filter = insensitive ? { ...reduced, mode: "insensitive" } : reduced;
+
+      return cond.op === "notIlike" ? { not: filter } : filter;
+    }
     case "inArray":
       return { in: cond.values };
     case "notInArray":
       return { notIn: cond.values };
-    case "between":
-      return { gte: cond.from, lte: cond.to };
-    case "notBetween":
-      return { not: { gte: cond.from, lte: cond.to } };
     case "arrayContains":
       return { hasEvery: cond.values };
     case "arrayOverlaps":

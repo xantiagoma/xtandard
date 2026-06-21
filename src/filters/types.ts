@@ -82,6 +82,11 @@ export type ArrayFilter =
     }
   | { kind: "array"; operator: "isNull" | "isNotNull" };
 
+/**
+ * One field filter — a discriminated union on `kind` (the column data kind),
+ * each kind a sub-union on `operator` (the argument shape). Narrow by `kind`
+ * then by an operator/property check (`"value" in f`, `"from" in f`, …).
+ */
 export type FieldFilter =
   | TextFilter
   | NumberFilter
@@ -90,6 +95,7 @@ export type FieldFilter =
   | DateFilter
   | ArrayFilter;
 
+/** A {@link FieldFilter} bound to a public field name (the allow-list key). */
 export type ColumnFilter = { field: string; filter: FieldFilter };
 
 /** Flat AND-combined list of column filters (the common case). */
@@ -105,6 +111,7 @@ export type FilterNode =
 // ── sort ──
 export type SortDirection = "asc" | "desc";
 export type SortItem = { field: string; dir: SortDirection };
+/** An ordered list of `{ field, dir }` (applied in order; allow-listed per adapter). */
 export type Sort = SortItem[];
 
 // these are referenced only to keep the per-kind operator unions honest:
@@ -123,8 +130,8 @@ export type ScalarValue = string | number | boolean | Date;
 
 /**
  * A normalized leaf condition — driver-agnostic. `compileFilters` lowers the
- * model into these: date presets become `gte`/`lt` (resolved `Date`s), text
- * `contains`/`startsWith`/`endsWith` become `ilike` with an escaped pattern.
+ * model into these: date presets become `gte`/`lt` (resolved `Date`s), `between`
+ * becomes `gte`/`lte`. Text-match ops stay SEMANTIC (each adapter renders them).
  */
 /** Text-matching ops kept SEMANTIC (not lowered) so each adapter renders them
  * natively: SQL → ilike/escape, Mongo → `$regex`, Prisma → contains/mode. */
@@ -134,7 +141,6 @@ export type CompiledCond =
   | { field: string; op: "eq" | "ne" | "lt" | "gt" | "lte" | "gte"; value: ScalarValue }
   | { field: string; op: TextMatchOp; value: string }
   | { field: string; op: "inArray" | "notInArray"; values: ScalarValue[] }
-  | { field: string; op: "between" | "notBetween"; from: ScalarValue; to: ScalarValue }
   | {
       field: string;
       op: "arrayContains" | "arrayContained" | "arrayOverlaps";

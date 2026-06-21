@@ -106,12 +106,15 @@ describe("buildWhere", () => {
     expect(q?.params).toEqual(["%a\\%b%"]);
   });
 
-  test("number between", () => {
+  test("number between → half-open >= AND <= (never SQL BETWEEN)", () => {
     const q = render([
       { field: "amount", filter: { kind: "number", operator: "between", from: 10, to: 20 } },
     ]);
 
-    expect(q?.sql.toLowerCase()).toContain("between");
+    const sql = q?.sql.toLowerCase() ?? "";
+    expect(sql).toContain(">=");
+    expect(sql).toContain("<=");
+    expect(sql).not.toContain("between");
     expect(q?.params).toEqual([10, 20]);
   });
 

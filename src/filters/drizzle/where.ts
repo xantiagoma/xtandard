@@ -5,7 +5,6 @@ import {
   arrayContained,
   arrayContains,
   arrayOverlaps,
-  between,
   eq,
   gt,
   gte,
@@ -18,7 +17,6 @@ import {
   lte,
   ne,
   not,
-  notBetween,
   notIlike,
   notInArray,
   or,
@@ -36,8 +34,21 @@ import type { FilterSpec } from "./spec.ts";
 /**
  * Render the portable {@link CompiledWhere} AST to a Drizzle `SQL`. `buildWhere`
  * / `buildFilterNode` compile the filter model (via the driver-free core) and
- * render it here against the spec's columns. The `date` preset is resolved by
- * an injected `resolveDate` (e.g. demi.casa's `@demi.casa/time` `resolveDateFilter`).
+ * render it here against the spec's columns. The `date` preset is resolved by an
+ * injected `resolveDate` (e.g. an app's `@demi.casa/time` `resolveDateFilter`).
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, textField, numberField, dateField } from "@xtandard/lib/filters/drizzle";
+ *
+ * const spec = {
+ *   name: textField({ column: tasks.name }), // ColumnOf<string> — kind↔column mismatch = compile error
+ *   amount: numberField({ column: tasks.amount }),
+ *   createdAt: dateField({ column: tasks.createdAt }),
+ * };
+ * const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate injected for `date`
+ * const rows = await db.select().from(tasks).where(where);
+ * ```
  */
 
 function condToSql(cond: CompiledCond, column: AnyColumn): SQL | undefined {
@@ -72,10 +83,6 @@ function condToSql(cond: CompiledCond, column: AnyColumn): SQL | undefined {
       return inArray(column, cond.values);
     case "notInArray":
       return notInArray(column, cond.values);
-    case "between":
-      return between(column, cond.from, cond.to);
-    case "notBetween":
-      return notBetween(column, cond.from, cond.to);
     case "arrayContains":
       return arrayContains(column, cond.values);
     case "arrayContained":

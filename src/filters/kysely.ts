@@ -3,6 +3,17 @@
  * expression (PostgreSQL flavor: `ilike`, array `@>`/`<@`/`&&`). Peer `kysely`.
  * String columns are passed to `sql.ref` (server-owned identifiers); computed
  * values use the `sql` tag. Validation-library-free.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, buildOrderBy, textField, dateField } from "@xtandard/lib/filters/kysely";
+ *
+ * const spec = { name: textField({ column: "posts.name" }), createdAt: dateField({ column: "posts.created_at" }) };
+ * const { where } = buildWhere({ spec, filters, resolveDate });
+ * let q = db.selectFrom("posts").selectAll();
+ * if (where) q = q.where(where);
+ * for (const o of buildOrderBy({ sort, columns: { name: "posts.name" } }).orderBy) q = q.orderBy(o);
+ * ```
  */
 
 import { sql, type RawBuilder, type SqlBool } from "kysely";
@@ -70,10 +81,6 @@ function condSql(cond: CompiledCond, col: RawBuilder<unknown>): RawBuilder<SqlBo
       return sql<SqlBool>`${col} in (${sql.join(cond.values)})`;
     case "notInArray":
       return sql<SqlBool>`${col} not in (${sql.join(cond.values)})`;
-    case "between":
-      return sql<SqlBool>`${col} between ${cond.from} and ${cond.to}`;
-    case "notBetween":
-      return sql<SqlBool>`${col} not between ${cond.from} and ${cond.to}`;
     case "arrayContains":
       return sql<SqlBool>`${col} @> ${cond.values}`;
     case "arrayContained":

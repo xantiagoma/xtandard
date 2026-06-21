@@ -3,9 +3,18 @@
  * query filter object. No driver dependency (returns plain objects). Text
  * matching becomes `$regex`; `between` → `$gte`/`$lte`; `inArray` → `$in`.
  *
- * Some PostgreSQL-flavored ops have no faithful Mongo equivalent and throw with
- * a clear message: `arrayContained` (use a different model), and SQL `like`/
- * `notIlike` are mapped to case-sensitive / negated regex respectively.
+ * `like`/`ilike` translate the SQL `LIKE` pattern to a regex (`%`→`.*`, `_`→`.`);
+ * `arrayContained` (array ⊆ values) has no Mongo operator and throws.
+ *
+ * @example
+ * ```ts
+ * import { buildFilter, textField, numberField } from "@xtandard/lib/filters/mongo";
+ *
+ * const spec = { name: textField({ path: "name" }), amount: numberField({ path: "amount" }) };
+ * const { filter } = buildFilter({ spec, filters, resolveDate });
+ * // filter → { $and: [{ name: { $regex: "ab", $options: "i" } }, … ] }
+ * const docs = await collection.find(filter ?? {}).toArray();
+ * ```
  */
 
 import { compileFilterNode, compileFilters, type DateFilterResolver } from "./compile.ts";
@@ -78,10 +87,6 @@ function condFilter(cond: CompiledCond): unknown {
       return { $in: cond.values };
     case "notInArray":
       return { $nin: cond.values };
-    case "between":
-      return { $gte: cond.from, $lte: cond.to };
-    case "notBetween":
-      return { $not: { $gte: cond.from, $lte: cond.to } };
     case "arrayContains":
       return { $all: cond.values };
     case "arrayOverlaps":

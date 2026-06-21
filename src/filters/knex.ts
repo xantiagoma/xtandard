@@ -4,6 +4,15 @@
  * `whereRaw`. No `knex` import: any object with `whereRaw(sql, bindings)` works,
  * keeping Knex your app's dependency. Column identifiers are server-owned and
  * validated; values are bound (`?`).
+ *
+ * @example
+ * ```ts
+ * import { applyFiltersToKnex, textField, numberField } from "@xtandard/lib/filters/knex";
+ *
+ * const spec = { name: textField({ column: "name" }), amount: numberField({ column: "amount" }) };
+ * const rows = await applyFiltersToKnex(knex("tasks"), { spec, filters, resolveDate });
+ * // or: const { sql, bindings } = buildWhereSql({ spec, filters }) ?? {}; query.whereRaw(sql, bindings);
+ * ```
  */
 
 import {
@@ -76,10 +85,6 @@ function condSql(cond: CompiledCond, ident: string): Fragment {
 
       return { sql: `${col} ${kw} (${placeholders})`, bindings: [...cond.values] };
     }
-    case "between":
-      return { sql: `${col} BETWEEN ? AND ?`, bindings: [cond.from, cond.to] };
-    case "notBetween":
-      return { sql: `${col} NOT BETWEEN ? AND ?`, bindings: [cond.from, cond.to] };
     case "arrayContains":
       return { sql: `${col} @> ?`, bindings: [cond.values] };
     case "arrayContained":
