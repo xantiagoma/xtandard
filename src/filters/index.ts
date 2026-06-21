@@ -2,8 +2,8 @@
 // plain TS types (`./types`), the portable compiler lowers a request to a
 // driver-agnostic AST (`./compile`), plus operators, sort helpers, describe, and
 // resource metadata. Validate with whatever you use; ready-made valibot schemas
-// are the optional `xantiagoma/filters/valibot` subpath. Driver WHERE builders
-// are the `xantiagoma/filters/{drizzle,kysely,knex,mongo,prisma}` subpaths.
+// are the optional `@xtandard/lib/filters/valibot` subpath. Driver WHERE builders
+// are the `@xtandard/lib/filters/{drizzle,kysely,knex,mongo,prisma}` subpaths.
 export * from "./types.ts";
 export * from "./operators.ts";
 export * from "./compile.ts";

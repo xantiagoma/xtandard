@@ -8,7 +8,7 @@ import { createKeysetSpec, createPaginator } from "../../entry-pagination.ts";
  * The Drizzle keyset bridge for cursor pagination. We use the PORTABLE
  * `createKeysetSpec` (drizzle-free — it emits a small `{ or: [{ and: [...] }] }`
  * predicate AST) and render it to Drizzle `SQL` here. We deliberately do NOT use
- * `xantiagoma/pagination/drizzle` (`toDrizzleKeyset`): its optional `drizzle-orm`
+ * `@xtandard/lib/pagination/drizzle` (`toDrizzleKeyset`): its optional `drizzle-orm`
  * peer is pinned `^0.45`, which can pull a SECOND drizzle-orm copy and collide
  * with a `1.0.0-beta` install. `combineWhere` ANDs the filter WHERE with the
  * keyset seek. Offset/page pagination needs none of this.

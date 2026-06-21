@@ -2,7 +2,7 @@ import type { Sort } from "./types.ts";
 
 /**
  * Sort helpers (pure, no validation library). The `Sort` model lives in
- * `./types.ts`; the valibot schema is in `xantiagoma/filters/valibot`. Field
+ * `./types.ts`; the valibot schema is in `@xtandard/lib/filters/valibot`. Field
  * names are public — the per-adapter column allow-list maps them to columns, so
  * a client can never sort by a column that isn't declared sortable.
  *

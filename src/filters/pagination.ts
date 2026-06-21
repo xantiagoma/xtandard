@@ -1,10 +1,10 @@
 /**
- * Pagination primitives, re-exported from `xantiagoma/pagination` so the filter
+ * Pagination primitives, re-exported from `@xtandard/lib/pagination` so the filter
  * surface is one import. These are PURE (no drizzle) — safe on the frontend:
  * `parsePaginationParams` normalizes + clamps untrusted query params into a
  * `PaginationInput`, `fromRelayArgs` does the same for GraphQL connection args,
  * and the envelope/infinite helpers shape results. The Drizzle keyset bridge
- * lives in `xantiagoma/filters/drizzle`.
+ * lives in `@xtandard/lib/filters/drizzle`.
  */
 export {
   fromRelayArgs,

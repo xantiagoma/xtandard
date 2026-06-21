@@ -2,7 +2,7 @@
  * The filter model as plain TypeScript types — the source of truth, **no
  * validation library**. Validate an untrusted request with whatever you use
  * (valibot/zod/arktype/effect/…); ready-made valibot schemas that produce these
- * exact shapes live at `xantiagoma/filters/valibot` (a `*.test-d.ts` asserts
+ * exact shapes live at `@xtandard/lib/filters/valibot` (a `*.test-d.ts` asserts
  * they match). `compileFilters` + every adapter consume these plain objects, so
  * the core and the driver adapters never depend on a validation library.
  */

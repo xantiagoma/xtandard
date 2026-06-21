@@ -1,7 +1,7 @@
 /**
  * Ready-made **valibot** schemas that validate an untrusted request into the
- * `xantiagoma/filters` model types. Optional — exposed at
- * `xantiagoma/filters/valibot` (peer `valibot` + `@js-temporal/polyfill`). Use
+ * `@xtandard/lib/filters` model types. Optional — exposed at
+ * `@xtandard/lib/filters/valibot` (peer `valibot` + `@js-temporal/polyfill`). Use
  * any Standard-Schema validator (zod/arktype/effect/…) instead if you prefer;
  * the model is just plain TS types (see `./types.ts`). A `*.test-d.ts` asserts
  * these schemas' output equals the model types.
