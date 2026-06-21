@@ -51,6 +51,8 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 @xtandard/lib/semver       → semantic-version range intervals (peer: semver)
 @xtandard/lib/ip           → IPv4/IPv6 address & CIDR intervals (peer: ipaddr.js)
 @xtandard/lib/pagination   → pagination, keyset helpers + raw SQL adapters
+@xtandard/lib/filters      → typed filter model + sort + describe + resource metadata (peer: valibot; FE-safe)
+@xtandard/lib/filters/drizzle → Drizzle WHERE/keyset builder; date resolve+describe INJECTED (peer: drizzle-orm, ts-pattern)
 @xtandard/lib/web          → browser/FormData + fetchWithProgress + keepSubDelims (peer: up-fetch)
 @xtandard/lib/tanstack     → nuqs-style URL query state for TanStack Router (peer: react, @tanstack/react-router)
 @xtandard/lib/tanstack/server   → framework-free parsers/serializer/loader/standard-schema (zero deps)

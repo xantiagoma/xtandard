@@ -183,6 +183,26 @@
         "default": "./dist/entry-tanstack-rison.cjs"
       }
     },
+    "./filters": {
+      "import": {
+        "types": "./dist/entry-filters.d.mts",
+        "default": "./dist/entry-filters.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters.d.cts",
+        "default": "./dist/entry-filters.cjs"
+      }
+    },
+    "./filters/drizzle": {
+      "import": {
+        "types": "./dist/entry-filters-drizzle.d.mts",
+        "default": "./dist/entry-filters-drizzle.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-drizzle.d.cts",
+        "default": "./dist/entry-filters-drizzle.cjs"
+      }
+    },
     "./pagination": {
       "import": {
         "types": "./dist/entry-pagination.d.mts",
@@ -358,6 +378,7 @@
     "react-dom": "^19.2.6",
     "semver": "^7.8.5",
     "sonner": "^2.0.7",
+    "ts-pattern": "^5.9.0",
     "type-testing": "^0.2.0",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
@@ -385,6 +406,7 @@
     "react": "^18.0.0 || ^19.0.0",
     "semver": "^7.8.5",
     "sonner": "^2.0.0",
+    "ts-pattern": "^5.0.0",
     "typescript": "^5",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
@@ -392,6 +414,9 @@
     "valibot": "^1.0.0"
   },
   "peerDependenciesMeta": {
+    "ts-pattern": {
+      "optional": true
+    },
     "ulid": {
       "optional": true
     },

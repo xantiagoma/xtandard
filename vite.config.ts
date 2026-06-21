@@ -68,6 +68,8 @@ export default defineConfig({
       "src/entry-tanstack-testing.ts",
       "src/entry-tanstack-temporal.ts",
       "src/entry-tanstack-rison.ts",
+      "src/entry-filters.ts",
+      "src/entry-filters-drizzle.ts",
       "src/entry-ulid.ts",
       "src/entry-temporal.ts",
       "src/entry-dataloader.ts",

@@ -43,6 +43,8 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/pagination/knex`    | Knex adapter for pagination keysets          | none                                 |
 | `@xtandard/lib/pagination/mongo`   | Mongo/Mongoose adapter for keysets           | none                                 |
 | `@xtandard/lib/pagination/prisma`  | Prisma adapter for pagination keysets        | none                                 |
+| `@xtandard/lib/filters`            | Typed filter model + sort + describe         | `valibot`                            |
+| `@xtandard/lib/filters/drizzle`    | Drizzle WHERE/keyset builder from filters    | `drizzle-orm`, `ts-pattern`          |
 | `@xtandard/lib/web`                | Browser/FormData utilities                   | none                                 |
 | `@xtandard/lib/tanstack`           | nuqs-style URL query state (TanStack Router) | `react`, `@tanstack/react-router`    |
 | `@xtandard/lib/tanstack/server`    | Framework-free parsers/serializer/loader     | none                                 |
@@ -385,6 +387,41 @@ function Pagination() {
 `keepSubDelims` (keep `( ) , : ! '` raw in the address bar, e.g. for Rison
 tokens) lives in [`@xtandard/lib/web`](#web-utilities-xtandardlibweb) and is also
 re-exported from `@xtandard/lib/tanstack`.
+
+## Filters (`@xtandard/lib/filters`)
+
+One typed filter model that spans frontend ↔ API ↔ Drizzle. The model is
+valibot-sourced (types via `v.InferOutput`, no casts): a two-level discriminated
+union — outer `kind` (date/text/number/enum/boolean/array), inner `operator`
+(Drizzle-aligned: `eq`/`lt`/`between`/`inArray`/`ilike`/`isNull`/`arrayContains`/…).
+Flat `FiltersRequestSchema` (AND list) for the common case; recursive
+`FilterNodeSchema` (and/or/not) for composition. The root entry is
+**frontend-safe** (no drizzle). **Full guide: [docs/FILTERS.md](./docs/FILTERS.md).**
+
+The `@xtandard/lib/filters/drizzle` subpath turns a request into a Drizzle `SQL`
+`WHERE` against a per-resource **allow-list** spec (`dateField`/`textField`/… make
+a kind↔column-type mismatch a compile error), plus a keyset/cursor bridge. The
+`date` kind's DST-aware resolution and chip label are **injected** (pass your own
+resolver/describer), so the package stays dependency-light and generic.
+
+```ts
+import { textField, numberField, dateField, buildWhere } from "@xtandard/lib/filters/drizzle";
+
+const spec = {
+  name: textField({ column: t.name }),
+  amount: numberField({ column: t.amount }),
+  createdAt: dateField({ column: t.createdAt }),
+};
+const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate injected for the `date` kind
+db.select().from(t).where(where);
+```
+
+| Import                          | Export                                                                                              | Source                                      |
+| ------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `@xtandard/lib/filters`         | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` + types                           | [src](./src/filters/model.ts)               |
+| `@xtandard/lib/filters`         | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata` | [src](./src/filters/)                       |
+| `@xtandard/lib/filters/drizzle` | `buildWhere` / `buildFilterNode` (injected `resolveDate`)                                           | [src](./src/filters/drizzle/build-where.ts) |
+| `@xtandard/lib/filters/drizzle` | `dateField`/`textField`/… spec builders, `buildOrderBy`, `createDrizzleKeyset`                      | [src](./src/filters/drizzle/)               |
 
 ## Recommended Libraries
 
