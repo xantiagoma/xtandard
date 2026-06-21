@@ -12,3 +12,4 @@ export * from "./describe.ts";
 export * from "./pagination.ts";
 export { parseSortParam, serializeSort } from "./sort.ts";
 export * from "./resource-metadata.ts";
+export * from "./resource-options.ts";
