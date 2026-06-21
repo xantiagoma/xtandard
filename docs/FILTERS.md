@@ -1,88 +1,71 @@
 # Filters (`@xtandard/lib/filters`)
 
-One typed filter system that spans **frontend ↔ API ↔ Drizzle**. The model is
-the source of truth (valibot → types via `v.InferOutput`, no casts); the Drizzle
-subpath compiles a request into a parameterized `WHERE`.
+One typed filter system that spans **frontend ↔ API ↔ any query builder** —
+built like [`pagination`](./PAGINATION.md): a **portable core** lowers a request
+to a driver-agnostic AST, and thin **per-driver adapters** render it.
 
-> Peers: `valibot` for the root entry (frontend-safe, no drizzle);
-> `drizzle-orm` + `ts-pattern` for `@xtandard/lib/filters/drizzle`. Both optional.
+- **Core** — `@xtandard/lib/filters`. Plain TS types + `compileFilters`. **No
+  validation library, no driver.**
+- **Validation (optional)** — `@xtandard/lib/filters/valibot` (ready-made valibot
+  schemas). Or validate with any Standard Schema (zod/arktype/effect/…).
+- **Adapters** — `@xtandard/lib/filters/{drizzle,kysely,knex,mongo,prisma}`.
 
-## The model (`@xtandard/lib/filters`)
+## The model (types only)
 
-A two-level discriminated union:
+The model is a two-level discriminated union (plain TS types — `./types.ts`):
 
-- **outer `kind`** — the column data kind: `text` / `number` / `enum` /
-  `boolean` / `date` / `array`.
-- **inner `operator`** — the argument shape within a kind, **Drizzle-aligned**:
-  scalar (`eq`/`ne`/`lt`/`gt`/`lte`/`gte`/`like`/`ilike`/`notIlike`/`contains`/
-  `startsWith`/`endsWith`), range (`between`/`notBetween`), set
-  (`inArray`/`notInArray`), array (`arrayContains`/`arrayContained`/
-  `arrayOverlaps`), unary (`isNull`/`isNotNull`), and the `date` **preset**
-  (`is`/`before`/`after`/`between` over a unit).
+- **outer `kind`** — `text` / `number` / `enum` / `boolean` / `date` / `array`.
+- **inner `operator`** — the argument shape, Drizzle-aligned: scalar
+  (`eq`/`ne`/`lt`/`gt`/`lte`/`gte`), text-match
+  (`contains`/`startsWith`/`endsWith`/`like`/`ilike`/`notIlike`), range
+  (`between`/`notBetween`), set (`inArray`/`notInArray`), array
+  (`arrayContains`/`arrayContained`/`arrayOverlaps`), unary (`isNull`/`isNotNull`),
+  and the `date` **preset** (`is`/`before`/`after`/`between` over a unit).
+
+A request is a flat AND list (`ColumnFilter[]` / `FiltersRequest`) or a recursive
+`FilterNode` tree (`and`/`or`/`not`). `Sort` is a `{ field, dir }[]`.
+
+## Validation — bring your own
+
+The core consumes plain typed objects, so you can validate the incoming request
+with **whatever you use** and pass the result straight to `compileFilters` / an
+adapter's `buildWhere`:
 
 ```ts
+// valibot (the optional ready-made schemas)
+import { FiltersRequestSchema } from "@xtandard/lib/filters/valibot";
 import * as v from "valibot";
-import { FieldFilterSchema, FiltersRequestSchema, FilterNodeSchema } from "@xtandard/lib/filters";
+const filters = v.parse(FiltersRequestSchema, input);
 
-// Validate an untrusted request (parse → typed discriminated union, no cast):
-const filters = v.parse(FiltersRequestSchema, [
-  { field: "status", filter: { kind: "enum", operator: "inArray", values: ["open", "done"] } },
-  { field: "amount", filter: { kind: "number", operator: "between", from: 10, to: 100 } },
-]);
+// or zod / arktype / effect — validate into the same `ColumnFilter[]` shape and
+// pass it in; @xtandard/lib/filters never imports a validation library.
 ```
 
-`FiltersRequestSchema` is the flat AND-combined list (the common case);
-`FilterNodeSchema` is the recursive `and`/`or`/`not` tree for composition.
+`@xtandard/lib/filters/valibot` exports `FieldFilterSchema`, `ColumnFilterSchema`,
+`FiltersRequestSchema`, `FilterNodeSchema`, `SortSchema`, `DatePresetSchema`. A
+`*.test-d.ts` asserts their output equals the model types (no drift). Peers:
+`valibot` + `@js-temporal/polyfill` (the `date` preset's anchor is a
+`Temporal.PlainDateTime` string; the timezone is IANA-validated).
 
-Also in the root entry (all frontend-safe):
+## The portable compiler
 
-- `*_OPERATORS` + `OPERATORS_BY_KIND` — the operator vocabulary per kind, for UI
-  pickers.
-- `parseSortParam` / `serializeSort` — compact `"createdAt:desc,name:asc"` ⇄ a
-  `{ field, dir }[]` sort model.
-- `describeFieldFilter` / `describeColumnFilter` — human chip labels. The `date`
-  preset's label is supplied by an injected `describeDate` (see below); without
-  it a date preset falls back to its operator label.
-- `ResourceMetadata` / `FieldMetadata` — a serializable wire contract a backend
-  can expose (e.g. at `…/_metadata`) and a frontend can render from.
+`compileFilters({ spec, filters, resolveDate })` → `{ where: CompiledWhere | null }`.
+`spec` is the per-field **kind allow-list** (`Record<field, FieldKind>`); a field
+not in `spec`, or whose filter kind mismatches, is dropped. `CompiledWhere` is an
+`and`/`or`/`not` tree of normalized leaf conditions (`{ field, op, value/… }`).
 
-## The Drizzle builder (`@xtandard/lib/filters/drizzle`)
+Lowering rules: the `date` preset is resolved to `gte`/`lt` (`Date` bounds) via
+the injected `resolveDate`; text-match ops stay **semantic** (each adapter
+renders `contains`→`ilike`/`$regex`/`contains`-mode natively).
 
-Compile a request into a Drizzle `SQL` `WHERE`, allow-listed by a per-resource
-**spec**. The spec maps each public field name to its column + kind; anything
-not in the spec is dropped (never trust client-supplied column access). The
-`dateField`/`textField`/`numberField`/… builders constrain the column by its
-SELECT type, so a kind↔column mismatch is a **compile error**.
+You rarely call `compileFilters` directly — the adapters do, via their typed
+spec. It's exported for writing your own adapter.
 
-```ts
-import {
-  buildWhere,
-  dateField,
-  numberField,
-  textField,
-  enumField,
-} from "@xtandard/lib/filters/drizzle";
+## The `date` kind is injected
 
-const spec = {
-  name: textField({ column: tasks.name }),
-  status: enumField({ column: tasks.status }),
-  amount: numberField({ column: tasks.amount }),
-  createdAt: dateField({ column: tasks.createdAt }),
-};
-
-const { where } = buildWhere({ spec, filters, resolveDate });
-db.select().from(tasks).where(where);
-```
-
-`buildFilterNode({ spec, node, resolveDate })` does the same for the recursive
-and/or/not tree.
-
-### The `date` kind is injected
-
-The `date` preset is a DST-aware period (e.g. "this month in America/Los_Angeles")
-that resolves to a half-open `[gte, lt)` instant window. That resolution — and
-the human label — are **app-specific**, so the builder takes them as injected
-functions instead of bundling a date library:
+A `date` preset (e.g. "this month in America/Los_Angeles") resolves to a
+half-open `[gte, lt)` instant window. That resolution — and the human label —
+are app-specific, so they're **injected** rather than bundling a date library:
 
 ```ts
 type DateFilterResolver = (input: { value: DatePreset }) => {
@@ -91,30 +74,74 @@ type DateFilterResolver = (input: { value: DatePreset }) => {
 };
 ```
 
-Pass `resolveDate` to `buildWhere`/`buildFilterNode` (a `date` preset filter
-without it throws). For the chip label, pass `describeDate` to
-`describeFieldFilter`. demi.casa wires its `@demi.casa/time` `resolveDateFilter`
-/ `describeDateSelectorValue`; any equivalent that returns `Date` bounds works.
+Pass `resolveDate` to any adapter's `buildWhere` (a `date` preset without it
+throws); pass `describeDate` to `describeFieldFilter` for chip labels. demi.casa
+wires its `@demi.casa/time` `resolveDateFilter` / `describeDateSelectorValue`.
 
-The temporal valibot schemas the model needs (`PlainDateTimeSchema`) and
-`isValidTimeZone` live in [`@xtandard/lib/valibot`](#) (peers `valibot` +
-`@js-temporal/polyfill`).
+## Adapters
 
-### Sorting & cursor pagination
+Every adapter exposes typed `dateField`/`textField`/`numberField`/`enumField`/
+`booleanField`/`arrayField` spec builders (the allow-list + column/path mapping)
+and `buildWhere` / `buildFilterNode`. They share the same model + compiler, so
+the only difference is the column reference and the WHERE representation.
 
-- `buildOrderBy({ sort, columns, defaultSort })` → Drizzle `orderBy` SQL,
-  allow-listed to `columns`. Use with `db.select(...).orderBy(...)` (NOT the RQB
-  query — RQB aliases the root table and breaks column-referencing SQL).
-- `createDrizzleKeyset({ sort, columns })` → a keyset/cursor helper
-  (`keys()`/`orderBy()`/`where()`) rendered from the portable
-  `@xtandard/lib/pagination` `createKeysetSpec`; `combineWhere(...)` ANDs the
-  filter `WHERE` with the keyset seek. (We render the portable AST to SQL here
-  rather than using `@xtandard/lib/pagination/drizzle`, whose `^0.45`
-  `drizzle-orm` peer can collide with a `1.0.0-beta` install.)
+### Drizzle (`/drizzle`, peer `drizzle-orm`)
 
-## Pagination re-exports
+```ts
+import { buildWhere, textField, numberField, dateField } from "@xtandard/lib/filters/drizzle";
 
-`@xtandard/lib/filters` re-exports the frontend-safe pagination helpers
-(`parsePaginationParams`, `fromRelayArgs`, `toRelayConnection`, `toRestEnvelope`,
-`infinitePaginationOptions`) from `@xtandard/lib/pagination` so the filter
-surface is one import. Full pagination guide: [docs/PAGINATION.md](./PAGINATION.md).
+const spec = {
+  name: textField({ column: t.name }), // ColumnOf<string> — a kind↔column mismatch is a compile error
+  amount: numberField({ column: t.amount }),
+  createdAt: dateField({ column: t.createdAt }),
+};
+const { where } = buildWhere({ spec, filters, resolveDate });
+db.select().from(t).where(where);
+```
+
+Also `buildOrderBy({ sort, columns, defaultSort })` and `createDrizzleKeyset`
+(cursor seek, rendered from the portable `@xtandard/lib/pagination` keyset).
+
+### Kysely (`/kysely`, peer `kysely`)
+
+`textField({ column: "posts.name" })` (a `sql.ref`) or a `sql` `RawBuilder`.
+`buildWhere(...)` → `RawBuilder<SqlBool> | undefined`; `buildOrderBy(...)` →
+order expressions. PostgreSQL flavor (`ilike`, array `@>`/`<@`/`&&`).
+
+### Knex (`/knex`, no driver dep)
+
+`textField({ column: "name" })` (server-owned identifier, validated).
+`buildWhereSql(...)` → `{ sql, bindings }` (parameterized, `?`); or
+`applyFiltersToKnex(query, { spec, filters, resolveDate })` via `whereRaw`.
+
+### Mongo (`/mongo`, no driver dep)
+
+`textField({ path: "name" })`. `buildFilter(...)` → a plain Mongo filter object
+(text → `$regex`, `between` → `$gte`/`$lte`, `inArray` → `$in`, `and`/`or`/`not`
+→ `$and`/`$or`/`$nor`).
+
+### Prisma (`/prisma`, no driver dep)
+
+`textField({ field: "name" })`. `buildWhere(...)` → a plain Prisma `where`
+object (text → `contains`/`startsWith`/`endsWith` with `mode: "insensitive"`,
+`between` → `gte`/`lte`, `inArray` → `in`, array → `hasEvery`/`hasSome`).
+
+### Cross-driver caveats (documented limitations)
+
+The model is PostgreSQL-leaning. Where an op has no faithful native equivalent
+the adapter **throws a clear error** rather than emitting something wrong:
+
+- Mongo/Prisma `arrayContained` (array ⊆ values) — no native operator.
+- Prisma `like`/`ilike`/`notIlike` (arbitrary `%`/`_` patterns) — use
+  `contains`/`startsWith`/`endsWith` instead.
+- Mongo maps `like`→case-sensitive regex, `ilike`→case-insensitive, by
+  translating the SQL `LIKE` pattern (`%`→`.*`, `_`→`.`).
+
+## Frontend helpers
+
+`@xtandard/lib/filters` also re-exports the frontend-safe pieces — `*_OPERATORS`
+/ `OPERATORS_BY_KIND` (UI operator pickers), `parseSortParam` / `serializeSort`,
+`describeFieldFilter` / `describeColumnFilter` (chip labels; `date` label
+injected), `ResourceMetadata` / `FieldMetadata` (a serializable `…/_metadata`
+contract), and the `@xtandard/lib/pagination` request helpers
+(`parsePaginationParams`, `fromRelayArgs`, `toRelayConnection`, …).

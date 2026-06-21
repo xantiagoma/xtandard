@@ -193,6 +193,16 @@
         "default": "./dist/entry-filters.cjs"
       }
     },
+    "./filters/valibot": {
+      "import": {
+        "types": "./dist/entry-filters-valibot.d.mts",
+        "default": "./dist/entry-filters-valibot.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-valibot.d.cts",
+        "default": "./dist/entry-filters-valibot.cjs"
+      }
+    },
     "./filters/drizzle": {
       "import": {
         "types": "./dist/entry-filters-drizzle.d.mts",
@@ -201,6 +211,46 @@
       "require": {
         "types": "./dist/entry-filters-drizzle.d.cts",
         "default": "./dist/entry-filters-drizzle.cjs"
+      }
+    },
+    "./filters/kysely": {
+      "import": {
+        "types": "./dist/entry-filters-kysely.d.mts",
+        "default": "./dist/entry-filters-kysely.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-kysely.d.cts",
+        "default": "./dist/entry-filters-kysely.cjs"
+      }
+    },
+    "./filters/knex": {
+      "import": {
+        "types": "./dist/entry-filters-knex.d.mts",
+        "default": "./dist/entry-filters-knex.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-knex.d.cts",
+        "default": "./dist/entry-filters-knex.cjs"
+      }
+    },
+    "./filters/mongo": {
+      "import": {
+        "types": "./dist/entry-filters-mongo.d.mts",
+        "default": "./dist/entry-filters-mongo.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-mongo.d.cts",
+        "default": "./dist/entry-filters-mongo.cjs"
+      }
+    },
+    "./filters/prisma": {
+      "import": {
+        "types": "./dist/entry-filters-prisma.d.mts",
+        "default": "./dist/entry-filters-prisma.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-prisma.d.cts",
+        "default": "./dist/entry-filters-prisma.cjs"
       }
     },
     "./pagination": {
@@ -378,7 +428,6 @@
     "react-dom": "^19.2.6",
     "semver": "^7.8.5",
     "sonner": "^2.0.7",
-    "ts-pattern": "^5.9.0",
     "type-testing": "^0.2.0",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
@@ -406,7 +455,6 @@
     "react": "^18.0.0 || ^19.0.0",
     "semver": "^7.8.5",
     "sonner": "^2.0.0",
-    "ts-pattern": "^5.0.0",
     "typescript": "^5",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
@@ -414,9 +462,6 @@
     "valibot": "^1.0.0"
   },
   "peerDependenciesMeta": {
-    "ts-pattern": {
-      "optional": true
-    },
     "ulid": {
       "optional": true
     },

@@ -26,38 +26,43 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Entry Points
 
-| Import                             | Description                                  | Dependencies                         |
-| ---------------------------------- | -------------------------------------------- | ------------------------------------ |
-| `@xtandard/lib`                    | Core utilities (isomorphic, zero deps)       | none                                 |
-| `@xtandard/lib/interval`           | Generic `Interval<T>` (Guava Range)          | none                                 |
-| `@xtandard/lib/dinero`             | Money intervals (`Interval` of money)        | `dinero.js`                          |
-| `@xtandard/lib/decimal`            | Exact-decimal intervals (decimal.js)         | `decimal.js`                         |
-| `@xtandard/lib/big`                | Exact-decimal intervals (big.js)             | `big.js`                             |
-| `@xtandard/lib/bignumber`          | Exact-decimal intervals (bignumber.js)       | `bignumber.js`                       |
-| `@xtandard/lib/fraction`           | Exact-rational intervals (fraction.js)       | `fraction.js`                        |
-| `@xtandard/lib/semver`             | Semantic-version range intervals             | `semver`                             |
-| `@xtandard/lib/ip`                 | IPv4/IPv6 address & CIDR intervals           | `ipaddr.js`                          |
-| `@xtandard/lib/pagination`         | Pagination + keyset helpers                  | none                                 |
-| `@xtandard/lib/pagination/drizzle` | Drizzle adapter for pagination keysets       | `drizzle-orm`                        |
-| `@xtandard/lib/pagination/kysely`  | Kysely adapter for pagination keysets        | `kysely`                             |
-| `@xtandard/lib/pagination/knex`    | Knex adapter for pagination keysets          | none                                 |
-| `@xtandard/lib/pagination/mongo`   | Mongo/Mongoose adapter for keysets           | none                                 |
-| `@xtandard/lib/pagination/prisma`  | Prisma adapter for pagination keysets        | none                                 |
-| `@xtandard/lib/filters`            | Typed filter model + sort + describe         | `valibot`                            |
-| `@xtandard/lib/filters/drizzle`    | Drizzle WHERE/keyset builder from filters    | `drizzle-orm`, `ts-pattern`          |
-| `@xtandard/lib/web`                | Browser/FormData utilities                   | none                                 |
-| `@xtandard/lib/tanstack`           | nuqs-style URL query state (TanStack Router) | `react`, `@tanstack/react-router`    |
-| `@xtandard/lib/tanstack/server`    | Framework-free parsers/serializer/loader     | none                                 |
-| `@xtandard/lib/tanstack/testing`   | Headless testing adapter (no router)         | `react`                              |
-| `@xtandard/lib/tanstack/temporal`  | Temporal-kind URL parsers                    | `@js-temporal/polyfill`, `valibot`   |
-| `@xtandard/lib/tanstack/rison`     | Rison value codec for `parseAsCodec`         | `@effective/rison`, `valibot`        |
-| `@xtandard/lib/ulid`               | Prefixed ULID generation + helpers           | `ulid`                               |
-| `@xtandard/lib/temporal`           | Date/time/duration + Temporal intervals      | `@js-temporal/polyfill`, `itty-time` |
-| `@xtandard/lib/dataloader`         | DataLoader factory                           | `dataloader`                         |
-| `@xtandard/lib/unstorage`          | Cache helpers with unstorage                 | `unstorage`, `ohash`                 |
-| `@xtandard/lib/valibot`            | TimeZone validation schema                   | `valibot`                            |
-| `@xtandard/lib/sonner`             | Toast streaming for iterables                | `sonner`, `react`                    |
-| `@xtandard/lib/react`              | React hooks + components                     | `react`, `@tanstack/react-query`     |
+| Import                             | Description                                              | Dependencies                         |
+| ---------------------------------- | -------------------------------------------------------- | ------------------------------------ |
+| `@xtandard/lib`                    | Core utilities (isomorphic, zero deps)                   | none                                 |
+| `@xtandard/lib/interval`           | Generic `Interval<T>` (Guava Range)                      | none                                 |
+| `@xtandard/lib/dinero`             | Money intervals (`Interval` of money)                    | `dinero.js`                          |
+| `@xtandard/lib/decimal`            | Exact-decimal intervals (decimal.js)                     | `decimal.js`                         |
+| `@xtandard/lib/big`                | Exact-decimal intervals (big.js)                         | `big.js`                             |
+| `@xtandard/lib/bignumber`          | Exact-decimal intervals (bignumber.js)                   | `bignumber.js`                       |
+| `@xtandard/lib/fraction`           | Exact-rational intervals (fraction.js)                   | `fraction.js`                        |
+| `@xtandard/lib/semver`             | Semantic-version range intervals                         | `semver`                             |
+| `@xtandard/lib/ip`                 | IPv4/IPv6 address & CIDR intervals                       | `ipaddr.js`                          |
+| `@xtandard/lib/pagination`         | Pagination + keyset helpers                              | none                                 |
+| `@xtandard/lib/pagination/drizzle` | Drizzle adapter for pagination keysets                   | `drizzle-orm`                        |
+| `@xtandard/lib/pagination/kysely`  | Kysely adapter for pagination keysets                    | `kysely`                             |
+| `@xtandard/lib/pagination/knex`    | Knex adapter for pagination keysets                      | none                                 |
+| `@xtandard/lib/pagination/mongo`   | Mongo/Mongoose adapter for keysets                       | none                                 |
+| `@xtandard/lib/pagination/prisma`  | Prisma adapter for pagination keysets                    | none                                 |
+| `@xtandard/lib/filters`            | Filter model (types) + portable compiler + sort/describe | none                                 |
+| `@xtandard/lib/filters/valibot`    | Ready-made valibot schemas for the model                 | `valibot`, `@js-temporal/polyfill`   |
+| `@xtandard/lib/filters/drizzle`    | Drizzle WHERE builder + keyset from filters              | `drizzle-orm`                        |
+| `@xtandard/lib/filters/kysely`     | Kysely WHERE builder from filters                        | `kysely`                             |
+| `@xtandard/lib/filters/knex`       | Knex raw-SQL WHERE builder from filters                  | none                                 |
+| `@xtandard/lib/filters/mongo`      | Mongo filter object from filters                         | none                                 |
+| `@xtandard/lib/filters/prisma`     | Prisma `where` object from filters                       | none                                 |
+| `@xtandard/lib/web`                | Browser/FormData utilities                               | none                                 |
+| `@xtandard/lib/tanstack`           | nuqs-style URL query state (TanStack Router)             | `react`, `@tanstack/react-router`    |
+| `@xtandard/lib/tanstack/server`    | Framework-free parsers/serializer/loader                 | none                                 |
+| `@xtandard/lib/tanstack/testing`   | Headless testing adapter (no router)                     | `react`                              |
+| `@xtandard/lib/tanstack/temporal`  | Temporal-kind URL parsers                                | `@js-temporal/polyfill`, `valibot`   |
+| `@xtandard/lib/tanstack/rison`     | Rison value codec for `parseAsCodec`                     | `@effective/rison`, `valibot`        |
+| `@xtandard/lib/ulid`               | Prefixed ULID generation + helpers                       | `ulid`                               |
+| `@xtandard/lib/temporal`           | Date/time/duration + Temporal intervals                  | `@js-temporal/polyfill`, `itty-time` |
+| `@xtandard/lib/dataloader`         | DataLoader factory                                       | `dataloader`                         |
+| `@xtandard/lib/unstorage`          | Cache helpers with unstorage                             | `unstorage`, `ohash`                 |
+| `@xtandard/lib/valibot`            | TimeZone validation schema                               | `valibot`                            |
+| `@xtandard/lib/sonner`             | Toast streaming for iterables                            | `sonner`, `react`                    |
+| `@xtandard/lib/react`              | React hooks + components                                 | `react`, `@tanstack/react-query`     |
 
 Sub-entry dependencies are **optional peer deps** — only install what you use.
 
@@ -390,38 +395,51 @@ re-exported from `@xtandard/lib/tanstack`.
 
 ## Filters (`@xtandard/lib/filters`)
 
-One typed filter model that spans frontend ↔ API ↔ Drizzle. The model is
-valibot-sourced (types via `v.InferOutput`, no casts): a two-level discriminated
-union — outer `kind` (date/text/number/enum/boolean/array), inner `operator`
-(Drizzle-aligned: `eq`/`lt`/`between`/`inArray`/`ilike`/`isNull`/`arrayContains`/…).
-Flat `FiltersRequestSchema` (AND list) for the common case; recursive
-`FilterNodeSchema` (and/or/not) for composition. The root entry is
-**frontend-safe** (no drizzle). **Full guide: [docs/FILTERS.md](./docs/FILTERS.md).**
+One typed filter system spanning frontend ↔ API ↔ any query builder, built like
+`pagination`: a **portable core** + **per-driver adapters**. **Full guide:
+[docs/FILTERS.md](./docs/FILTERS.md).**
 
-The `@xtandard/lib/filters/drizzle` subpath turns a request into a Drizzle `SQL`
-`WHERE` against a per-resource **allow-list** spec (`dateField`/`textField`/… make
-a kind↔column-type mismatch a compile error), plus a keyset/cursor bridge. The
-`date` kind's DST-aware resolution and chip label are **injected** (pass your own
-resolver/describer), so the package stays dependency-light and generic.
+- **Core (`@xtandard/lib/filters`)** is **validation-library-free** and
+  **driver-free**: the model is plain TS types (a two-level discriminated union —
+  `kind` × Drizzle-aligned `operator`), and `compileFilters({ spec, filters,
+resolveDate })` lowers a request to a **portable `CompiledWhere` AST**. Validate
+  the request with whatever you use (valibot/zod/arktype/effect/…) — the core
+  never imports one.
+- **Validation (optional):** ready-made **valibot** schemas at
+  `@xtandard/lib/filters/valibot` that validate into the model types (a
+  `*.test-d.ts` asserts no drift). Or bring your own Standard Schema.
+- **Adapters** render the AST per driver:
+  `@xtandard/lib/filters/{drizzle,kysely,knex,mongo,prisma}` — each with typed
+  `dateField`/`textField`/… spec builders (allow-list) + `buildWhere`.
+- The **`date` kind is injected** — its DST-aware `resolveDate` (→ `[gte, lt)`)
+  and chip-label `describeDate` are passed in, so no date library is bundled.
 
 ```ts
-import { textField, numberField, dateField, buildWhere } from "@xtandard/lib/filters/drizzle";
+import { FiltersRequestSchema } from "@xtandard/lib/filters/valibot"; // optional validation
+import { buildWhere, textField, numberField, dateField } from "@xtandard/lib/filters/drizzle";
+import * as v from "valibot";
 
+const filters = v.parse(FiltersRequestSchema, await req.json());
 const spec = {
   name: textField({ column: t.name }),
   amount: numberField({ column: t.amount }),
   createdAt: dateField({ column: t.createdAt }),
 };
-const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate injected for the `date` kind
+const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate injected for `date`
 db.select().from(t).where(where);
 ```
 
-| Import                          | Export                                                                                              | Source                                      |
-| ------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `@xtandard/lib/filters`         | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` + types                           | [src](./src/filters/model.ts)               |
-| `@xtandard/lib/filters`         | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata` | [src](./src/filters/)                       |
-| `@xtandard/lib/filters/drizzle` | `buildWhere` / `buildFilterNode` (injected `resolveDate`)                                           | [src](./src/filters/drizzle/build-where.ts) |
-| `@xtandard/lib/filters/drizzle` | `dateField`/`textField`/… spec builders, `buildOrderBy`, `createDrizzleKeyset`                      | [src](./src/filters/drizzle/)               |
+| Import                          | Export                                                                                              | Source                          |
+| ------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `@xtandard/lib/filters`         | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                          | [src](./src/filters/types.ts)   |
+| `@xtandard/lib/filters`         | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                     | [src](./src/filters/compile.ts) |
+| `@xtandard/lib/filters`         | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata` | [src](./src/filters/)           |
+| `@xtandard/lib/filters/valibot` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema`                    | [src](./src/filters/schemas.ts) |
+| `@xtandard/lib/filters/drizzle` | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                | [src](./src/filters/drizzle/)   |
+| `@xtandard/lib/filters/kysely`  | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                     | [src](./src/filters/kysely.ts)  |
+| `@xtandard/lib/filters/knex`    | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                           | [src](./src/filters/knex.ts)    |
+| `@xtandard/lib/filters/mongo`   | `buildFilter` → Mongo filter object                                                                 | [src](./src/filters/mongo.ts)   |
+| `@xtandard/lib/filters/prisma`  | `buildWhere` → Prisma `where` object                                                                | [src](./src/filters/prisma.ts)  |
 
 ## Recommended Libraries
 

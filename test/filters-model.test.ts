@@ -2,7 +2,11 @@ import { describe, expect, test } from "vitest";
 import * as v from "valibot";
 
 import { describeColumnFilter, describeFieldFilter } from "../src/filters/describe.ts";
-import { FieldFilterSchema, FilterNodeSchema, FiltersRequestSchema } from "../src/filters/model.ts";
+import {
+  FieldFilterSchema,
+  FilterNodeSchema,
+  FiltersRequestSchema,
+} from "../src/filters/schemas.ts";
 
 describe("FieldFilterSchema", () => {
   test("parses a date preset into the discriminated union", () => {

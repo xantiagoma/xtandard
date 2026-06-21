@@ -1,4 +1,4 @@
-import type { ColumnFilter, DatePreset, FieldFilter } from "./model.ts";
+import type { ColumnFilter, DatePreset, FieldFilter } from "./types.ts";
 
 /**
  * Frontend-safe human labels for active filters (chips, summaries). No drizzle,

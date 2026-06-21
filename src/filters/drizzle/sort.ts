@@ -2,7 +2,7 @@ import type { AnyColumn, SQL } from "drizzle-orm";
 
 import { asc, desc } from "drizzle-orm";
 
-import type { Sort } from "../sort.ts";
+import type { Sort } from "../types.ts";
 
 /**
  * Compile a `Sort` into Drizzle `orderBy` SQL, allow-listed to `columns` (a

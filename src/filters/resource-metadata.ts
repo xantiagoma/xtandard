@@ -1,5 +1,4 @@
-import type { FieldKind } from "./model.ts";
-import type { Sort } from "./sort.ts";
+import type { FieldKind, Sort } from "./types.ts";
 
 import {
   ARRAY_OPERATORS,

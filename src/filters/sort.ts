@@ -1,27 +1,14 @@
-import * as v from "valibot";
+import type { Sort } from "./types.ts";
 
 /**
- * Sort model — a list of `{ field, dir }` applied in order. Field names are
- * public (the resource allow-list maps them to columns, just like filters), so
+ * Sort helpers (pure, no validation library). The `Sort` model lives in
+ * `./types.ts`; the valibot schema is in `xantiagoma/filters/valibot`. Field
+ * names are public — the per-adapter column allow-list maps them to columns, so
  * a client can never sort by a column that isn't declared sortable.
- */
-export const SortDirectionSchema = v.picklist(["asc", "desc"]);
-
-export const SortItemSchema = v.object({
-  field: v.string(),
-  dir: SortDirectionSchema,
-});
-
-export const SortSchema = v.array(SortItemSchema);
-
-export type SortDirection = v.InferOutput<typeof SortDirectionSchema>;
-export type SortItem = v.InferOutput<typeof SortItemSchema>;
-export type Sort = v.InferOutput<typeof SortSchema>;
-
-/**
- * Parse a compact `sort` query param into the model: `"createdAt:desc,name:asc"`.
- * Unknown/malformed entries are dropped (the allow-list in the where-builder is
- * the real guard). Returns `[]` for empty/absent input.
+ *
+ * Parse a compact `sort` query param: `"createdAt:desc,name:asc"`. Unknown/
+ * malformed entries are dropped (the allow-list is the real guard). Empty/absent
+ * input → `[]`.
  */
 export function parseSortParam(input: { value: string | null | undefined }): { sort: Sort } {
   if (!input.value) return { sort: [] };

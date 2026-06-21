@@ -1,0 +1,199 @@
+/**
+ * The portable compiler: lower the filter model + a kind allow-list into a
+ * driver-agnostic {@link CompiledWhere} AST that every adapter renders. No
+ * validation library, no driver — pure data in, pure data out.
+ *
+ * Lowering rules: a non-allow-listed (or kind-mismatched) field is dropped; the
+ * `date` preset is resolved to `gte`/`lt` via the injected `resolveDate`; text
+ * `contains`/`startsWith`/`endsWith` become `ilike` with an escaped pattern.
+ */
+
+import type {
+  ColumnFilter,
+  CompiledCond,
+  CompiledWhere,
+  DatePreset,
+  FieldFilter,
+  FieldKind,
+  FieldKindSpec,
+  FilterNode,
+} from "./types.ts";
+
+/** Resolve a `date`-preset filter to half-open `[start, end)` instant bounds. */
+export type DateFilterResolver = (input: { value: DatePreset }) => {
+  start: Date | null;
+  end: Date | null;
+};
+
+// Postgres-style LIKE/ILIKE wildcards escaped for the ergonomic
+// contains/startsWith/endsWith affordances (default escape char is backslash).
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Lower a semantic text-match op to a SQL `LIKE`/`ILIKE` `(op, pattern)` —
+ * shared by the SQL adapters (drizzle/kysely/knex). `contains`/`startsWith`/
+ * `endsWith` become `ilike` with an escaped `%` pattern; `like`/`ilike`/
+ * `notIlike` pass the pattern through verbatim.
+ */
+export function sqlTextOp(
+  op: "contains" | "startsWith" | "endsWith" | "like" | "ilike" | "notIlike",
+  value: string,
+): { op: "like" | "ilike" | "notIlike"; pattern: string } {
+  switch (op) {
+    case "contains":
+      return { op: "ilike", pattern: `%${escapeLike(value)}%` };
+    case "startsWith":
+      return { op: "ilike", pattern: `${escapeLike(value)}%` };
+    case "endsWith":
+      return { op: "ilike", pattern: `%${escapeLike(value)}` };
+    case "like":
+      return { op: "like", pattern: value };
+    case "ilike":
+      return { op: "ilike", pattern: value };
+    case "notIlike":
+      return { op: "notIlike", pattern: value };
+  }
+}
+
+function condsForField(input: {
+  field: string;
+  filter: FieldFilter;
+  resolveDate: DateFilterResolver | undefined;
+}): CompiledCond[] {
+  const { field, filter, resolveDate } = input;
+
+  // Narrow by property presence (reliable across the kind × variant unions);
+  // the `*Unary` variants (isNull/isNotNull) have none of value/values/from.
+  switch (filter.kind) {
+    case "text": {
+      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
+      if ("value" in filter) {
+        // eq/ne are scalar; contains/startsWith/endsWith/like/ilike/notIlike stay
+        // SEMANTIC in the AST (each adapter renders them natively).
+        if (filter.operator === "eq" || filter.operator === "ne") {
+          return [{ field, op: filter.operator, value: filter.value }];
+        }
+
+        return [{ field, op: filter.operator, value: filter.value }];
+      }
+
+      return [{ field, op: filter.operator }];
+    }
+    case "number": {
+      if ("from" in filter)
+        return [{ field, op: filter.operator, from: filter.from, to: filter.to }];
+      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
+      if ("value" in filter) return [{ field, op: filter.operator, value: filter.value }];
+      return [{ field, op: filter.operator }];
+    }
+    case "enum": {
+      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
+      if ("value" in filter) return [{ field, op: filter.operator, value: filter.value }];
+      return [{ field, op: filter.operator }];
+    }
+    case "boolean": {
+      if ("value" in filter) return [{ field, op: filter.operator, value: filter.value }];
+      return [{ field, op: filter.operator }];
+    }
+    case "array": {
+      if ("values" in filter) return [{ field, op: filter.operator, values: filter.values }];
+      return [{ field, op: filter.operator }];
+    }
+    case "date": {
+      if (!("anchor" in filter)) return [{ field, op: filter.operator }];
+
+      if (!resolveDate) {
+        throw new Error(
+          "compileFilters: a `date` preset filter requires a `resolveDate` resolver (none provided).",
+        );
+      }
+
+      const { start, end } = resolveDate({ value: filter });
+      const out: CompiledCond[] = [];
+      if (start) out.push({ field, op: "gte", value: start });
+      if (end) out.push({ field, op: "lt", value: end });
+
+      return out;
+    }
+  }
+}
+
+function kindOf(spec: FieldKindSpec, field: string): FieldKind | undefined {
+  return spec[field];
+}
+
+function asWhere(conds: CompiledCond[]): CompiledWhere | null {
+  if (conds.length === 0) return null;
+  if (conds.length === 1) {
+    const only = conds[0];
+    if (only) return { type: "cond", cond: only };
+  }
+
+  return { type: "and", nodes: conds.map((cond) => ({ type: "cond", cond })) };
+}
+
+/**
+ * Compile a flat AND-combined list of column filters into a {@link CompiledWhere}
+ * (or `null` when nothing is allow-listed). `spec` is the per-field kind
+ * allow-list — a field not in `spec`, or whose filter kind doesn't match, is
+ * dropped.
+ */
+export function compileFilters(input: {
+  spec: FieldKindSpec;
+  filters: ColumnFilter[];
+  resolveDate?: DateFilterResolver;
+}): { where: CompiledWhere | null } {
+  const conds: CompiledCond[] = [];
+
+  for (const { field, filter } of input.filters) {
+    if (kindOf(input.spec, field) !== filter.kind) continue; // not allow-listed / kind mismatch
+
+    conds.push(...condsForField({ field, filter, resolveDate: input.resolveDate }));
+  }
+
+  return { where: asWhere(conds) };
+}
+
+function nodeToWhere(
+  spec: FieldKindSpec,
+  node: FilterNode,
+  resolveDate: DateFilterResolver | undefined,
+): CompiledWhere | null {
+  switch (node.type) {
+    case "column": {
+      if (kindOf(spec, node.field) !== node.filter.kind) return null;
+
+      return asWhere(condsForField({ field: node.field, filter: node.filter, resolveDate }));
+    }
+    case "and": {
+      const nodes = node.nodes
+        .map((n) => nodeToWhere(spec, n, resolveDate))
+        .filter((w): w is CompiledWhere => w !== null);
+
+      return nodes.length > 0 ? { type: "and", nodes } : null;
+    }
+    case "or": {
+      const nodes = node.nodes
+        .map((n) => nodeToWhere(spec, n, resolveDate))
+        .filter((w): w is CompiledWhere => w !== null);
+
+      return nodes.length > 0 ? { type: "or", nodes } : null;
+    }
+    case "not": {
+      const inner = nodeToWhere(spec, node.node, resolveDate);
+
+      return inner ? { type: "not", node: inner } : null;
+    }
+  }
+}
+
+/** Compile a recursive and/or/not tree into a {@link CompiledWhere} (or `null`). */
+export function compileFilterNode(input: {
+  spec: FieldKindSpec;
+  node: FilterNode;
+  resolveDate?: DateFilterResolver;
+}): { where: CompiledWhere | null } {
+  return { where: nodeToWhere(input.spec, input.node, input.resolveDate) };
+}

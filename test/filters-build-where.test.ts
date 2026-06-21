@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { boolean, integer, PgDialect, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-import type { ColumnFilter, DatePreset, FilterNode } from "../src/filters/model.ts";
+import type { ColumnFilter, DatePreset, FilterNode } from "../src/filters/types.ts";
 
-import { buildFilterNode, buildWhere } from "../src/filters/drizzle/build-where.ts";
+import { buildFilterNode, buildWhere } from "../src/filters/drizzle/where.ts";
 import {
   booleanField,
   dateField,

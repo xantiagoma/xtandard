@@ -4,11 +4,26 @@
  */
 import type { Equal, Expect } from "type-testing";
 import type { SQL } from "drizzle-orm";
+import type * as v from "valibot";
 
-import type { DatePreset, FieldFilter, FieldKind, NumberFilter } from "../src/filters/model.ts";
-import type { DateFilterResolver, buildWhere } from "../src/filters/drizzle/build-where.ts";
-import type { FieldSpec } from "../src/filters/drizzle/spec.ts";
+import type {
+  ColumnFilter,
+  DatePreset,
+  FieldFilter,
+  FieldKind,
+  FiltersRequest,
+  FilterNode,
+  NumberFilter,
+} from "../src/filters/types.ts";
+import type { DateFilterResolver } from "../src/filters/compile.ts";
+import type { buildWhere } from "../src/filters/drizzle/where.ts";
+import type { FilterSpec } from "../src/filters/drizzle/spec.ts";
 import { dateField, numberField } from "../src/filters/drizzle/spec.ts";
+import type {
+  FieldFilterSchema,
+  FilterNodeSchema,
+  FiltersRequestSchema,
+} from "../src/filters/schemas.ts";
 
 // FieldFilter is a discriminated union over the six column kinds.
 export type _Kinds = Expect<
@@ -28,9 +43,21 @@ export type _Resolver = Expect<
   >
 >;
 
-// buildWhere returns a Drizzle SQL (or undefined).
+// The (optional) valibot schemas validate INTO the model types — no drift.
+export type _SchemaFieldFilter = Expect<
+  Equal<v.InferOutput<typeof FieldFilterSchema>, FieldFilter>
+>;
+export type _SchemaRequest = Expect<
+  Equal<v.InferOutput<typeof FiltersRequestSchema>, FiltersRequest>
+>;
+export type _SchemaNode = Expect<Equal<v.InferOutput<typeof FilterNodeSchema>, FilterNode>>;
+
+// The Drizzle adapter's buildWhere returns a Drizzle SQL (or undefined).
 export type _BuildWhere = Expect<Equal<ReturnType<typeof buildWhere>, { where: SQL | undefined }>>;
 
 // The spec field builders return a FieldSpec (kind↔column type checked at the call).
-export type _DateField = Expect<Equal<ReturnType<typeof dateField>, FieldSpec>>;
-export type _NumberField = Expect<Equal<ReturnType<typeof numberField>, FieldSpec>>;
+export type _DateField = Expect<Equal<ReturnType<typeof dateField>, FilterSpec[string]>>;
+export type _NumberField = Expect<Equal<ReturnType<typeof numberField>, FilterSpec[string]>>;
+
+// silence unused-import lint for the value imports used only via typeof above
+export type _ColumnFilter = ColumnFilter;

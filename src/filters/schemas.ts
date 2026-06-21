@@ -1,7 +1,19 @@
+/**
+ * Ready-made **valibot** schemas that validate an untrusted request into the
+ * `xantiagoma/filters` model types. Optional — exposed at
+ * `xantiagoma/filters/valibot` (peer `valibot` + `@js-temporal/polyfill`). Use
+ * any Standard-Schema validator (zod/arktype/effect/…) instead if you prefer;
+ * the model is just plain TS types (see `./types.ts`). A `*.test-d.ts` asserts
+ * these schemas' output equals the model types.
+ *
+ * Two levels of `v.variant`: outer on `kind`, inner on `operator`.
+ */
+
 import * as v from "valibot";
 
-import { isValidTimeZone } from "../valibot-utils.ts";
+import type { FilterNode } from "./types.ts";
 import { PlainDateTimeSchema } from "../temporal-schemas.ts";
+import { isValidTimeZone } from "../valibot-utils.ts";
 import {
   ARRAY_COL_OPERATORS,
   DATE_PRESET_OPERATORS,
@@ -12,17 +24,6 @@ import {
   TEXT_SCALAR_OPERATORS,
   UNARY_OPERATORS,
 } from "./operators.ts";
-
-/**
- * The shared filter model — valibot schemas are the source of truth; TS types
- * are derived with `v.InferOutput` so `v.parse` yields the discriminated union
- * with NO cast. Two levels of `v.variant`: the outer on `kind` (the column data
- * kind), the inner on `operator` (the argument-shape group within a kind). The
- * operator vocabulary is Drizzle-aligned (see ./operators).
- *
- * FRONTEND-SAFE — no drizzle. The Drizzle WHERE builder lives in the
- * `xantiagoma/filters/drizzle` subpath.
- */
 
 // Plain-string IANA timezone (validated, NOT branded) — keeps InferInput ===
 // InferOutput === string, which the recursive FilterNode annotation requires.
@@ -44,7 +45,6 @@ const DATE_UNITS = [
   "year",
 ] as const;
 
-// ── text ── string columns
 const TextScalar = v.object({
   kind: v.literal("text"),
   operator: v.picklist(TEXT_SCALAR_OPERATORS),
@@ -58,7 +58,6 @@ const TextSet = v.object({
 const TextUnary = v.object({ kind: v.literal("text"), operator: v.picklist(UNARY_OPERATORS) });
 export const TextFilterSchema = v.variant("operator", [TextScalar, TextSet, TextUnary]);
 
-// ── number ── numeric columns
 const NumberScalar = v.object({
   kind: v.literal("number"),
   operator: v.picklist(NUMBER_SCALAR_OPERATORS),
@@ -83,7 +82,6 @@ export const NumberFilterSchema = v.variant("operator", [
   NumberUnary,
 ]);
 
-// ── enum ── text columns with a fixed value set
 const EnumEquality = v.object({
   kind: v.literal("enum"),
   operator: v.picklist(EQUALITY_OPERATORS),
@@ -97,7 +95,6 @@ const EnumSet = v.object({
 const EnumUnary = v.object({ kind: v.literal("enum"), operator: v.picklist(UNARY_OPERATORS) });
 export const EnumFilterSchema = v.variant("operator", [EnumEquality, EnumSet, EnumUnary]);
 
-// ── boolean ──
 const BooleanEquality = v.object({
   kind: v.literal("boolean"),
   operator: v.picklist(EQUALITY_OPERATORS),
@@ -109,8 +106,6 @@ const BooleanUnary = v.object({
 });
 export const BooleanFilterSchema = v.variant("operator", [BooleanEquality, BooleanUnary]);
 
-// ── date ── the DST-correct period preset (is/before/after/between over a unit)
-// resolves to a half-open instant interval; plus the null checks.
 export const DatePresetSchema = v.object({
   kind: v.literal("date"),
   operator: v.picklist(DATE_PRESET_OPERATORS),
@@ -123,7 +118,6 @@ export const DatePresetSchema = v.object({
 const DateUnary = v.object({ kind: v.literal("date"), operator: v.picklist(UNARY_OPERATORS) });
 export const DateFilterSchema = v.variant("operator", [DatePresetSchema, DateUnary]);
 
-// ── array ── PostgreSQL array columns
 const ArrayElement = v.union([v.string(), v.number()]);
 const ArrayOps = v.object({
   kind: v.literal("array"),
@@ -147,33 +141,18 @@ export const ColumnFilterSchema = v.object({
   filter: FieldFilterSchema,
 });
 
-/** A request as a flat AND-combined list of column filters (the common case;
- * the FilterBar emits this). For nested AND/OR/NOT use `FilterNodeSchema`. */
+/** Flat AND-combined list of column filters (the common case). */
 export const FiltersRequestSchema = v.array(ColumnFilterSchema);
 
-export type DatePreset = v.InferOutput<typeof DatePresetSchema>;
-export type TextFilter = v.InferOutput<typeof TextFilterSchema>;
-export type NumberFilter = v.InferOutput<typeof NumberFilterSchema>;
-export type EnumFilter = v.InferOutput<typeof EnumFilterSchema>;
-export type BooleanFilter = v.InferOutput<typeof BooleanFilterSchema>;
-export type DateFilter = v.InferOutput<typeof DateFilterSchema>;
-export type ArrayFilter = v.InferOutput<typeof ArrayFilterSchema>;
-export type FieldFilter = v.InferOutput<typeof FieldFilterSchema>;
-export type ColumnFilter = v.InferOutput<typeof ColumnFilterSchema>;
-export type FiltersRequest = v.InferOutput<typeof FiltersRequestSchema>;
-export type FieldKind = FieldFilter["kind"];
+export const SortItemSchema = v.object({
+  field: v.string(),
+  dir: v.picklist(["asc", "desc"]),
+});
 
-/**
- * A recursive filter tree: leaves are column filters, internal nodes combine
- * them with and / or / not. Defined as an explicit type + a `v.lazy` schema
- * annotated with `GenericSchema<FilterNode>` (recursion without a cast).
- */
-export type FilterNode =
-  | { type: "column"; field: string; filter: FieldFilter }
-  | { type: "and"; nodes: FilterNode[] }
-  | { type: "or"; nodes: FilterNode[] }
-  | { type: "not"; node: FilterNode };
+/** A `{ field, dir }[]` sort list. */
+export const SortSchema = v.array(SortItemSchema);
 
+/** Recursive and/or/not tree (annotated for recursion without a cast). */
 export const FilterNodeSchema: v.GenericSchema<FilterNode> = v.lazy(() =>
   v.variant("type", [
     v.object({ type: v.literal("column"), field: v.string(), filter: FieldFilterSchema }),
