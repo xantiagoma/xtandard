@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.4.1
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.4.0...v0.4.1)
+
+### 📖 Documentation
+
+- **releasing:** Document ZeroVer (no planned 1.0) + standard-semver policy ([#4](https://github.com/xantiagoma/xtandard/pull/4))
+
+### 🏡 Chore
+
+- Rename package + repo to xtandard ([#5](https://github.com/xantiagoma/xtandard/pull/5))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.4.0
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.3.0...v0.4.0)
