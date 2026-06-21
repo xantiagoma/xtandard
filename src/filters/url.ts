@@ -452,21 +452,25 @@ function expandLeaf(x: Record<string, unknown>, kind: FieldKind, o: string): Fie
   }
 }
 
-function expandNode(x: unknown, kinds: FieldKindSpec): FilterNode | null {
+function expandNode(x: unknown, kinds: FieldKindSpec, keepEmptyGroups: boolean): FilterNode | null {
   if (!isRecord(x)) return null;
 
   if (Array.isArray(x.and)) {
-    const nodes = x.and.map((c) => expandNode(c, kinds)).filter((n): n is FilterNode => n !== null);
+    const nodes = x.and
+      .map((c) => expandNode(c, kinds, keepEmptyGroups))
+      .filter((n): n is FilterNode => n !== null);
 
-    return nodes.length > 0 ? { type: "and", nodes } : null;
+    return keepEmptyGroups || nodes.length > 0 ? { type: "and", nodes } : null;
   }
   if (Array.isArray(x.or)) {
-    const nodes = x.or.map((c) => expandNode(c, kinds)).filter((n): n is FilterNode => n !== null);
+    const nodes = x.or
+      .map((c) => expandNode(c, kinds, keepEmptyGroups))
+      .filter((n): n is FilterNode => n !== null);
 
-    return nodes.length > 0 ? { type: "or", nodes } : null;
+    return keepEmptyGroups || nodes.length > 0 ? { type: "or", nodes } : null;
   }
   if ("not" in x) {
-    const inner = expandNode(x.not, kinds);
+    const inner = expandNode(x.not, kinds, keepEmptyGroups);
 
     return inner ? { type: "not", node: inner } : null;
   }
@@ -494,11 +498,25 @@ export function compactFilterNode(input: { node: FilterNode }): { compact: Compa
 
 /** Decode a compact tree back to a `FilterNode`, restoring `kind` from `kinds`
  * (a field → kind allow-list, e.g. from `_metadata`). Returns `null` if nothing
- * allow-listed survives. */
-export function expandFilterNode(input: { compact: unknown; kinds: FieldKindSpec }): {
+ * allow-listed survives.
+ *
+ * `keepEmptyGroups` (default `false`) controls whether an `and`/`or` container
+ * that decodes to zero children survives. The default prunes empty groups
+ * (defensive — a stale/hand-edited URL collapses to a valid subset). Set it
+ * `true` when the URL is the source of truth for a tree **being edited** in an
+ * interactive filter-builder, so a just-added still-empty group (the "Add group"
+ * → empty box pattern) survives the encode→URL→decode round-trip instead of
+ * vanishing before you can fill it. Invalid LEAVES (non-allow-listed field,
+ * unknown operator, bad value) are still dropped in both modes, and `not` is
+ * resolved the same way — only the empty-container collapse changes. */
+export function expandFilterNode(input: {
+  compact: unknown;
+  kinds: FieldKindSpec;
+  keepEmptyGroups?: boolean;
+}): {
   node: FilterNode | null;
 } {
-  return { node: expandNode(input.compact, input.kinds) };
+  return { node: expandNode(input.compact, input.kinds, input.keepEmptyGroups ?? false) };
 }
 
 /** Encode a flat AND list of column filters to compact leaves. */
@@ -531,16 +549,24 @@ export function expandFilters(input: { compact: unknown; kinds: FieldKindSpec })
 }
 
 /** Bind a `field → kind` allow-list once and get encode/decode pairs — sugar for
- * composing with a URL-state codec (e.g. `parseAsCodec(risonCodec(...))`). */
-export function createFilterUrlCodec(input: { kinds: FieldKindSpec }): {
+ * composing with a URL-state codec (e.g. `parseAsCodec(risonCodec(...))`).
+ *
+ * `keepEmptyGroups` (default `false`) is forwarded to `decodeNode` — set it
+ * `true` for an interactive filter-builder whose tree lives in the URL, so a
+ * freshly-added empty `and`/`or` group survives the round-trip (see
+ * {@link expandFilterNode}). It does not affect `decodeFilters` (a flat list has
+ * no groups). */
+export function createFilterUrlCodec(input: { kinds: FieldKindSpec; keepEmptyGroups?: boolean }): {
   encodeNode: (node: FilterNode) => CompactNode;
   decodeNode: (compact: unknown) => FilterNode | null;
   encodeFilters: (filters: FiltersRequest) => CompactLeaf[];
   decodeFilters: (compact: unknown) => FiltersRequest;
 } {
+  const keepEmptyGroups = input.keepEmptyGroups ?? false;
+
   return {
     encodeNode: (node) => compactNode(node),
-    decodeNode: (compact) => expandNode(compact, input.kinds),
+    decodeNode: (compact) => expandNode(compact, input.kinds, keepEmptyGroups),
     encodeFilters: (filters) => filters.map((c) => compactLeaf(c.field, c.filter)),
     decodeFilters: (compact) => expandFilters({ compact, kinds: input.kinds }).filters,
   };

@@ -184,3 +184,75 @@ describe("compact URL codec — createFilterUrlCodec", () => {
     expect(codec.decodeFilters(codec.encodeFilters(flat))).toEqual(flat);
   });
 });
+
+describe("compact URL codec — keepEmptyGroups (interactive filter-builder)", () => {
+  const emptyAnd: FilterNode = { type: "and", nodes: [] };
+
+  test("(1) an empty `and` group survives the round-trip", () => {
+    const { compact } = compactFilterNode({ node: emptyAnd });
+    expect(compact).toEqual({ and: [] }); // encode is already symmetric
+    expect(expandFilterNode({ compact, kinds, keepEmptyGroups: true }).node).toEqual(emptyAnd);
+  });
+
+  test("(2) an empty group nested inside another group survives", () => {
+    const node: FilterNode = {
+      type: "or",
+      nodes: [
+        { type: "column", field: "title", filter: { kind: "text", operator: "eq", value: "a" } },
+        { type: "and", nodes: [] }, // freshly-added empty group
+      ],
+    };
+    const { compact } = compactFilterNode({ node });
+    expect(expandFilterNode({ compact, kinds, keepEmptyGroups: true }).node).toEqual(node);
+  });
+
+  test("(3) `not` wrapping an empty group survives", () => {
+    const node: FilterNode = { type: "not", node: { type: "or", nodes: [] } };
+    const { compact } = compactFilterNode({ node });
+    expect(expandFilterNode({ compact, kinds, keepEmptyGroups: true }).node).toEqual(node);
+  });
+
+  test("(4) default / false still collapses empty groups (unchanged behavior)", () => {
+    const { compact } = compactFilterNode({ node: emptyAnd });
+    expect(expandFilterNode({ compact, kinds }).node).toBeNull();
+    expect(expandFilterNode({ compact, kinds, keepEmptyGroups: false }).node).toBeNull();
+    // a group that becomes empty only after dropping invalid leaves also collapses
+    expect(
+      expandFilterNode({ compact: { and: [{ f: "ghost", o: "eq", v: "x" }] }, kinds }).node,
+    ).toBeNull();
+  });
+
+  test("(5) invalid leaves are still dropped in keepEmptyGroups mode", () => {
+    const { node } = expandFilterNode({
+      compact: {
+        and: [
+          { f: "title", o: "ct", v: "a" }, // valid
+          { f: "ghost", o: "eq", v: "x" }, // not allow-listed → dropped
+          { f: "title", o: "zzz", v: "a" }, // unknown operator → dropped
+          { and: [] }, // empty group → KEPT
+        ],
+      },
+      kinds,
+      keepEmptyGroups: true,
+    });
+
+    expect(node).toEqual({
+      type: "and",
+      nodes: [
+        {
+          type: "column",
+          field: "title",
+          filter: { kind: "text", operator: "contains", value: "a" },
+        },
+        { type: "and", nodes: [] },
+      ],
+    });
+  });
+
+  test("createFilterUrlCodec forwards keepEmptyGroups to decodeNode", () => {
+    const codec = createFilterUrlCodec({ kinds, keepEmptyGroups: true });
+    expect(codec.decodeNode(codec.encodeNode(emptyAnd))).toEqual(emptyAnd);
+    // default codec still collapses
+    expect(createFilterUrlCodec({ kinds }).decodeNode({ and: [] })).toBeNull();
+  });
+});
