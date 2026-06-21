@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
+import {
+  DummyDriver,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+} from "kysely";
 
-import type { ColumnFilter, DatePreset } from "../src/filters/types.ts";
-import { compileFilters } from "../src/filters/compile.ts";
+import type { ColumnFilter, DatePreset, FilterNode } from "../src/filters/types.ts";
+import { compileFilterNode, compileFilters } from "../src/filters/compile.ts";
 import * as mongo from "../src/filters/mongo.ts";
 import * as prisma from "../src/filters/prisma.ts";
 import * as knex from "../src/filters/knex.ts";
@@ -14,23 +21,56 @@ const resolveDate = ({ value }: { value: DatePreset }) => {
   return { start, end };
 };
 
-describe("compileFilters (portable core)", () => {
-  const spec = { name: "text", amount: "number", createdAt: "date" } as const;
+// ── core compiler ───────────────────────────────────────────────────────────
 
-  test("keeps text-match ops semantic and drops non-allow-listed fields", () => {
+describe("compileFilters (portable core)", () => {
+  const spec = { name: "text", amount: "number", tags: "array", createdAt: "date" } as const;
+
+  test("keeps text-match ops semantic and drops non-allow-listed / mismatched fields", () => {
     const { where } = compileFilters({
       spec,
       filters: [
         { field: "name", filter: { kind: "text", operator: "contains", value: "a%b" } },
-        { field: "secret", filter: { kind: "text", operator: "eq", value: "x" } }, // dropped
+        { field: "secret", filter: { kind: "text", operator: "eq", value: "x" } }, // not allow-listed
+        { field: "amount", filter: { kind: "text", operator: "eq", value: "x" } }, // kind mismatch
       ],
     });
 
     expect(where).toEqual({ type: "cond", cond: { field: "name", op: "contains", value: "a%b" } });
   });
 
-  test("resolves a date preset to gte + lt", () => {
-    const { where } = compileFilters({
+  test("between → gte AND lte; notBetween → lt OR gt (never a between op)", () => {
+    const between = compileFilters({
+      spec,
+      filters: [
+        { field: "amount", filter: { kind: "number", operator: "between", from: 1, to: 9 } },
+      ],
+    }).where;
+    expect(between).toEqual({
+      type: "and",
+      nodes: [
+        { type: "cond", cond: { field: "amount", op: "gte", value: 1 } },
+        { type: "cond", cond: { field: "amount", op: "lte", value: 9 } },
+      ],
+    });
+
+    const notBetween = compileFilters({
+      spec,
+      filters: [
+        { field: "amount", filter: { kind: "number", operator: "notBetween", from: 1, to: 9 } },
+      ],
+    }).where;
+    expect(notBetween).toEqual({
+      type: "or",
+      nodes: [
+        { type: "cond", cond: { field: "amount", op: "lt", value: 1 } },
+        { type: "cond", cond: { field: "amount", op: "gt", value: 9 } },
+      ],
+    });
+  });
+
+  test("date preset → gte + lt; bare date isNull stays a single cond", () => {
+    const preset = compileFilters({
       spec,
       filters: [
         {
@@ -45,39 +85,144 @@ describe("compileFilters (portable core)", () => {
         },
       ],
       resolveDate,
-    });
+    }).where;
+    expect(preset?.type).toBe("and");
 
-    expect(where?.type).toBe("and");
-    if (where?.type === "and") {
-      expect(where.nodes.map((n) => (n.type === "cond" ? n.cond.op : n.type))).toEqual([
-        "gte",
-        "lt",
-      ]);
-    }
+    const isNull = compileFilters({
+      spec,
+      filters: [{ field: "createdAt", filter: { kind: "date", operator: "isNull" } }],
+    }).where;
+    expect(isNull).toEqual({ type: "cond", cond: { field: "createdAt", op: "isNull" } });
   });
 
-  test("empty / all-dropped → null", () => {
+  test("a date preset without resolveDate throws", () => {
+    expect(() =>
+      compileFilters({
+        spec,
+        filters: [
+          {
+            field: "createdAt",
+            filter: {
+              kind: "date",
+              operator: "is",
+              unit: "day",
+              timeZone: "UTC",
+              anchor: "2026-02-14T00:00:00",
+            },
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  test("compileFilterNode handles and/or/not and drops empty branches", () => {
+    const node: FilterNode = {
+      type: "and",
+      nodes: [
+        { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "a" } },
+        {
+          type: "not",
+          node: {
+            type: "or",
+            nodes: [
+              {
+                type: "column",
+                field: "amount",
+                filter: { kind: "number", operator: "gt", value: 5 },
+              },
+              {
+                type: "column",
+                field: "ghost",
+                filter: { kind: "text", operator: "eq", value: "z" },
+              }, // dropped
+            ],
+          },
+        },
+      ],
+    };
+
+    expect(compileFilterNode({ spec, node }).where).toEqual({
+      type: "and",
+      nodes: [
+        { type: "cond", cond: { field: "name", op: "eq", value: "a" } },
+        {
+          type: "not",
+          node: {
+            type: "or",
+            nodes: [{ type: "cond", cond: { field: "amount", op: "gt", value: 5 } }],
+          },
+        },
+      ],
+    });
+
     expect(compileFilters({ spec, filters: [] }).where).toBeNull();
   });
 });
 
+// A small all-kinds filter list reused across adapters.
 const filters: ColumnFilter[] = [
   { field: "name", filter: { kind: "text", operator: "contains", value: "ab" } },
   { field: "amount", filter: { kind: "number", operator: "between", from: 1, to: 9 } },
 ];
 
+// ── mongo ─────────────────────────────────────────────────────────────────
+
 describe("mongo adapter", () => {
   const spec = {
     name: mongo.textField({ path: "name" }),
     amount: mongo.numberField({ path: "amount" }),
+    status: mongo.enumField({ path: "status" }),
     tags: mongo.arrayField({ path: "tags" }),
     deletedAt: mongo.dateField({ path: "deletedAt" }),
   };
+  const one = (f: ColumnFilter) => {
+    const { filter } = mongo.buildFilter({ spec, filters: [f] });
+    const key = Object.keys((filter as Record<string, unknown>) ?? {})[0] ?? "";
 
-  test("contains → $regex, between → half-open $gte/$lte (no $and-flatten)", () => {
-    const { filter } = mongo.buildFilter({ spec, filters });
+    return (filter as Record<string, unknown>)?.[key];
+  };
 
-    expect(filter).toEqual({
+  test("scalar + ne ops", () => {
+    expect(one({ field: "amount", filter: { kind: "number", operator: "ne", value: 3 } })).toEqual({
+      $ne: 3,
+    });
+    expect(one({ field: "amount", filter: { kind: "number", operator: "lt", value: 3 } })).toEqual({
+      $lt: 3,
+    });
+    expect(one({ field: "amount", filter: { kind: "number", operator: "gte", value: 3 } })).toEqual(
+      { $gte: 3 },
+    );
+  });
+
+  test("text ops → $regex (contains/startsWith/endsWith) + like→regex", () => {
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "startsWith", value: "a" } }),
+    ).toEqual({ $regex: "^a", $options: "i" });
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "endsWith", value: "a" } }),
+    ).toEqual({ $regex: "a$", $options: "i" });
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "ilike", value: "a%b_" } }),
+    ).toEqual({ $regex: "^a.*b.$", $options: "i" });
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "notIlike", value: "a%" } }),
+    ).toEqual({ $not: { $regex: "^a.*$", $options: "i" } });
+  });
+
+  test("set / array / null ops", () => {
+    expect(
+      one({ field: "status", filter: { kind: "enum", operator: "notInArray", values: ["x"] } }),
+    ).toEqual({ $nin: ["x"] });
+    expect(
+      one({ field: "tags", filter: { kind: "array", operator: "arrayOverlaps", values: ["x"] } }),
+    ).toEqual({ $in: ["x"] });
+    expect(one({ field: "deletedAt", filter: { kind: "date", operator: "isNotNull" } })).toEqual({
+      $ne: null,
+    });
+  });
+
+  test("contains + between under $and (between = half-open $gte/$lte)", () => {
+    expect(mongo.buildFilter({ spec, filters }).filter).toEqual({
       $and: [
         { name: { $regex: "ab", $options: "i" } },
         { $and: [{ amount: { $gte: 1 } }, { amount: { $lte: 9 } }] },
@@ -85,31 +230,105 @@ describe("mongo adapter", () => {
     });
   });
 
-  test("inArray → $in, isNull → $eq null", () => {
+  test("buildFilterNode renders $or / $nor (not)", () => {
+    const { filter } = mongo.buildFilterNode({
+      spec,
+      node: {
+        type: "not",
+        node: {
+          type: "or",
+          nodes: [
+            { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "a" } },
+            {
+              type: "column",
+              field: "amount",
+              filter: { kind: "number", operator: "gt", value: 5 },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(filter).toEqual({ $nor: [{ $or: [{ name: { $eq: "a" } }, { amount: { $gt: 5 } }] }] });
+  });
+
+  test("arrayContained → $expr + $setIsSubset (field ⊆ values)", () => {
     const { filter } = mongo.buildFilter({
       spec,
       filters: [
-        { field: "tags", filter: { kind: "array", operator: "arrayContains", values: ["x", "y"] } },
-        { field: "deletedAt", filter: { kind: "date", operator: "isNull" } },
+        {
+          field: "tags",
+          filter: { kind: "array", operator: "arrayContained", values: ["x", "y"] },
+        },
       ],
     });
 
-    expect(filter).toEqual({
-      $and: [{ tags: { $all: ["x", "y"] } }, { deletedAt: { $eq: null } }],
-    });
+    expect(filter).toEqual({ $expr: { $setIsSubset: ["$tags", ["x", "y"]] } });
   });
 });
+
+// ── prisma ──────────────────────────────────────────────────────────────────
 
 describe("prisma adapter", () => {
   const spec = {
     name: prisma.textField({ field: "name" }),
     amount: prisma.numberField({ field: "amount" }),
+    tags: prisma.arrayField({ field: "tags" }),
+  };
+  const one = (f: ColumnFilter) => {
+    const { where } = prisma.buildWhere({ spec, filters: [f] });
+    const key = Object.keys((where as Record<string, unknown>) ?? {})[0] ?? "";
+
+    return (where as Record<string, unknown>)?.[key];
   };
 
-  test("contains → insensitive mode, between → half-open gte/lte", () => {
-    const { where } = prisma.buildWhere({ spec, filters });
+  test("scalar + set + array + null ops", () => {
+    expect(one({ field: "amount", filter: { kind: "number", operator: "ne", value: 3 } })).toEqual({
+      not: 3,
+    });
+    expect(one({ field: "amount", filter: { kind: "number", operator: "lte", value: 3 } })).toEqual(
+      { lte: 3 },
+    );
+    expect(
+      one({ field: "amount", filter: { kind: "number", operator: "inArray", values: [1] } }),
+    ).toEqual({ in: [1] });
+    expect(
+      one({ field: "amount", filter: { kind: "number", operator: "notInArray", values: [1] } }),
+    ).toEqual({ notIn: [1] });
+    expect(
+      one({ field: "tags", filter: { kind: "array", operator: "arrayContains", values: ["x"] } }),
+    ).toEqual({ hasEvery: ["x"] });
+    expect(
+      one({ field: "tags", filter: { kind: "array", operator: "arrayOverlaps", values: ["x"] } }),
+    ).toEqual({ hasSome: ["x"] });
+    expect(one({ field: "amount", filter: { kind: "number", operator: "isNull" } })).toEqual({
+      equals: null,
+    });
+    expect(one({ field: "amount", filter: { kind: "number", operator: "isNotNull" } })).toEqual({
+      not: null,
+    });
+  });
 
-    expect(where).toEqual({
+  test("reducible like/ilike/notIlike patterns map to contains/startsWith/endsWith", () => {
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "ilike", value: "%a%" } }),
+    ).toEqual({ contains: "a", mode: "insensitive" });
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "ilike", value: "a%" } }),
+    ).toEqual({ startsWith: "a", mode: "insensitive" });
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "ilike", value: "%a" } }),
+    ).toEqual({ endsWith: "a", mode: "insensitive" });
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "like", value: "%a%" } }),
+    ).toEqual({ contains: "a" }); // case-sensitive
+    expect(
+      one({ field: "name", filter: { kind: "text", operator: "notIlike", value: "%a%" } }),
+    ).toEqual({ not: { contains: "a", mode: "insensitive" } });
+  });
+
+  test("contains + between under AND (half-open gte/lte)", () => {
+    expect(prisma.buildWhere({ spec, filters }).where).toEqual({
       AND: [
         { name: { contains: "ab", mode: "insensitive" } },
         { AND: [{ amount: { gte: 1 } }, { amount: { lte: 9 } }] },
@@ -117,40 +336,126 @@ describe("prisma adapter", () => {
     });
   });
 
-  test("reducible ilike patterns map to contains/startsWith/endsWith", () => {
-    const at = (value: string) =>
-      prisma.buildWhere({
-        spec,
-        filters: [{ field: "name", filter: { kind: "text", operator: "ilike", value } }],
-      }).where;
+  test("buildFilterNode renders OR / NOT", () => {
+    const { where } = prisma.buildFilterNode({
+      spec,
+      node: {
+        type: "not",
+        node: {
+          type: "or",
+          nodes: [
+            { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "a" } },
+            {
+              type: "column",
+              field: "amount",
+              filter: { kind: "number", operator: "gt", value: 5 },
+            },
+          ],
+        },
+      },
+    });
 
-    expect(at("%a%")).toEqual({ name: { contains: "a", mode: "insensitive" } });
-    expect(at("a%")).toEqual({ name: { startsWith: "a", mode: "insensitive" } });
-    expect(at("%a")).toEqual({ name: { endsWith: "a", mode: "insensitive" } });
+    expect(where).toEqual({ NOT: { OR: [{ name: { equals: "a" } }, { amount: { gt: 5 } }] } });
   });
 
-  test("an irreducible like pattern (internal wildcard) throws", () => {
+  test("irreducible like (internal wildcard / underscore) and arrayContained throw", () => {
     expect(() =>
       prisma.buildWhere({
         spec,
         filters: [{ field: "name", filter: { kind: "text", operator: "like", value: "a%b" } }],
       }),
     ).toThrow();
+    expect(() =>
+      prisma.buildWhere({
+        spec,
+        filters: [{ field: "name", filter: { kind: "text", operator: "ilike", value: "a_b" } }],
+      }),
+    ).toThrow();
+    expect(() =>
+      prisma.buildWhere({
+        spec,
+        filters: [
+          { field: "tags", filter: { kind: "array", operator: "arrayContained", values: ["x"] } },
+        ],
+      }),
+    ).toThrow();
   });
 });
+
+// ── knex (raw SQL) ────────────────────────────────────────────────────────
 
 describe("knex adapter", () => {
   const spec = {
     name: knex.textField({ column: "name" }),
     amount: knex.numberField({ column: "amount" }),
+    status: knex.enumField({ column: "status" }),
+    tags: knex.arrayField({ column: "tags" }),
   };
+  const sqlOf = (f: ColumnFilter) => knex.buildWhereSql({ spec, filters: [f] });
 
-  test("renders parameterized SQL with ILIKE + half-open range (no BETWEEN)", () => {
-    const fragment = knex.buildWhereSql({ spec, filters });
+  test("scalar / text / set / array / null → parameterized SQL", () => {
+    expect(
+      sqlOf({ field: "amount", filter: { kind: "number", operator: "gte", value: 3 } }),
+    ).toEqual({ sql: '"amount" >= ?', bindings: [3] });
+    expect(
+      sqlOf({ field: "name", filter: { kind: "text", operator: "ilike", value: "a%" } }),
+    ).toEqual({ sql: '"name" ILIKE ?', bindings: ["a%"] });
+    expect(
+      sqlOf({ field: "name", filter: { kind: "text", operator: "like", value: "a%" } }),
+    ).toEqual({ sql: '"name" LIKE ?', bindings: ["a%"] });
+    expect(
+      sqlOf({ field: "name", filter: { kind: "text", operator: "notIlike", value: "a%" } }),
+    ).toEqual({ sql: '"name" NOT ILIKE ?', bindings: ["a%"] });
+    expect(
+      sqlOf({ field: "status", filter: { kind: "enum", operator: "inArray", values: ["a", "b"] } }),
+    ).toEqual({ sql: '"status" IN (?, ?)', bindings: ["a", "b"] });
+    expect(
+      sqlOf({ field: "tags", filter: { kind: "array", operator: "arrayContains", values: ["x"] } }),
+    ).toEqual({ sql: '"tags" @> ?', bindings: [["x"]] });
+    expect(sqlOf({ field: "amount", filter: { kind: "number", operator: "isNull" } })).toEqual({
+      sql: '"amount" IS NULL',
+      bindings: [],
+    });
+  });
 
-    expect(fragment).not.toBeNull();
-    expect(fragment?.sql).toBe('("name" ILIKE ? AND ("amount" >= ? AND "amount" <= ?))');
-    expect(fragment?.bindings).toEqual(["%ab%", 1, 9]);
+  test("between → half-open; whole AND list", () => {
+    expect(knex.buildWhereSql({ spec, filters })).toEqual({
+      sql: '("name" ILIKE ? AND ("amount" >= ? AND "amount" <= ?))',
+      bindings: ["%ab%", 1, 9],
+    });
+  });
+
+  test("buildFilterNodeSql renders NOT ( ... OR ... )", () => {
+    const node: FilterNode = {
+      type: "not",
+      node: {
+        type: "or",
+        nodes: [
+          { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "a" } },
+          { type: "column", field: "amount", filter: { kind: "number", operator: "gt", value: 5 } },
+        ],
+      },
+    };
+
+    expect(knex.buildFilterNodeSql({ spec, node })).toEqual({
+      sql: 'NOT (("name" = ? OR "amount" > ?))',
+      bindings: ["a", 5],
+    });
+  });
+
+  test("applyFiltersToKnex calls whereRaw with the fragment", () => {
+    const calls: { sql: string; bindings: unknown[] }[] = [];
+    const query = {
+      whereRaw(sql: string, bindings?: unknown[]) {
+        calls.push({ sql, bindings: bindings ?? [] });
+
+        return this;
+      },
+    };
+    knex.applyFiltersToKnex(query, { spec, filters });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.bindings).toEqual(["%ab%", 1, 9]);
   });
 
   test("rejects an invalid identifier", () => {
@@ -161,17 +466,96 @@ describe("knex adapter", () => {
       }),
     ).toThrow();
   });
+
+  test("table.column identifiers are quoted per part", () => {
+    expect(
+      knex.buildWhereSql({
+        spec: { name: knex.textField({ column: "t.name" }) },
+        filters: [{ field: "name", filter: { kind: "text", operator: "eq", value: "x" } }],
+      }),
+    ).toEqual({ sql: '"t"."name" = ?', bindings: ["x"] });
+  });
+});
+
+// ── kysely (compiled SQL) ───────────────────────────────────────────────────
+
+const kdb = new Kysely<Record<string, never>>({
+  dialect: {
+    createAdapter: () => new PostgresAdapter(),
+    createDriver: () => new DummyDriver(),
+    createIntrospector: (db) => new PostgresIntrospector(db),
+    createQueryCompiler: () => new PostgresQueryCompiler(),
+  },
 });
 
 describe("kysely adapter", () => {
-  const spec = { name: kysely.textField({ column: "t.name" }) };
+  const spec = {
+    name: kysely.textField({ column: "name" }),
+    amount: kysely.numberField({ column: "amount" }),
+    tags: kysely.arrayField({ column: "tags" }),
+  };
+  const compiled = (f: ColumnFilter) => {
+    const { where } = kysely.buildWhere({ spec, filters: [f] });
 
-  test("produces a defined boolean expression", () => {
-    const { where } = kysely.buildWhere({
+    return where ? where.compile(kdb) : null;
+  };
+
+  test("scalar / text / array / null ops compile to PG SQL", () => {
+    expect(
+      compiled({ field: "amount", filter: { kind: "number", operator: "lte", value: 3 } })?.sql,
+    ).toContain("<=");
+    expect(
+      compiled({ field: "name", filter: { kind: "text", operator: "contains", value: "a" } })?.sql,
+    ).toContain("ilike");
+    expect(
+      compiled({
+        field: "tags",
+        filter: { kind: "array", operator: "arrayContains", values: ["x"] },
+      })?.sql,
+    ).toContain("@>");
+    expect(
+      compiled({ field: "amount", filter: { kind: "number", operator: "isNull" } })?.sql,
+    ).toContain("is null");
+  });
+
+  test("between (half-open) + and/or/not tree compile", () => {
+    const all = kysely.buildWhere({ spec, filters }).where?.compile(kdb);
+    expect(all?.sql).toContain(">=");
+    expect(all?.sql).toContain("<=");
+    expect(all?.sql).not.toContain("between");
+
+    const { where } = kysely.buildFilterNode({
       spec,
-      filters: [{ field: "name", filter: { kind: "text", operator: "eq", value: "x" } }],
+      node: {
+        type: "not",
+        node: {
+          type: "or",
+          nodes: [
+            { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "a" } },
+            {
+              type: "column",
+              field: "amount",
+              filter: { kind: "number", operator: "gt", value: 5 },
+            },
+          ],
+        },
+      },
+    });
+    const sql = where?.compile(kdb).sql.toLowerCase() ?? "";
+    expect(sql).toContain(" or ");
+    expect(sql).toContain("not ");
+  });
+
+  test("buildOrderBy renders allow-listed asc/desc expressions", () => {
+    const { orderBy } = kysely.buildOrderBy({
+      sort: [
+        { field: "amount", dir: "desc" },
+        { field: "ghost", dir: "asc" }, // dropped
+      ],
+      columns: { amount: "amount" },
     });
 
-    expect(where).toBeDefined();
+    expect(orderBy).toHaveLength(1);
+    expect(orderBy[0]?.compile(kdb).sql.toLowerCase()).toContain("desc");
   });
 });

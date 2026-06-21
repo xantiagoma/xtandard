@@ -1,6 +1,7 @@
 /**
  * Kysely adapter — renders the portable filter AST to a Kysely raw boolean
- * expression (PostgreSQL flavor: `ilike`, array `@>`/`<@`/`&&`). Peer `kysely`.
+ * expression. **PostgreSQL flavor**: `ilike` and the `array` ops (`@>`/`<@`/`&&`)
+ * are PG-specific — the `array` kind is not supported on MySQL/SQLite. Peer `kysely`.
  * String columns are passed to `sql.ref` (server-owned identifiers); computed
  * values use the `sql` tag. Validation-library-free.
  *

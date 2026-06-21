@@ -1,7 +1,8 @@
 /**
- * Knex adapter — renders the portable filter AST to raw parameterized SQL
- * (PostgreSQL flavor: `ILIKE`, array `@>`/`<@`/`&&`) and applies it via
- * `whereRaw`. No `knex` import: any object with `whereRaw(sql, bindings)` works,
+ * Knex adapter — renders the portable filter AST to raw parameterized SQL and
+ * applies it via `whereRaw`. **PostgreSQL flavor**: `ILIKE` and the `array` ops
+ * (`@>`/`<@`/`&&`) are PG-specific — the `array` kind is not supported on
+ * MySQL/SQLite. No `knex` import: any object with `whereRaw(sql, bindings)` works,
  * keeping Knex your app's dependency. Column identifiers are server-owned and
  * validated; values are bound (`?`).
  *

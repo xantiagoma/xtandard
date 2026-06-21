@@ -3,8 +3,10 @@
  * query filter object. No driver dependency (returns plain objects). Text
  * matching becomes `$regex`; `between` → `$gte`/`$lte`; `inArray` → `$in`.
  *
- * `like`/`ilike` translate the SQL `LIKE` pattern to a regex (`%`→`.*`, `_`→`.`);
- * `arrayContained` (array ⊆ values) has no Mongo operator and throws.
+ * `like`/`ilike` translate the SQL `LIKE` pattern to a regex (`%`→`.*`, `_`→`.`).
+ * The PG array ops map natively: `arrayContains` (`@>`) → `$all`, `arrayOverlaps`
+ * (`&&`) → `$in`, and `arrayContained` (`<@`, field ⊆ values) → an `$expr` with
+ * `$setIsSubset` (Mongo has no single-symbol "contained by" operator).
  *
  * @example
  * ```ts
@@ -57,7 +59,9 @@ function likeToRegex(pattern: string): string {
   return `${out}$`;
 }
 
-function condFilter(cond: CompiledCond): unknown {
+// A field-scoped operator doc (everything except arrayContained, which needs a
+// top-level `$expr` — see `condDoc`).
+function fieldOp(cond: CompiledCond): unknown {
   switch (cond.op) {
     case "eq":
       return { $eq: cond.value };
@@ -88,18 +92,26 @@ function condFilter(cond: CompiledCond): unknown {
     case "notInArray":
       return { $nin: cond.values };
     case "arrayContains":
-      return { $all: cond.values };
+      return { $all: cond.values }; // field contains all values (PG `@>`)
     case "arrayOverlaps":
-      return { $in: cond.values };
+      return { $in: cond.values }; // field shares any value (PG `&&`)
     case "arrayContained":
-      throw new Error(
-        "toMongoFilter: `arrayContained` (array ⊆ values) has no native Mongo operator.",
-      );
+      return undefined; // handled at the document level in `condDoc`
     case "isNull":
       return { $eq: null };
     case "isNotNull":
       return { $ne: null };
   }
+}
+
+/** A full Mongo clause for one condition against `path`. */
+function condDoc(path: string, cond: CompiledCond): MongoFilter {
+  // PG `<@` (field ⊆ values): no field-scoped operator, use $expr + $setIsSubset.
+  if (cond.op === "arrayContained") {
+    return { $expr: { $setIsSubset: [`$${path}`, cond.values] } };
+  }
+
+  return { [path]: fieldOp(cond) };
 }
 
 /** Render a portable {@link CompiledWhere} to a Mongo filter object. */
@@ -112,7 +124,7 @@ export function toMongoFilter(input: {
       case "cond": {
         const path = input.paths[node.cond.field];
 
-        return path === undefined ? undefined : { [path]: condFilter(node.cond) };
+        return path === undefined ? undefined : condDoc(path, node.cond);
       }
       case "and":
       case "or": {

@@ -177,4 +177,20 @@ describe("describe", () => {
       }),
     ).toBe('Name = "x"');
   });
+
+  test("date preset uses the injected describeDate; falls back to the operator label without it", () => {
+    const preset = {
+      kind: "date",
+      operator: "is",
+      unit: "day",
+      timeZone: "UTC",
+      anchor: "2026-02-14T00:00:00",
+    } as const;
+
+    expect(describeFieldFilter({ filter: preset, describeDate: () => "Feb 14, 2026" })).toBe(
+      "Feb 14, 2026",
+    );
+    expect(describeFieldFilter({ filter: preset })).toBe("is"); // no describer → operator label
+    expect(describeFieldFilter({ filter: { kind: "date", operator: "isNull" } })).toBe("is empty");
+  });
 });
