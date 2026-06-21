@@ -5,6 +5,10 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
     exclude: ["node_modules/**", "dist/**"],
+    // @effective/rison's published `main` (dist/rison.js) uses extensionless
+    // relative imports (invalid ESM); inline it so Vite/esbuild bundles + resolves
+    // them. Real consumers go through a bundler that handles this transparently.
+    server: { deps: { inline: ["@effective/rison"] } },
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts", "src/**/*.tsx"],
@@ -59,6 +63,11 @@ export default defineConfig({
       "src/entry-pagination-mongo.ts",
       "src/entry-pagination-prisma.ts",
       "src/entry-web.ts",
+      "src/entry-tanstack.ts",
+      "src/entry-tanstack-server.ts",
+      "src/entry-tanstack-testing.ts",
+      "src/entry-tanstack-temporal.ts",
+      "src/entry-tanstack-rison.ts",
       "src/entry-ulid.ts",
       "src/entry-temporal.ts",
       "src/entry-dataloader.ts",

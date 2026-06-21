@@ -26,31 +26,36 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Entry Points
 
-| Import                          | Description                             | Dependencies                         |
-| ------------------------------- | --------------------------------------- | ------------------------------------ |
-| `xantiagoma`                    | Core utilities (isomorphic, zero deps)  | none                                 |
-| `xantiagoma/interval`           | Generic `Interval<T>` (Guava Range)     | none                                 |
-| `xantiagoma/dinero`             | Money intervals (`Interval` of money)   | `dinero.js`                          |
-| `xantiagoma/decimal`            | Exact-decimal intervals (decimal.js)    | `decimal.js`                         |
-| `xantiagoma/big`                | Exact-decimal intervals (big.js)        | `big.js`                             |
-| `xantiagoma/bignumber`          | Exact-decimal intervals (bignumber.js)  | `bignumber.js`                       |
-| `xantiagoma/fraction`           | Exact-rational intervals (fraction.js)  | `fraction.js`                        |
-| `xantiagoma/semver`             | Semantic-version range intervals        | `semver`                             |
-| `xantiagoma/ip`                 | IPv4/IPv6 address & CIDR intervals      | `ipaddr.js`                          |
-| `xantiagoma/pagination`         | Pagination + keyset helpers             | none                                 |
-| `xantiagoma/pagination/drizzle` | Drizzle adapter for pagination keysets  | `drizzle-orm`                        |
-| `xantiagoma/pagination/kysely`  | Kysely adapter for pagination keysets   | `kysely`                             |
-| `xantiagoma/pagination/knex`    | Knex adapter for pagination keysets     | none                                 |
-| `xantiagoma/pagination/mongo`   | Mongo/Mongoose adapter for keysets      | none                                 |
-| `xantiagoma/pagination/prisma`  | Prisma adapter for pagination keysets   | none                                 |
-| `xantiagoma/web`                | Browser/FormData utilities              | none                                 |
-| `xantiagoma/ulid`               | Prefixed ULID generation + helpers      | `ulid`                               |
-| `xantiagoma/temporal`           | Date/time/duration + Temporal intervals | `@js-temporal/polyfill`, `itty-time` |
-| `xantiagoma/dataloader`         | DataLoader factory                      | `dataloader`                         |
-| `xantiagoma/unstorage`          | Cache helpers with unstorage            | `unstorage`, `ohash`                 |
-| `xantiagoma/valibot`            | TimeZone validation schema              | `valibot`                            |
-| `xantiagoma/sonner`             | Toast streaming for iterables           | `sonner`, `react`                    |
-| `xantiagoma/react`              | React hooks + components                | `react`, `@tanstack/react-query`     |
+| Import                          | Description                                  | Dependencies                         |
+| ------------------------------- | -------------------------------------------- | ------------------------------------ |
+| `xantiagoma`                    | Core utilities (isomorphic, zero deps)       | none                                 |
+| `xantiagoma/interval`           | Generic `Interval<T>` (Guava Range)          | none                                 |
+| `xantiagoma/dinero`             | Money intervals (`Interval` of money)        | `dinero.js`                          |
+| `xantiagoma/decimal`            | Exact-decimal intervals (decimal.js)         | `decimal.js`                         |
+| `xantiagoma/big`                | Exact-decimal intervals (big.js)             | `big.js`                             |
+| `xantiagoma/bignumber`          | Exact-decimal intervals (bignumber.js)       | `bignumber.js`                       |
+| `xantiagoma/fraction`           | Exact-rational intervals (fraction.js)       | `fraction.js`                        |
+| `xantiagoma/semver`             | Semantic-version range intervals             | `semver`                             |
+| `xantiagoma/ip`                 | IPv4/IPv6 address & CIDR intervals           | `ipaddr.js`                          |
+| `xantiagoma/pagination`         | Pagination + keyset helpers                  | none                                 |
+| `xantiagoma/pagination/drizzle` | Drizzle adapter for pagination keysets       | `drizzle-orm`                        |
+| `xantiagoma/pagination/kysely`  | Kysely adapter for pagination keysets        | `kysely`                             |
+| `xantiagoma/pagination/knex`    | Knex adapter for pagination keysets          | none                                 |
+| `xantiagoma/pagination/mongo`   | Mongo/Mongoose adapter for keysets           | none                                 |
+| `xantiagoma/pagination/prisma`  | Prisma adapter for pagination keysets        | none                                 |
+| `xantiagoma/web`                | Browser/FormData utilities                   | none                                 |
+| `xantiagoma/tanstack`           | nuqs-style URL query state (TanStack Router) | `react`, `@tanstack/react-router`    |
+| `xantiagoma/tanstack/server`    | Framework-free parsers/serializer/loader     | none                                 |
+| `xantiagoma/tanstack/testing`   | Headless testing adapter (no router)         | `react`                              |
+| `xantiagoma/tanstack/temporal`  | Temporal-kind URL parsers                    | `@js-temporal/polyfill`, `valibot`   |
+| `xantiagoma/tanstack/rison`     | Rison value codec for `parseAsCodec`         | `@effective/rison`, `valibot`        |
+| `xantiagoma/ulid`               | Prefixed ULID generation + helpers           | `ulid`                               |
+| `xantiagoma/temporal`           | Date/time/duration + Temporal intervals      | `@js-temporal/polyfill`, `itty-time` |
+| `xantiagoma/dataloader`         | DataLoader factory                           | `dataloader`                         |
+| `xantiagoma/unstorage`          | Cache helpers with unstorage                 | `unstorage`, `ohash`                 |
+| `xantiagoma/valibot`            | TimeZone validation schema                   | `valibot`                            |
+| `xantiagoma/sonner`             | Toast streaming for iterables                | `sonner`, `react`                    |
+| `xantiagoma/react`              | React hooks + components                     | `react`, `@tanstack/react-query`     |
 
 Sub-entry dependencies are **optional peer deps** — only install what you use.
 
@@ -345,121 +350,159 @@ const { items, returnValue } = await toastId.unwrap();
 | `useDynamicRefs`               | Dynamic ref registry by key         | [src](./src/use-dynamic-refs.ts)       | [tests](./test/use-dynamic-refs.test.tsx)       |
 | `useStream` / `StreamRenderer` | Stream consumption hook + component | [src](./src/stream-renderer.tsx)       | [tests](./test/stream-renderer.test.tsx)        |
 
+## TanStack URL State (`xantiagoma/tanstack`)
+
+nuqs-style, **component-owned** URL query state for TanStack Router (and Start).
+`useQueryState` behaves like `useState`, but backed by the URL — reusable
+components own "their" query key without importing a route object. Per-key
+parsers, an optimistic store, rate-limited URL commits, shallow-by-default
+updates, atomic multi-key batching, a framework-free server/loader/serializer
+core, and a `validateSearch`-ready Standard Schema. **Full guide:
+[docs/TANSTACK.md](./docs/TANSTACK.md).**
+
+```tsx
+import { NuqsAdapter, useQueryState, parseAsInteger } from "xantiagoma/tanstack";
+
+// once, inside RouterProvider (e.g. your __root route component):
+<NuqsAdapter>{/* app */}</NuqsAdapter>;
+
+function Pagination() {
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+  return <button onClick={() => setPage((p) => p + 1)}>Next</button>; // setPage(null) removes the key
+}
+```
+
+| Import                         | Export                                                                        | Description                                            | Source                                             |
+| ------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| `xantiagoma/tanstack`          | `useQueryState` / `useQueryStates` / `useUrlSearchString`                     | nuqs-style hooks backed by the URL                     | [src](./src/tanstack/react/)                       |
+| `xantiagoma/tanstack`          | `NuqsAdapter` / `TanStackQueryStateAdapter`                                   | Bridges the store to TanStack Router                   | [src](./src/tanstack/adapters/tanstack-router.tsx) |
+| `xantiagoma/tanstack`          | `parseAs*` (15 built-ins) / `createParser` / `parseAsCodec` / `withTransport` | Per-key parsers + custom codec/transport combinators   | [src](./src/tanstack/core/built-in-parsers.ts)     |
+| `xantiagoma/tanstack/server`   | `createLoader` / `createSerializer` / `createStandardSchemaV1`                | Framework-free (loaders, `validateSearch`, server fns) | [src](./src/tanstack/server.ts)                    |
+| `xantiagoma/tanstack/testing`  | `QueryStateTestingAdapter`                                                    | Drive hooks from a static search string, no router     | [src](./src/tanstack/adapters/testing.tsx)         |
+| `xantiagoma/tanstack/temporal` | `parseAsInstant` / `parseAsPlainDate` / … / `parseAsTimeZone`                 | URL parsers for the six Temporal kinds                 | [src](./src/tanstack/temporal.ts)                  |
+| `xantiagoma/tanstack/rison`    | `risonCodec`                                                                  | Readable, canonical Rison codec for `parseAsCodec`     | [src](./src/tanstack/rison.ts)                     |
+
+`keepSubDelims` (keep `( ) , : ! '` raw in the address bar, e.g. for Rison
+tokens) lives in [`xantiagoma/web`](#web-utilities-xantiagomaweb) and is also
+re-exported from `xantiagoma/tanstack`.
+
 ## Recommended Libraries
 
 These are libraries we use and recommend. They're not re-exported — install them directly:
 
-| Library                                                                    | Description                         |
-| -------------------------------------------------------------------------- | ----------------------------------- |
-| [es-toolkit](https://github.com/toss/es-toolkit)                           | Modern lodash alternative           |
-| [ohash](https://github.com/unjs/ohash)                                     | Object hashing                      |
-| [unstorage](https://github.com/unjs/unstorage)                             | Universal key-value storage         |
-| [cockatiel](https://github.com/connor4312/cockatiel)                       | Retry / circuit breaker / bulkhead  |
-| [chroma-js](https://github.com/gka/chroma.js)                              | Color manipulation                  |
-| [xbytes](https://github.com/Zak-Olyarnik/xbytes)                           | Byte size formatting                |
-| [etiket](https://github.com/nicholasgasior/etiket)                         | Barcode generation                  |
-| [portakal](https://www.npmjs.com/package/portakal)                         | Printer / ESC/POS                   |
-| [hucre](https://www.npmjs.com/package/hucre)                               | Spreadsheet utilities               |
-| [@gobrand/tiempo](https://www.npmjs.com/package/@gobrand/tiempo)           | Time formatting / parsing           |
-| [dinero.js](https://dinerojs.com/)                                         | Immutable, type-safe money handling |
-| [decimal.js](https://github.com/MikeMcl/decimal.js)                        | Arbitrary-precision decimals        |
-| [big.js](https://github.com/MikeMcl/big.js)                                | Minimalist arbitrary-precision dec. |
-| [bignumber.js](https://github.com/MikeMcl/bignumber.js)                    | Arbitrary-precision decimals/bases  |
-| [fraction.js](https://github.com/rawify/Fraction.js)                       | Exact rational numbers              |
-| [semver](https://github.com/npm/node-semver)                               | Semantic version parsing/compare    |
-| [ipaddr.js](https://github.com/whitequark/ipaddr.js)                       | IPv4/IPv6 address parsing           |
-| [tactus](https://www.npmjs.com/package/tactus)                             | Haptic feedback for web             |
-| [liveline](https://www.npmjs.com/package/liveline)                         | Animated line charts (React)        |
-| [react-lzy-img](https://www.npmjs.com/package/react-lzy-img)               | Lazy loading images (React)         |
-| [masonic](https://github.com/jaredLunde/masonic)                           | Virtualized masonry layout (React)  |
-| [p-map](https://github.com/sindresorhus/p-map)                             | Concurrent async mapping            |
-| [motion](https://motion.dev/)                                              | Animation library (React)           |
-| [tailwind-merge](https://github.com/dcastil/tailwind-merge)                | Merge Tailwind classes              |
-| [lucide-react](https://lucide.dev/)                                        | Icon library (React)                |
-| [jotai](https://jotai.org/)                                                | Atomic state management (React)     |
-| [permix](https://www.npmjs.com/package/permix)                             | Permission management               |
-| [std-env](https://github.com/unjs/std-env)                                 | Runtime environment detection       |
-| [ufo](https://github.com/unjs/ufo)                                         | URL utilities                       |
-| [@total-typescript/ts-reset](https://github.com/total-typescript/ts-reset) | Stricter TypeScript defaults        |
-| [better-auth](https://www.better-auth.com/)                                | Authentication framework            |
-| [drizzle-orm](https://orm.drizzle.team/)                                   | TypeScript ORM                      |
-| [drizzle-cursor](https://github.com/xantiagoma/drizzle-cursor)             | Cursor-based pagination for Drizzle |
-| [drizzle-audit](https://github.com/xantiagoma/drizzle-audit)               | Audit logging for Drizzle           |
-| [elysia](https://elysiajs.com/)                                            | Bun-first web framework             |
-| [hono](https://hono.dev/)                                                  | Lightweight web framework           |
-| [inngest](https://www.inngest.com/)                                        | Background jobs + durable functions |
-| [stripe](https://stripe.com/)                                              | Payment processing                  |
-| [paykit](https://github.com/getpaykit/paykit)                              | Payment toolkit for Stripe          |
-| [@tanstack/react-query](https://tanstack.com/query)                        | Async state management (React)      |
-| [@tanstack/react-table](https://tanstack.com/table)                        | Headless table (React)              |
-| [@tanstack/react-form](https://tanstack.com/form)                          | Form management (React)             |
-| [@tanstack/react-virtual](https://tanstack.com/virtual)                    | Virtualized lists (React)           |
-| [ai](https://sdk.vercel.ai/)                                               | Vercel AI SDK                       |
-| [graphql-yoga](https://the-guild.dev/graphql/yoga-server)                  | GraphQL server                      |
-| [pothos](https://pothos-graphql.dev/)                                      | GraphQL schema builder              |
-| [react-router](https://reactrouter.com/)                                   | Routing (React)                     |
-| [class-variance-authority](https://cva.style/)                             | Component variant classes           |
-| [clsx](https://github.com/lukeed/clsx)                                     | Conditional classnames              |
-| [next-themes](https://github.com/pacocoursey/next-themes)                  | Theme management (React)            |
-| [react-email](https://react.email/)                                        | Email templates (React)             |
-| [@uppy/core](https://uppy.io/)                                             | File upload                         |
-| [dotenv](https://github.com/motdotla/dotenv)                               | Environment variables               |
-| [citty](https://github.com/unjs/citty)                                     | CLI framework                       |
-| [evlog](https://www.npmjs.com/package/evlog)                               | Event logging                       |
-| [@electric-sql/pglite](https://pglite.dev/)                                | In-memory PostgreSQL                |
-| [neverthrow](https://github.com/supermacro/neverthrow)                     | Type-safe Result type               |
-| [ts-pattern](https://github.com/gvergnaud/ts-pattern)                      | Exhaustive pattern matching         |
-| [nanoid](https://github.com/ai/nanoid)                                     | Tiny unique ID generator            |
-| [superjson](https://github.com/flightcontrolhq/superjson)                  | Serialize Date, Map, Set via JSON   |
-| [destr](https://github.com/unjs/destr)                                     | Safe, fast JSON.parse alternative   |
-| [dequal](https://github.com/lukeed/dequal)                                 | Tiny deep equality check            |
-| [klona](https://github.com/lukeed/klona)                                   | Tiny deep clone                     |
-| [mutative](https://github.com/unadlib/mutative)                            | Fast immutable updates (like Immer) |
-| [ofetch](https://github.com/unjs/ofetch)                                   | Better fetch with retries + parsing |
-| [ky](https://github.com/sindresorhus/ky)                                   | Tiny fetch-based HTTP client        |
-| [consola](https://github.com/unjs/consola)                                 | Elegant structured logger           |
-| [p-queue](https://github.com/sindresorhus/p-queue)                         | Promise queue with concurrency      |
-| [croner](https://github.com/Hexagon/croner)                                | Cron scheduler (Node + browser)     |
-| [oslo](https://github.com/pilcrowonpaper/oslo)                             | Auth utilities (TOTP, JWT, hashing) |
-| [arctic](https://github.com/pilcrowonpaper/arctic)                         | OAuth 2.0 provider integrations     |
-| [casl](https://github.com/stalniy/casl)                                    | Isomorphic authorization            |
-| [unctx](https://github.com/unjs/unctx)                                     | Composables via AsyncLocalStorage   |
-| [execa](https://github.com/sindresorhus/execa)                             | Better child_process                |
-| [knip](https://github.com/webpro-nl/knip)                                  | Find unused code + dependencies     |
-| [clack](https://github.com/bombshell-dev/clack)                            | Beautiful CLI prompts + spinners    |
-| [sonner](https://github.com/emilkowalski/sonner)                           | Toast notifications (React)         |
-| [vaul](https://github.com/emilkowalski/vaul)                               | Drawer component (React)            |
-| [cmdk](https://github.com/pacocoursey/cmdk)                                | Command menu (React)                |
-| [embla-carousel](https://github.com/davidjerleke/embla-carousel)           | Lightweight carousel                |
-| [dnd-kit](https://github.com/clauderic/dnd-kit)                            | Drag and drop toolkit (React)       |
-| [nuqs](https://github.com/47ng/nuqs)                                       | Type-safe URL search params (React) |
-| [react-error-boundary](https://github.com/bvaughn/react-error-boundary)    | Error boundary component (React)    |
-| [react-hotkeys-hook](https://github.com/JohannesKlauss/react-hotkeys-hook) | Keyboard shortcuts hook (React)     |
-| [auto-animate](https://github.com/formkit/auto-animate)                    | Zero-config DOM animations          |
-| [satori](https://github.com/vercel/satori)                                 | JSX/HTML to SVG (OG images)         |
-| [orama](https://github.com/oramasearch/orama)                              | In-memory full-text + vector search |
-| [gql.tada](https://github.com/0no-co/gql.tada)                             | Typed GraphQL documents at compile  |
-| [kysely](https://github.com/kysely-org/kysely)                             | Type-safe SQL query builder         |
-| [currency.js](https://github.com/scurker/currency.js)                      | Safe currency arithmetic            |
-| [thumbhash](https://github.com/evanw/thumbhash)                            | Image placeholder algorithm         |
-| [noble-hashes](https://github.com/paulmillr/noble-hashes)                  | Audited crypto hashes (pure TS)     |
-| [better-all](https://github.com/shuding/better-all)                        | Better Promise.all with named keys  |
-| [better-result](https://github.com/dmmulroy/better-result)                 | Rust-like Result type for TS        |
-| [fuse.js](https://www.fusejs.io/)                                          | Lightweight fuzzy search            |
-| [files-sdk](https://github.com/haydenbleasel/files-sdk)                    | Unified file storage SDK            |
-| [streamdown](https://github.com/vercel/streamdown)                         | Stream Markdown rendering           |
-| [ai-elements](https://github.com/vercel/ai-elements)                       | AI-powered UI components            |
-| [tiptap](https://tiptap.dev/)                                              | Headless rich text editor           |
-| [better-notify](https://github.com/better-notify/better-notify)            | Notification management             |
-| [@vercel/chat](https://github.com/vercel/chat)                             | Chat UI components                  |
-| [@vercel/workflow](https://github.com/vercel/workflow)                     | Durable workflow engine             |
-| [trigger.dev](https://trigger.dev/)                                        | Background jobs platform            |
-| [temporal](https://temporal.io/)                                           | Durable workflow orchestration      |
-| [@vercel/sandbox](https://github.com/vercel/sandbox)                       | Code sandbox execution              |
-| [reactflow](https://reactflow.dev/)                                        | Node-based graph editor (React)     |
-| [date-fns](https://date-fns.org/)                                          | Modern date utility library         |
-| [cheerio](https://cheerio.js.org/)                                         | Fast HTML parsing + manipulation    |
-| [dexie](https://dexie.org/)                                                | IndexedDB wrapper with clean API    |
+| Library                                                                    | Description                          |
+| -------------------------------------------------------------------------- | ------------------------------------ |
+| [es-toolkit](https://github.com/toss/es-toolkit)                           | Modern lodash alternative            |
+| [ohash](https://github.com/unjs/ohash)                                     | Object hashing                       |
+| [unstorage](https://github.com/unjs/unstorage)                             | Universal key-value storage          |
+| [cockatiel](https://github.com/connor4312/cockatiel)                       | Retry / circuit breaker / bulkhead   |
+| [chroma-js](https://github.com/gka/chroma.js)                              | Color manipulation                   |
+| [xbytes](https://github.com/Zak-Olyarnik/xbytes)                           | Byte size formatting                 |
+| [etiket](https://github.com/nicholasgasior/etiket)                         | Barcode generation                   |
+| [portakal](https://www.npmjs.com/package/portakal)                         | Printer / ESC/POS                    |
+| [hucre](https://www.npmjs.com/package/hucre)                               | Spreadsheet utilities                |
+| [@gobrand/tiempo](https://www.npmjs.com/package/@gobrand/tiempo)           | Time formatting / parsing            |
+| [dinero.js](https://dinerojs.com/)                                         | Immutable, type-safe money handling  |
+| [decimal.js](https://github.com/MikeMcl/decimal.js)                        | Arbitrary-precision decimals         |
+| [big.js](https://github.com/MikeMcl/big.js)                                | Minimalist arbitrary-precision dec.  |
+| [bignumber.js](https://github.com/MikeMcl/bignumber.js)                    | Arbitrary-precision decimals/bases   |
+| [fraction.js](https://github.com/rawify/Fraction.js)                       | Exact rational numbers               |
+| [semver](https://github.com/npm/node-semver)                               | Semantic version parsing/compare     |
+| [ipaddr.js](https://github.com/whitequark/ipaddr.js)                       | IPv4/IPv6 address parsing            |
+| [tactus](https://www.npmjs.com/package/tactus)                             | Haptic feedback for web              |
+| [liveline](https://www.npmjs.com/package/liveline)                         | Animated line charts (React)         |
+| [react-lzy-img](https://www.npmjs.com/package/react-lzy-img)               | Lazy loading images (React)          |
+| [masonic](https://github.com/jaredLunde/masonic)                           | Virtualized masonry layout (React)   |
+| [p-map](https://github.com/sindresorhus/p-map)                             | Concurrent async mapping             |
+| [motion](https://motion.dev/)                                              | Animation library (React)            |
+| [tailwind-merge](https://github.com/dcastil/tailwind-merge)                | Merge Tailwind classes               |
+| [lucide-react](https://lucide.dev/)                                        | Icon library (React)                 |
+| [jotai](https://jotai.org/)                                                | Atomic state management (React)      |
+| [permix](https://www.npmjs.com/package/permix)                             | Permission management                |
+| [std-env](https://github.com/unjs/std-env)                                 | Runtime environment detection        |
+| [ufo](https://github.com/unjs/ufo)                                         | URL utilities                        |
+| [@total-typescript/ts-reset](https://github.com/total-typescript/ts-reset) | Stricter TypeScript defaults         |
+| [better-auth](https://www.better-auth.com/)                                | Authentication framework             |
+| [drizzle-orm](https://orm.drizzle.team/)                                   | TypeScript ORM                       |
+| [drizzle-cursor](https://github.com/xantiagoma/drizzle-cursor)             | Cursor-based pagination for Drizzle  |
+| [drizzle-audit](https://github.com/xantiagoma/drizzle-audit)               | Audit logging for Drizzle            |
+| [elysia](https://elysiajs.com/)                                            | Bun-first web framework              |
+| [hono](https://hono.dev/)                                                  | Lightweight web framework            |
+| [inngest](https://www.inngest.com/)                                        | Background jobs + durable functions  |
+| [stripe](https://stripe.com/)                                              | Payment processing                   |
+| [paykit](https://github.com/getpaykit/paykit)                              | Payment toolkit for Stripe           |
+| [@tanstack/react-query](https://tanstack.com/query)                        | Async state management (React)       |
+| [@tanstack/react-table](https://tanstack.com/table)                        | Headless table (React)               |
+| [@tanstack/react-form](https://tanstack.com/form)                          | Form management (React)              |
+| [@tanstack/react-virtual](https://tanstack.com/virtual)                    | Virtualized lists (React)            |
+| [ai](https://sdk.vercel.ai/)                                               | Vercel AI SDK                        |
+| [graphql-yoga](https://the-guild.dev/graphql/yoga-server)                  | GraphQL server                       |
+| [pothos](https://pothos-graphql.dev/)                                      | GraphQL schema builder               |
+| [react-router](https://reactrouter.com/)                                   | Routing (React)                      |
+| [class-variance-authority](https://cva.style/)                             | Component variant classes            |
+| [clsx](https://github.com/lukeed/clsx)                                     | Conditional classnames               |
+| [next-themes](https://github.com/pacocoursey/next-themes)                  | Theme management (React)             |
+| [react-email](https://react.email/)                                        | Email templates (React)              |
+| [@uppy/core](https://uppy.io/)                                             | File upload                          |
+| [dotenv](https://github.com/motdotla/dotenv)                               | Environment variables                |
+| [citty](https://github.com/unjs/citty)                                     | CLI framework                        |
+| [evlog](https://www.npmjs.com/package/evlog)                               | Event logging                        |
+| [@electric-sql/pglite](https://pglite.dev/)                                | In-memory PostgreSQL                 |
+| [neverthrow](https://github.com/supermacro/neverthrow)                     | Type-safe Result type                |
+| [ts-pattern](https://github.com/gvergnaud/ts-pattern)                      | Exhaustive pattern matching          |
+| [nanoid](https://github.com/ai/nanoid)                                     | Tiny unique ID generator             |
+| [superjson](https://github.com/flightcontrolhq/superjson)                  | Serialize Date, Map, Set via JSON    |
+| [destr](https://github.com/unjs/destr)                                     | Safe, fast JSON.parse alternative    |
+| [dequal](https://github.com/lukeed/dequal)                                 | Tiny deep equality check             |
+| [klona](https://github.com/lukeed/klona)                                   | Tiny deep clone                      |
+| [mutative](https://github.com/unadlib/mutative)                            | Fast immutable updates (like Immer)  |
+| [ofetch](https://github.com/unjs/ofetch)                                   | Better fetch with retries + parsing  |
+| [ky](https://github.com/sindresorhus/ky)                                   | Tiny fetch-based HTTP client         |
+| [consola](https://github.com/unjs/consola)                                 | Elegant structured logger            |
+| [p-queue](https://github.com/sindresorhus/p-queue)                         | Promise queue with concurrency       |
+| [croner](https://github.com/Hexagon/croner)                                | Cron scheduler (Node + browser)      |
+| [oslo](https://github.com/pilcrowonpaper/oslo)                             | Auth utilities (TOTP, JWT, hashing)  |
+| [arctic](https://github.com/pilcrowonpaper/arctic)                         | OAuth 2.0 provider integrations      |
+| [casl](https://github.com/stalniy/casl)                                    | Isomorphic authorization             |
+| [unctx](https://github.com/unjs/unctx)                                     | Composables via AsyncLocalStorage    |
+| [execa](https://github.com/sindresorhus/execa)                             | Better child_process                 |
+| [knip](https://github.com/webpro-nl/knip)                                  | Find unused code + dependencies      |
+| [clack](https://github.com/bombshell-dev/clack)                            | Beautiful CLI prompts + spinners     |
+| [sonner](https://github.com/emilkowalski/sonner)                           | Toast notifications (React)          |
+| [vaul](https://github.com/emilkowalski/vaul)                               | Drawer component (React)             |
+| [cmdk](https://github.com/pacocoursey/cmdk)                                | Command menu (React)                 |
+| [embla-carousel](https://github.com/davidjerleke/embla-carousel)           | Lightweight carousel                 |
+| [dnd-kit](https://github.com/clauderic/dnd-kit)                            | Drag and drop toolkit (React)        |
+| [nuqs](https://github.com/47ng/nuqs)                                       | Type-safe URL search params (React)  |
+| [@tanstack/react-router](https://tanstack.com/router)                      | Type-safe file-based routing (React) |
+| [@effective/rison](https://github.com/sebastian-software/effective-rison)  | URL-friendly JSON encoding (Rison)   |
+| [react-error-boundary](https://github.com/bvaughn/react-error-boundary)    | Error boundary component (React)     |
+| [react-hotkeys-hook](https://github.com/JohannesKlauss/react-hotkeys-hook) | Keyboard shortcuts hook (React)      |
+| [auto-animate](https://github.com/formkit/auto-animate)                    | Zero-config DOM animations           |
+| [satori](https://github.com/vercel/satori)                                 | JSX/HTML to SVG (OG images)          |
+| [orama](https://github.com/oramasearch/orama)                              | In-memory full-text + vector search  |
+| [gql.tada](https://github.com/0no-co/gql.tada)                             | Typed GraphQL documents at compile   |
+| [kysely](https://github.com/kysely-org/kysely)                             | Type-safe SQL query builder          |
+| [currency.js](https://github.com/scurker/currency.js)                      | Safe currency arithmetic             |
+| [thumbhash](https://github.com/evanw/thumbhash)                            | Image placeholder algorithm          |
+| [noble-hashes](https://github.com/paulmillr/noble-hashes)                  | Audited crypto hashes (pure TS)      |
+| [better-all](https://github.com/shuding/better-all)                        | Better Promise.all with named keys   |
+| [better-result](https://github.com/dmmulroy/better-result)                 | Rust-like Result type for TS         |
+| [fuse.js](https://www.fusejs.io/)                                          | Lightweight fuzzy search             |
+| [files-sdk](https://github.com/haydenbleasel/files-sdk)                    | Unified file storage SDK             |
+| [streamdown](https://github.com/vercel/streamdown)                         | Stream Markdown rendering            |
+| [ai-elements](https://github.com/vercel/ai-elements)                       | AI-powered UI components             |
+| [tiptap](https://tiptap.dev/)                                              | Headless rich text editor            |
+| [better-notify](https://github.com/better-notify/better-notify)            | Notification management              |
+| [@vercel/chat](https://github.com/vercel/chat)                             | Chat UI components                   |
+| [@vercel/workflow](https://github.com/vercel/workflow)                     | Durable workflow engine              |
+| [trigger.dev](https://trigger.dev/)                                        | Background jobs platform             |
+| [temporal](https://temporal.io/)                                           | Durable workflow orchestration       |
+| [@vercel/sandbox](https://github.com/vercel/sandbox)                       | Code sandbox execution               |
+| [reactflow](https://reactflow.dev/)                                        | Node-based graph editor (React)      |
+| [date-fns](https://date-fns.org/)                                          | Modern date utility library          |
+| [cheerio](https://cheerio.js.org/)                                         | Fast HTML parsing + manipulation     |
+| [dexie](https://dexie.org/)                                                | IndexedDB wrapper with clean API     |
 
 ## See Also
 

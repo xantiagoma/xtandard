@@ -50,7 +50,12 @@ xantiagoma/fraction     → exact-rational intervals (Interval of fraction.js va
 xantiagoma/semver       → semantic-version range intervals (peer: semver)
 xantiagoma/ip           → IPv4/IPv6 address & CIDR intervals (peer: ipaddr.js)
 xantiagoma/pagination   → pagination, keyset helpers + raw SQL adapters
-xantiagoma/web          → browser/FormData + fetchWithProgress (peer: up-fetch)
+xantiagoma/web          → browser/FormData + fetchWithProgress + keepSubDelims (peer: up-fetch)
+xantiagoma/tanstack     → nuqs-style URL query state for TanStack Router (peer: react, @tanstack/react-router)
+xantiagoma/tanstack/server   → framework-free parsers/serializer/loader/standard-schema (zero deps)
+xantiagoma/tanstack/testing  → headless QueryStateTestingAdapter (peer: react)
+xantiagoma/tanstack/temporal → URL parsers for the six Temporal kinds (peer: @js-temporal/polyfill, valibot)
+xantiagoma/tanstack/rison    → risonCodec for parseAsCodec (peer: @effective/rison, valibot)
 xantiagoma/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
 xantiagoma/sonner       → toastStream (peer: sonner, react)
 xantiagoma/ulid         → ULID generation + helpers (peer: ulid)
@@ -75,6 +80,9 @@ src/
   entry-dataloader.ts   — dataloader entry point
   entry-unstorage.ts    — unstorage entry point
   entry-valibot.ts      — valibot entry point
+  entry-tanstack*.ts    — TanStack entry points (root, -server, -testing, -temporal, -rison)
+  tanstack/             — query-params module (core/, react/, adapters/, temporal.ts, rison.ts)
+                          — the one nested module; entries above are flat barrels into it
   types.ts              — shared types (MaybePromise)
   try-catch.ts, wait.ts, range.ts, ...  — individual utils
   *-utils.ts            — dep-based implementations (renamed to avoid entry conflicts)

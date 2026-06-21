@@ -133,6 +133,56 @@
         "default": "./dist/entry-web.cjs"
       }
     },
+    "./tanstack": {
+      "import": {
+        "types": "./dist/entry-tanstack.d.mts",
+        "default": "./dist/entry-tanstack.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-tanstack.d.cts",
+        "default": "./dist/entry-tanstack.cjs"
+      }
+    },
+    "./tanstack/server": {
+      "import": {
+        "types": "./dist/entry-tanstack-server.d.mts",
+        "default": "./dist/entry-tanstack-server.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-tanstack-server.d.cts",
+        "default": "./dist/entry-tanstack-server.cjs"
+      }
+    },
+    "./tanstack/testing": {
+      "import": {
+        "types": "./dist/entry-tanstack-testing.d.mts",
+        "default": "./dist/entry-tanstack-testing.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-tanstack-testing.d.cts",
+        "default": "./dist/entry-tanstack-testing.cjs"
+      }
+    },
+    "./tanstack/temporal": {
+      "import": {
+        "types": "./dist/entry-tanstack-temporal.d.mts",
+        "default": "./dist/entry-tanstack-temporal.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-tanstack-temporal.d.cts",
+        "default": "./dist/entry-tanstack-temporal.cjs"
+      }
+    },
+    "./tanstack/rison": {
+      "import": {
+        "types": "./dist/entry-tanstack-rison.d.mts",
+        "default": "./dist/entry-tanstack-rison.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-tanstack-rison.d.cts",
+        "default": "./dist/entry-tanstack-rison.cjs"
+      }
+    },
     "./pagination": {
       "import": {
         "types": "./dist/entry-pagination.d.mts",
@@ -280,8 +330,10 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@effective/rison": "^2.0.1",
     "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.100.13",
+    "@tanstack/react-router": "^1.170.13",
     "@types/big.js": "^7.0.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
@@ -314,8 +366,10 @@
     "vitest-browser-react": "^2.2.0"
   },
   "peerDependencies": {
+    "@effective/rison": "^2.0.0",
     "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-router": "^1.0.0",
     "big.js": "^7.0.1",
     "bignumber.js": "^11.1.4",
     "dataloader": "^2.2.3",
@@ -338,6 +392,12 @@
   },
   "peerDependenciesMeta": {
     "ulid": {
+      "optional": true
+    },
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "@effective/rison": {
       "optional": true
     },
     "@js-temporal/polyfill": {
