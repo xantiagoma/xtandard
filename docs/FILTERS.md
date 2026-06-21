@@ -317,6 +317,59 @@ keyset — self-contained, no separate `pagination/drizzle` import needed), and
 > across the v1 RQBv2 break. A consumer pinned to a single v1-beta install gets
 > no second `drizzle-orm` copy.
 
+### Drizzle RQB v2 — `@xtandard/lib/filters/drizzle-rqb` (no driver dependency)
+
+For drizzle v1's **relational query builder** (`db.query.<table>.findMany`), the
+`where` is a plain OBJECT, not a `SQL`. This adapter renders the AST to that
+object so you can use the RQB (with its relation filters, nested `with`, etc.)
+instead of `db.select()`. It **emits a plain object** — no `drizzle-orm` import,
+no peer.
+
+```ts
+import { buildWhere, textField, numberField, dateField } from "@xtandard/lib/filters/drizzle-rqb";
+
+// `column` is the RQBv2 schema PROPERTY key (e.g. "createdAt"), not the SQL column name.
+const spec = {
+  name: textField({ column: "name" }),
+  amount: numberField({ column: "amount" }),
+  createdAt: dateField({ column: "createdAt" }),
+};
+
+const { where } = buildWhere({ spec, filters, resolveDate });
+const rows = await db.query.tasks.findMany({ where, limit: 20 });
+// where → { AND: [ { name: { ilike: "%ab%" } }, { amount: { gte: 1 } }, … ] }
+```
+
+Operator map (1:1 with RQBv2): `eq`/`ne`/`gt`/`gte`/`lt`/`lte`; set →
+`in`/`notIn`; text → `like`/`ilike`/`notIlike` (`contains`/`startsWith`/`endsWith`
+lower to `ilike`); `isNull`/`isNotNull` → `{ isNull: true }`/`{ isNotNull: true }`;
+array → `arrayContains`/`arrayContained`/`arrayOverlaps`; tree → `AND`/`OR`/`NOT`.
+`between`/`notBetween` are lowered upstream to `gte`+`lte` / `lt`+`gt`.
+
+> **Why the native object beats `where: { RAW: sql }`.** Feeding a raw column
+> `SQL` into the RQB breaks because the RQB aliases the root table (`invalid
+reference to FROM-clause entry`). The native object references columns by their
+> property key, so drizzle resolves them against the aliased table itself —
+> sidestepping that footgun. For keyset/cursor pagination on the RQB, pair it
+> with `@xtandard/lib/pagination/drizzle-rqb` (`toDrizzleRqbKeyset` → `where` +
+> `orderBy` objects). Typing note: the emitted object is a structural
+> `DrizzleRqbWhere`; if drizzle's generated per-table `where` type is stricter,
+> annotate at the call site.
+
+**Legacy RQB v1** (the older callback `where: (fields, operators) => SQL`, e.g.
+`db._query` on drizzle v1 or `db.query` on 0.x) is in the **same subpath**:
+`buildRqbV1Where`/`buildRqbV1FilterNode` return `{ where }` where `where` is that
+callback. It builds via the **operators and fields the callback provides** (not
+raw imported columns), so column refs resolve against the aliased table — same
+alias-safety as the v2 object.
+
+```ts
+import { buildRqbV1Where, textField } from "@xtandard/lib/filters/drizzle-rqb";
+
+const { where } = buildRqbV1Where({ spec: { name: textField({ column: "name" }) }, filters });
+const rows = await db._query.tasks.findMany({ where }); // where: (fields, ops) => SQL | undefined
+```
+
 ### Kysely — `@xtandard/lib/filters/kysely` (peer `kysely`)
 
 Columns are string references (passed to `sql.ref`) or `sql` `RawBuilder`s.
@@ -415,6 +468,11 @@ the pattern allows (`%x%`/`x%`/`%x`); patterns with internal `%`/`_` throw (use
 | `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     |
 | `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       |
 | date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |
+
+> **`drizzle-rqb`** (the RQBv2 `where` object) supports every operator above
+> natively — RQBv2 has `ilike` + the array ops built in — so it matches the
+> `drizzle` column. It's listed separately because it returns an object for
+> `db.query`, not a `SQL` for `db.select()`.
 
 > **drizzle** emits the PG array operators only — its array helpers are
 > Postgres-specific. **kysely / knex** (`multi`) render the `array` ops for all
@@ -732,13 +790,14 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 
 ### Adapters
 
-| Entry      | Peer          | Key exports                                                                                                                                                    |
-| ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/drizzle` | `drizzle-orm` | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf` |
-| `/kysely`  | `kysely`      | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                              |
-| `/knex`    | —             | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                 |
-| `/mongo`   | —             | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                             |
-| `/prisma`  | —             | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                             |
+| Entry          | Peer                       | Key exports                                                                                                                                                                                                                              |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/drizzle`     | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf`                                                                           |
+| `/drizzle-rqb` | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
+| `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                        |
+| `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                           |
+| `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                       |
+| `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                       |
 
 ## Gotchas & FAQ
 
