@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.2
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.5.1...v0.5.2)
+
+### 🚀 Enhancements
+
+- **filters,pagination:** Drizzle RQB adapters — v2 object + v1 callback ([#9](https://github.com/xantiagoma/xtandard/pull/9))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.5.1
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.5.0...v0.5.1)
