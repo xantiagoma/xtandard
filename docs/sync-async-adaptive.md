@@ -46,8 +46,8 @@ For FP readers: `chainMaybePromise` is monadic `flatMap` where the monad is
 ## Building Blocks (all in core)
 
 ```ts
-import type { MaybePromise } from "xtandard"; // T | Promise<T>
-import { isPromise, chainMaybePromise, resolveMaybePromise } from "xtandard";
+import type { MaybePromise } from "@xtandard/lib"; // T | Promise<T>
+import { isPromise, chainMaybePromise, resolveMaybePromise } from "@xtandard/lib";
 ```
 
 - `isPromise(value)` — thenable guard; the runtime color test.

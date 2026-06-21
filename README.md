@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/xtandard"><img src="https://img.shields.io/npm/v/xtandard?color=blue" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/xtandard"><img src="https://img.shields.io/npm/dm/xtandard" alt="npm downloads" /></a>
-  <a href="https://github.com/xantiagoma/xtandard/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/xtandard" alt="license" /></a>
+  <a href="https://www.npmjs.com/package/@xtandard/lib"><img src="https://img.shields.io/npm/v/@xtandard/lib?color=blue" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@xtandard/lib"><img src="https://img.shields.io/npm/dm/@xtandard/lib" alt="npm downloads" /></a>
+  <a href="https://github.com/xantiagoma/xtandard/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@xtandard/lib" alt="license" /></a>
 </p>
 
 ---
@@ -19,47 +19,47 @@
 ## Install
 
 ```bash
-npm install xtandard
+npm install @xtandard/lib
 ```
 
 Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Entry Points
 
-| Import                        | Description                                  | Dependencies                         |
-| ----------------------------- | -------------------------------------------- | ------------------------------------ |
-| `xtandard`                    | Core utilities (isomorphic, zero deps)       | none                                 |
-| `xtandard/interval`           | Generic `Interval<T>` (Guava Range)          | none                                 |
-| `xtandard/dinero`             | Money intervals (`Interval` of money)        | `dinero.js`                          |
-| `xtandard/decimal`            | Exact-decimal intervals (decimal.js)         | `decimal.js`                         |
-| `xtandard/big`                | Exact-decimal intervals (big.js)             | `big.js`                             |
-| `xtandard/bignumber`          | Exact-decimal intervals (bignumber.js)       | `bignumber.js`                       |
-| `xtandard/fraction`           | Exact-rational intervals (fraction.js)       | `fraction.js`                        |
-| `xtandard/semver`             | Semantic-version range intervals             | `semver`                             |
-| `xtandard/ip`                 | IPv4/IPv6 address & CIDR intervals           | `ipaddr.js`                          |
-| `xtandard/pagination`         | Pagination + keyset helpers                  | none                                 |
-| `xtandard/pagination/drizzle` | Drizzle adapter for pagination keysets       | `drizzle-orm`                        |
-| `xtandard/pagination/kysely`  | Kysely adapter for pagination keysets        | `kysely`                             |
-| `xtandard/pagination/knex`    | Knex adapter for pagination keysets          | none                                 |
-| `xtandard/pagination/mongo`   | Mongo/Mongoose adapter for keysets           | none                                 |
-| `xtandard/pagination/prisma`  | Prisma adapter for pagination keysets        | none                                 |
-| `xtandard/web`                | Browser/FormData utilities                   | none                                 |
-| `xtandard/tanstack`           | nuqs-style URL query state (TanStack Router) | `react`, `@tanstack/react-router`    |
-| `xtandard/tanstack/server`    | Framework-free parsers/serializer/loader     | none                                 |
-| `xtandard/tanstack/testing`   | Headless testing adapter (no router)         | `react`                              |
-| `xtandard/tanstack/temporal`  | Temporal-kind URL parsers                    | `@js-temporal/polyfill`, `valibot`   |
-| `xtandard/tanstack/rison`     | Rison value codec for `parseAsCodec`         | `@effective/rison`, `valibot`        |
-| `xtandard/ulid`               | Prefixed ULID generation + helpers           | `ulid`                               |
-| `xtandard/temporal`           | Date/time/duration + Temporal intervals      | `@js-temporal/polyfill`, `itty-time` |
-| `xtandard/dataloader`         | DataLoader factory                           | `dataloader`                         |
-| `xtandard/unstorage`          | Cache helpers with unstorage                 | `unstorage`, `ohash`                 |
-| `xtandard/valibot`            | TimeZone validation schema                   | `valibot`                            |
-| `xtandard/sonner`             | Toast streaming for iterables                | `sonner`, `react`                    |
-| `xtandard/react`              | React hooks + components                     | `react`, `@tanstack/react-query`     |
+| Import                             | Description                                  | Dependencies                         |
+| ---------------------------------- | -------------------------------------------- | ------------------------------------ |
+| `@xtandard/lib`                    | Core utilities (isomorphic, zero deps)       | none                                 |
+| `@xtandard/lib/interval`           | Generic `Interval<T>` (Guava Range)          | none                                 |
+| `@xtandard/lib/dinero`             | Money intervals (`Interval` of money)        | `dinero.js`                          |
+| `@xtandard/lib/decimal`            | Exact-decimal intervals (decimal.js)         | `decimal.js`                         |
+| `@xtandard/lib/big`                | Exact-decimal intervals (big.js)             | `big.js`                             |
+| `@xtandard/lib/bignumber`          | Exact-decimal intervals (bignumber.js)       | `bignumber.js`                       |
+| `@xtandard/lib/fraction`           | Exact-rational intervals (fraction.js)       | `fraction.js`                        |
+| `@xtandard/lib/semver`             | Semantic-version range intervals             | `semver`                             |
+| `@xtandard/lib/ip`                 | IPv4/IPv6 address & CIDR intervals           | `ipaddr.js`                          |
+| `@xtandard/lib/pagination`         | Pagination + keyset helpers                  | none                                 |
+| `@xtandard/lib/pagination/drizzle` | Drizzle adapter for pagination keysets       | `drizzle-orm`                        |
+| `@xtandard/lib/pagination/kysely`  | Kysely adapter for pagination keysets        | `kysely`                             |
+| `@xtandard/lib/pagination/knex`    | Knex adapter for pagination keysets          | none                                 |
+| `@xtandard/lib/pagination/mongo`   | Mongo/Mongoose adapter for keysets           | none                                 |
+| `@xtandard/lib/pagination/prisma`  | Prisma adapter for pagination keysets        | none                                 |
+| `@xtandard/lib/web`                | Browser/FormData utilities                   | none                                 |
+| `@xtandard/lib/tanstack`           | nuqs-style URL query state (TanStack Router) | `react`, `@tanstack/react-router`    |
+| `@xtandard/lib/tanstack/server`    | Framework-free parsers/serializer/loader     | none                                 |
+| `@xtandard/lib/tanstack/testing`   | Headless testing adapter (no router)         | `react`                              |
+| `@xtandard/lib/tanstack/temporal`  | Temporal-kind URL parsers                    | `@js-temporal/polyfill`, `valibot`   |
+| `@xtandard/lib/tanstack/rison`     | Rison value codec for `parseAsCodec`         | `@effective/rison`, `valibot`        |
+| `@xtandard/lib/ulid`               | Prefixed ULID generation + helpers           | `ulid`                               |
+| `@xtandard/lib/temporal`           | Date/time/duration + Temporal intervals      | `@js-temporal/polyfill`, `itty-time` |
+| `@xtandard/lib/dataloader`         | DataLoader factory                           | `dataloader`                         |
+| `@xtandard/lib/unstorage`          | Cache helpers with unstorage                 | `unstorage`, `ohash`                 |
+| `@xtandard/lib/valibot`            | TimeZone validation schema                   | `valibot`                            |
+| `@xtandard/lib/sonner`             | Toast streaming for iterables                | `sonner`, `react`                    |
+| `@xtandard/lib/react`              | React hooks + components                     | `react`, `@tanstack/react-query`     |
 
 Sub-entry dependencies are **optional peer deps** — only install what you use.
 
-## Core Utilities (`xtandard`)
+## Core Utilities (`@xtandard/lib`)
 
 ### Error Handling
 
@@ -127,7 +127,7 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 | `resolveStreamSource`                       | Resolve `StreamSource<T>`               | [src](./src/stream-source.ts)         | [tests](./test/stream-source.test.ts)         |
 | `secondsToMs` / `minutesToMs` / `hoursToMs` | Time unit converters                    | [src](./src/time-convert.ts)          | [tests](./test/time-convert.test.ts)          |
 
-## Interval Utilities (`xtandard/interval`)
+## Interval Utilities (`@xtandard/lib/interval`)
 
 A generic, immutable `Interval<T>` over any ordered type — modeled on Guava's
 `Range` + `DiscreteDomain`. The engine knows nothing about `T` except through an
@@ -136,7 +136,7 @@ and the domain's `±∞` values). Zero dependencies. **Full guide:
 [docs/INTERVAL.md](./docs/INTERVAL.md).**
 
 ```ts
-import { NumberInterval, IntegerInterval } from "xtandard/interval";
+import { NumberInterval, IntegerInterval } from "@xtandard/lib/interval";
 
 const r = new NumberInterval({ start: 0, startClose: true, end: 10, endClose: false }); // [0,10)
 r.contains(5); // true
@@ -156,7 +156,7 @@ IntegerInterval.closed(1, 5).union(IntegerInterval.closed(6, 10))?.toString(); /
 | `NumberInterval` / `IntegerInterval` / `BigIntInterval` / `DateInterval` / `StringInterval` | Ready-to-use classes (incl. lexicographic strings)      | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
 | `createOrdinalInterval(labels)`                                                             | Discrete intervals over an ordered label list (enums)   | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
 
-**Temporal intervals** (`xtandard/temporal`, peer `@js-temporal/polyfill`) — the
+**Temporal intervals** (`@xtandard/lib/temporal`, peer `@js-temporal/polyfill`) — the
 same engine bound to the TC39 `Temporal` types:
 `InstantInterval`, `ZonedDateTimeInterval`, `PlainDateInterval` (discrete, ε 1 day),
 `PlainDateTimeInterval`, `PlainTimeInterval` (+ the matching `instantDomain` … exports).
@@ -164,7 +164,7 @@ Ordering/membership are nanosecond-exact; `length()`/`middle()` are millisecond-
 (day-granular for `PlainDate`) — see [docs/INTERVAL.md](./docs/INTERVAL.md#temporal-intervals).
 
 ```ts
-import { PlainTimeInterval, InstantInterval } from "xtandard/temporal";
+import { PlainTimeInterval, InstantInterval } from "@xtandard/lib/temporal";
 import { Temporal } from "@js-temporal/polyfill";
 
 const shift = PlainTimeInterval.closedOpen(
@@ -175,14 +175,14 @@ shift.contains(Temporal.PlainTime.from("12:30")); // true
 shift.length(); // 28_800_000 (ms = 8h)
 ```
 
-**Money intervals** (`xtandard/dinero`, peer `dinero.js`) — the engine bound to
+**Money intervals** (`@xtandard/lib/dinero`, peer `dinero.js`) — the engine bound to
 dinero.js v2 values, **discrete** with the epsilon being one minor unit (1 cent for
 USD, 1 yen for JPY) so adjacent ranges merge and `length()` counts amounts. Build a
 class per currency with `createDineroInterval(currency)` — see
 [docs/INTERVAL.md](./docs/INTERVAL.md#money-intervals).
 
 ```ts
-import { createDineroInterval } from "xtandard/dinero";
+import { createDineroInterval } from "@xtandard/lib/dinero";
 import { dinero, USD } from "dinero.js";
 
 const UsdInterval = createDineroInterval(USD);
@@ -194,13 +194,13 @@ tier.contains(dinero({ amount: 7_500, currency: USD })); // true ($75 ∈ [$50, 
 tier.toString(); // "[5000,10000]"  (minor units)
 ```
 
-**Decimal intervals** (`xtandard/decimal`, peer `decimal.js`) — an exact, continuous
+**Decimal intervals** (`@xtandard/lib/decimal`, peer `decimal.js`) — an exact, continuous
 alternative to `NumberInterval` when IEEE-754 float fuzz is unacceptable. Ordering,
 membership, and the string form are exact arbitrary-precision; see
 [docs/INTERVAL.md](./docs/INTERVAL.md#decimal-intervals).
 
 ```ts
-import { DecimalInterval } from "xtandard/decimal";
+import { DecimalInterval } from "@xtandard/lib/decimal";
 import Decimal from "decimal.js";
 
 DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3")).length(); // 0.2 (not 0.19999999999999998)
@@ -208,15 +208,15 @@ DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3")).toString(); // "[
 ```
 
 Same exact-decimal model, different backing library (pick the one you already use):
-**`xtandard/big`** (`BigInterval`, peer `big.js` — smaller) and **`xtandard/bignumber`**
+**`@xtandard/lib/big`** (`BigInterval`, peer `big.js` — smaller) and **`@xtandard/lib/bignumber`**
 (`BigNumberInterval`, peer `bignumber.js`).
 
-**Fraction intervals** (`xtandard/fraction`, peer `fraction.js`) — exact **rationals**:
+**Fraction intervals** (`@xtandard/lib/fraction`, peer `fraction.js`) — exact **rationals**:
 `1/3` is lossless (never rounds, even where decimals can't) and renders as `"1/3"`. See
 [docs/INTERVAL.md](./docs/INTERVAL.md#fraction-intervals).
 
 ```ts
-import { FractionInterval } from "xtandard/fraction";
+import { FractionInterval } from "@xtandard/lib/fraction";
 import Fraction from "fraction.js";
 
 const third = (n: number) => new Fraction(n, 3);
@@ -224,23 +224,23 @@ FractionInterval.closed(third(1), third(2)).toString(); // "[1/3,2/3]"
 FractionInterval.closed(third(1), third(2)).contains(new Fraction(1, 2)); // true
 ```
 
-**Semver intervals** (`xtandard/semver`, peer `semver`) — a version range IS an interval
+**Semver intervals** (`@xtandard/lib/semver`, peer `semver`) — a version range IS an interval
 (`[">=1.2.0","<2.0.0")`). Exact precedence ordering; see
 [docs/INTERVAL.md](./docs/INTERVAL.md#semver-intervals).
 
 ```ts
-import { SemverInterval } from "xtandard/semver";
+import { SemverInterval } from "@xtandard/lib/semver";
 
 const compatible = SemverInterval.closedOpen("1.2.0", "2.0.0");
 compatible.contains("1.5.3"); // true
 compatible.contains("2.0.0"); // false
 ```
 
-**IP intervals** (`xtandard/ip`, peer `ipaddr.js`) — IPv4/IPv6 ranges, discrete (ε = one
+**IP intervals** (`@xtandard/lib/ip`, peer `ipaddr.js`) — IPv4/IPv6 ranges, discrete (ε = one
 address), CIDR-aware. See [docs/INTERVAL.md](./docs/INTERVAL.md#ip-intervals).
 
 ```ts
-import { Ipv4Interval } from "xtandard/ip";
+import { Ipv4Interval } from "@xtandard/lib/ip";
 
 const lan = Ipv4Interval.cidr("192.168.0.0/16");
 lan.contains(Ipv4Interval.ip("192.168.1.50")); // true
@@ -248,33 +248,33 @@ lan.length(); // 65536
 ```
 
 Strings and ordered enums need no extra dependency — `StringInterval` (lexicographic) and
-`createOrdinalInterval([...])` (ordered labels) ship in `xtandard/interval`.
+`createOrdinalInterval([...])` (ordered labels) ship in `@xtandard/lib/interval`.
 
-## Pagination Utilities (`xtandard/pagination`)
+## Pagination Utilities (`@xtandard/lib/pagination`)
 
-Source-agnostic pagination: import from `xtandard/pagination`, provide fetchers for your data source (SQL, Drizzle, Prisma, Mongoose, HTTP...), and the paginator handles input styles (`page`/`pageSize`, `limit`/`offset`, cursor), `hasNextPage` lookahead, backward (scroll-up) pagination, and a uniform result envelope. **Full guide: [docs/PAGINATION.md](./docs/PAGINATION.md)** — backend recipes for SQL drivers, ORMs/query builders, Mongo, Firestore, DynamoDB, Redis sorted sets, Elasticsearch/OpenSearch, analytics warehouses, HTTP APIs, REST/GraphQL endpoints, cursor codecs, and frontend integration.
+Source-agnostic pagination: import from `@xtandard/lib/pagination`, provide fetchers for your data source (SQL, Drizzle, Prisma, Mongoose, HTTP...), and the paginator handles input styles (`page`/`pageSize`, `limit`/`offset`, cursor), `hasNextPage` lookahead, backward (scroll-up) pagination, and a uniform result envelope. **Full guide: [docs/PAGINATION.md](./docs/PAGINATION.md)** — backend recipes for SQL drivers, ORMs/query builders, Mongo, Firestore, DynamoDB, Redis sorted sets, Elasticsearch/OpenSearch, analytics warehouses, HTTP APIs, REST/GraphQL endpoints, cursor codecs, and frontend integration.
 
 Sync/async adaptive: pass all-sync fetchers and codec (e.g. an in-memory array) and `paginate()` returns plain values — no `await` needed; any async piece (even just an async cursor encoder) makes results Promises, reflected in the types. The pattern is documented in [docs/sync-async-adaptive.md](./docs/sync-async-adaptive.md).
 
-| Import                        | Export                      | Description                                                                | Source                             | Tests                                      |
-| ----------------------------- | --------------------------- | -------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
-| `xtandard/pagination`         | `createPaginator`           | Paginator over user-provided fetchers; `pages()`/`items()` async iteration | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
-| `xtandard/pagination`         | `toOffsetWindow`            | Page/offset input → `{ limit, offset }`                                    | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
-| `xtandard/pagination`         | `createCursorCodec`         | Pluggable opaque-cursor codec (JSON + base64url)                           | [src](./src/cursor-codec.ts)       | [tests](./test/cursor-codec.test.ts)       |
-| `xtandard/pagination`         | `createKeysetSpec`          | Portable keyset `where()`/`orderBy()` AST                                  | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `xtandard/pagination`         | `keysetSqlExpression`       | Mark server-owned computed SQL expressions for raw keyset helpers          | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `xtandard/pagination`         | `toKeysetWhereSql`          | Keyset `WHERE` → parameterized SQL + params                                | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `xtandard/pagination`         | `toKeysetOrderBySql`        | Keyset order → SQL `ORDER BY` fragment                                     | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `xtandard/pagination/drizzle` | `toDrizzleKeyset`           | Keyset AST → Drizzle `where`/`orderBy` helpers                             | [src](./src/pagination-drizzle.ts) | [tests](./test/pagination-drizzle.test.ts) |
-| `xtandard/pagination/kysely`  | `toKyselyKeyset`            | Keyset AST → Kysely `where`/`orderBy` helpers                              | [src](./src/pagination-kysely.ts)  | [tests](./test/pagination-kysely.test.ts)  |
-| `xtandard/pagination/knex`    | `applyKeysetToKnex`         | Apply keyset AST to Knex `whereRaw`/`orderByRaw`                           | [src](./src/pagination-knex.ts)    | [tests](./test/pagination-knex.test.ts)    |
-| `xtandard/pagination/mongo`   | `toMongoKeyset`             | Keyset AST → Mongo/Mongoose `filter`/`sort` objects                        | [src](./src/pagination-mongo.ts)   | [tests](./test/pagination-mongo.test.ts)   |
-| `xtandard/pagination/prisma`  | `toPrismaKeyset`            | Keyset AST → Prisma `where`/`orderBy` objects                              | [src](./src/pagination-prisma.ts)  | [tests](./test/pagination-prisma.test.ts)  |
-| `xtandard/pagination`         | `parsePaginationParams`     | Query params → `PaginationInput` (with clamping)                           | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
-| `xtandard/pagination`         | `fromRelayArgs`             | Relay `first`/`after`/`last`/`before` → input                              | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
-| `xtandard/pagination`         | `toRelayConnection`         | Result → Relay connection (`edges`, `pageInfo`)                            | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
-| `xtandard/pagination`         | `toRestEnvelope`            | Result → `{ data, meta }` REST envelope                                    | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
-| `xtandard/pagination`         | `infinitePaginationOptions` | TanStack `useInfiniteQuery` config (dep-free)                              | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+| Import                             | Export                      | Description                                                                | Source                             | Tests                                      |
+| ---------------------------------- | --------------------------- | -------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
+| `@xtandard/lib/pagination`         | `createPaginator`           | Paginator over user-provided fetchers; `pages()`/`items()` async iteration | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
+| `@xtandard/lib/pagination`         | `toOffsetWindow`            | Page/offset input → `{ limit, offset }`                                    | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
+| `@xtandard/lib/pagination`         | `createCursorCodec`         | Pluggable opaque-cursor codec (JSON + base64url)                           | [src](./src/cursor-codec.ts)       | [tests](./test/cursor-codec.test.ts)       |
+| `@xtandard/lib/pagination`         | `createKeysetSpec`          | Portable keyset `where()`/`orderBy()` AST                                  | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `@xtandard/lib/pagination`         | `keysetSqlExpression`       | Mark server-owned computed SQL expressions for raw keyset helpers          | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `@xtandard/lib/pagination`         | `toKeysetWhereSql`          | Keyset `WHERE` → parameterized SQL + params                                | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `@xtandard/lib/pagination`         | `toKeysetOrderBySql`        | Keyset order → SQL `ORDER BY` fragment                                     | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
+| `@xtandard/lib/pagination/drizzle` | `toDrizzleKeyset`           | Keyset AST → Drizzle `where`/`orderBy` helpers                             | [src](./src/pagination-drizzle.ts) | [tests](./test/pagination-drizzle.test.ts) |
+| `@xtandard/lib/pagination/kysely`  | `toKyselyKeyset`            | Keyset AST → Kysely `where`/`orderBy` helpers                              | [src](./src/pagination-kysely.ts)  | [tests](./test/pagination-kysely.test.ts)  |
+| `@xtandard/lib/pagination/knex`    | `applyKeysetToKnex`         | Apply keyset AST to Knex `whereRaw`/`orderByRaw`                           | [src](./src/pagination-knex.ts)    | [tests](./test/pagination-knex.test.ts)    |
+| `@xtandard/lib/pagination/mongo`   | `toMongoKeyset`             | Keyset AST → Mongo/Mongoose `filter`/`sort` objects                        | [src](./src/pagination-mongo.ts)   | [tests](./test/pagination-mongo.test.ts)   |
+| `@xtandard/lib/pagination/prisma`  | `toPrismaKeyset`            | Keyset AST → Prisma `where`/`orderBy` objects                              | [src](./src/pagination-prisma.ts)  | [tests](./test/pagination-prisma.test.ts)  |
+| `@xtandard/lib/pagination`         | `parsePaginationParams`     | Query params → `PaginationInput` (with clamping)                           | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
+| `@xtandard/lib/pagination`         | `fromRelayArgs`             | Relay `first`/`after`/`last`/`before` → input                              | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
+| `@xtandard/lib/pagination`         | `toRelayConnection`         | Result → Relay connection (`edges`, `pageInfo`)                            | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+| `@xtandard/lib/pagination`         | `toRestEnvelope`            | Result → `{ data, meta }` REST envelope                                    | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+| `@xtandard/lib/pagination`         | `infinitePaginationOptions` | TanStack `useInfiniteQuery` config (dep-free)                              | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
 
 ```ts
 import {
@@ -282,7 +282,7 @@ import {
   fromRelayArgs,
   parsePaginationParams,
   toRestEnvelope,
-} from "xtandard/pagination";
+} from "@xtandard/lib/pagination";
 
 const paginator = createPaginator({
   fetchOffset: ({ limit, offset }) => ({ items: db.query(/* LIMIT/OFFSET */) }),
@@ -302,7 +302,7 @@ return toRelayConnection(result, paginator.cursorFor);
 
 Cursor tokens are produced by a two-stage codec (`serializer` + `encoder`, both replaceable) signature-compatible with [drizzle-cursor](https://github.com/xantiagoma/drizzle-cursor), so the same custom encoder/decoder (encryption, signing...) can be shared between both.
 
-## Web Utilities (`xtandard/web`)
+## Web Utilities (`@xtandard/lib/web`)
 
 | Export                  | Description                         | Source                                    | Tests                                       |
 | ----------------------- | ----------------------------------- | ----------------------------------------- | ------------------------------------------- |
@@ -310,7 +310,7 @@ Cursor tokens are produced by a two-stage codec (`serializer` + `encoder`, both 
 | `fetchWithProgress`     | Fetch with upload/download progress | [src](./src/fetch-with-progress.ts)       | [tests](./test/fetch-with-progress.test.ts) |
 | `createHttpInterceptor` | Intercept fetch + XHR with rules    | [src](./src/intercept-http.ts)            | [tests](./test/intercept-http.test.tsx)     |
 
-## Sonner Utilities (`xtandard/sonner`)
+## Sonner Utilities (`@xtandard/lib/sonner`)
 
 Toast helpers for streaming iterables/generators through [Sonner](https://sonner.emilkowal.ski/).
 
@@ -322,7 +322,7 @@ Toast helpers for streaming iterables/generators through [Sonner](https://sonner
 Use `toastStream` when the caller should wait for completion:
 
 ```ts
-import { toastStream } from "xtandard/sonner";
+import { toastStream } from "@xtandard/lib/sonner";
 
 const { items, returnValue } = await toastStream(source, {
   loading: "Loading...",
@@ -335,13 +335,13 @@ Use `toastStreamAsync` when the caller should continue immediately, matching
 Sonner's `toast.promise(...).unwrap()` style:
 
 ```ts
-import { toastStreamAsync } from "xtandard/sonner";
+import { toastStreamAsync } from "@xtandard/lib/sonner";
 
 const toastId = toastStreamAsync(source, { loading: "Loading..." });
 const { items, returnValue } = await toastId.unwrap();
 ```
 
-## React Utilities (`xtandard/react`)
+## React Utilities (`@xtandard/lib/react`)
 
 | Export                         | Description                         | Source                                 | Tests                                           |
 | ------------------------------ | ----------------------------------- | -------------------------------------- | ----------------------------------------------- |
@@ -350,7 +350,7 @@ const { items, returnValue } = await toastId.unwrap();
 | `useDynamicRefs`               | Dynamic ref registry by key         | [src](./src/use-dynamic-refs.ts)       | [tests](./test/use-dynamic-refs.test.tsx)       |
 | `useStream` / `StreamRenderer` | Stream consumption hook + component | [src](./src/stream-renderer.tsx)       | [tests](./test/stream-renderer.test.tsx)        |
 
-## TanStack URL State (`xtandard/tanstack`)
+## TanStack URL State (`@xtandard/lib/tanstack`)
 
 nuqs-style, **component-owned** URL query state for TanStack Router (and Start).
 `useQueryState` behaves like `useState`, but backed by the URL — reusable
@@ -361,7 +361,7 @@ core, and a `validateSearch`-ready Standard Schema. **Full guide:
 [docs/TANSTACK.md](./docs/TANSTACK.md).**
 
 ```tsx
-import { NuqsAdapter, useQueryState, parseAsInteger } from "xtandard/tanstack";
+import { NuqsAdapter, useQueryState, parseAsInteger } from "@xtandard/lib/tanstack";
 
 // once, inside RouterProvider (e.g. your __root route component):
 <NuqsAdapter>{/* app */}</NuqsAdapter>;
@@ -372,19 +372,19 @@ function Pagination() {
 }
 ```
 
-| Import                       | Export                                                                        | Description                                            | Source                                             |
-| ---------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
-| `xtandard/tanstack`          | `useQueryState` / `useQueryStates` / `useUrlSearchString`                     | nuqs-style hooks backed by the URL                     | [src](./src/tanstack/react/)                       |
-| `xtandard/tanstack`          | `NuqsAdapter` / `TanStackQueryStateAdapter`                                   | Bridges the store to TanStack Router                   | [src](./src/tanstack/adapters/tanstack-router.tsx) |
-| `xtandard/tanstack`          | `parseAs*` (15 built-ins) / `createParser` / `parseAsCodec` / `withTransport` | Per-key parsers + custom codec/transport combinators   | [src](./src/tanstack/core/built-in-parsers.ts)     |
-| `xtandard/tanstack/server`   | `createLoader` / `createSerializer` / `createStandardSchemaV1`                | Framework-free (loaders, `validateSearch`, server fns) | [src](./src/tanstack/server.ts)                    |
-| `xtandard/tanstack/testing`  | `QueryStateTestingAdapter`                                                    | Drive hooks from a static search string, no router     | [src](./src/tanstack/adapters/testing.tsx)         |
-| `xtandard/tanstack/temporal` | `parseAsInstant` / `parseAsPlainDate` / … / `parseAsTimeZone`                 | URL parsers for the six Temporal kinds                 | [src](./src/tanstack/temporal.ts)                  |
-| `xtandard/tanstack/rison`    | `risonCodec`                                                                  | Readable, canonical Rison codec for `parseAsCodec`     | [src](./src/tanstack/rison.ts)                     |
+| Import                            | Export                                                                        | Description                                            | Source                                             |
+| --------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| `@xtandard/lib/tanstack`          | `useQueryState` / `useQueryStates` / `useUrlSearchString`                     | nuqs-style hooks backed by the URL                     | [src](./src/tanstack/react/)                       |
+| `@xtandard/lib/tanstack`          | `NuqsAdapter` / `TanStackQueryStateAdapter`                                   | Bridges the store to TanStack Router                   | [src](./src/tanstack/adapters/tanstack-router.tsx) |
+| `@xtandard/lib/tanstack`          | `parseAs*` (15 built-ins) / `createParser` / `parseAsCodec` / `withTransport` | Per-key parsers + custom codec/transport combinators   | [src](./src/tanstack/core/built-in-parsers.ts)     |
+| `@xtandard/lib/tanstack/server`   | `createLoader` / `createSerializer` / `createStandardSchemaV1`                | Framework-free (loaders, `validateSearch`, server fns) | [src](./src/tanstack/server.ts)                    |
+| `@xtandard/lib/tanstack/testing`  | `QueryStateTestingAdapter`                                                    | Drive hooks from a static search string, no router     | [src](./src/tanstack/adapters/testing.tsx)         |
+| `@xtandard/lib/tanstack/temporal` | `parseAsInstant` / `parseAsPlainDate` / … / `parseAsTimeZone`                 | URL parsers for the six Temporal kinds                 | [src](./src/tanstack/temporal.ts)                  |
+| `@xtandard/lib/tanstack/rison`    | `risonCodec`                                                                  | Readable, canonical Rison codec for `parseAsCodec`     | [src](./src/tanstack/rison.ts)                     |
 
 `keepSubDelims` (keep `( ) , : ! '` raw in the address bar, e.g. for Rison
-tokens) lives in [`xtandard/web`](#web-utilities-xtandardweb) and is also
-re-exported from `xtandard/tanstack`.
+tokens) lives in [`@xtandard/lib/web`](#web-utilities-xtandardlibweb) and is also
+re-exported from `@xtandard/lib/tanstack`.
 
 ## Recommended Libraries
 

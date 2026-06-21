@@ -1,6 +1,6 @@
 import type { AnyParser } from "./parser.ts";
 
-// `keepSubDelims` lives in xtandard/web (generic, zero-dep) and is re-exported
+// `keepSubDelims` lives in @xtandard/lib/web (generic, zero-dep) and is re-exported
 // here for convenience since it pairs with the adapter's `serializeSearch`.
 export { keepSubDelims } from "../../url-search-params-utils.ts";
 

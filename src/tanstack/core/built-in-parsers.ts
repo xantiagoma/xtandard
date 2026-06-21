@@ -262,7 +262,7 @@ export function parseAsCodec<T>(
  * Useful for base64url / signing on top of any existing parser. Apply
  * `.withDefault()` after wrapping.
  *
- *   import { encodeBase64Url, decodeBase64Url } from "xtandard";
+ *   import { encodeBase64Url, decodeBase64Url } from "@xtandard/lib";
  *   const opaque = withTransport(parseAsJson(schema), {
  *     encode: encodeBase64Url,
  *     decode: decodeBase64Url,

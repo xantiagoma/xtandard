@@ -31,7 +31,7 @@ export const decimalDomain: IntervalDomain<Decimal> = {
 /**
  * Interval over decimal.js `Decimal` values — exact, continuous.
  *
- *   import { DecimalInterval } from "xtandard/decimal";
+ *   import { DecimalInterval } from "@xtandard/lib/decimal";
  *   import Decimal from "decimal.js";
  *
  *   const r = DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3"));

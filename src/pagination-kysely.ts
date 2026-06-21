@@ -45,7 +45,7 @@ const predicateSql = (
  * @example
  * ```ts
  * import { sql } from "kysely";
- * import { toKyselyKeyset } from "xtandard/pagination/kysely";
+ * import { toKyselyKeyset } from "@xtandard/lib/pagination/kysely";
  *
  * const kyselyKeyset = toKyselyKeyset({
  *   createdAt: "posts.created_at",

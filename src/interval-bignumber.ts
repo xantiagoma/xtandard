@@ -1,7 +1,7 @@
 /**
  * Exact-decimal intervals backed by [bignumber.js](https://github.com/MikeMcl/bignumber.js)
  * — arbitrary-precision decimals with base conversion (popular in finance/crypto).
- * Same model as `xtandard/decimal`; pick the big-number library you already use.
+ * Same model as `@xtandard/lib/decimal`; pick the big-number library you already use.
  * CONTINUOUS (decimals are dense). bignumber.js is a **peer dependency**.
  *
  * Ordering, membership, and `toString`/`parse` are exact; `measure`/`length()`/
@@ -28,7 +28,7 @@ export const bigNumberDomain: IntervalDomain<BigNumber> = {
 /**
  * Interval over bignumber.js `BigNumber` values — exact, continuous.
  *
- *   import { BigNumberInterval } from "xtandard/bignumber";
+ *   import { BigNumberInterval } from "@xtandard/lib/bignumber";
  *   import { BigNumber } from "bignumber.js";
  *
  *   BigNumberInterval.closed(new BigNumber("0.1"), new BigNumber("0.3")).length(); // 0.2 (exact)

@@ -48,7 +48,7 @@ function createRefGetter<T>(refMap: RefMap<T>): DynamicRefGetter<T> {
  *
  * @example
  * ```tsx
- * import { useDynamicRefs } from "xtandard/react";
+ * import { useDynamicRefs } from "@xtandard/lib/react";
  *
  * function TabList({ tabs }: { tabs: string[] }) {
  *   const getRef = useDynamicRefs<HTMLButtonElement>();

@@ -67,7 +67,7 @@ const filterFor = (op: KeysetCompareOp, value: unknown): unknown => {
  *
  * @example
  * ```ts
- * import { toMongoKeyset } from "xtandard/pagination/mongo";
+ * import { toMongoKeyset } from "@xtandard/lib/pagination/mongo";
  *
  * const mongoKeyset = toMongoKeyset({
  *   createdAt: "createdAt",

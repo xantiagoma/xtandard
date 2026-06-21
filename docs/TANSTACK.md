@@ -1,4 +1,4 @@
-# TanStack URL State (`xtandard/tanstack`)
+# TanStack URL State (`@xtandard/lib/tanstack`)
 
 nuqs-style, **component-owned** URL query state for TanStack Router (and
 TanStack Start). `useQueryState` behaves like `useState`, but backed by the
@@ -13,16 +13,16 @@ default updates) on top of TanStack navigation — and bridges _into_ the router
 only when you opt in.
 
 > Peer deps: `react` + `@tanstack/react-router` for the hooks/adapter;
-> `xtandard/tanstack/server` is framework-free (zero deps);
-> `xtandard/tanstack/temporal` adds `@js-temporal/polyfill` + `valibot`;
-> `xtandard/tanstack/rison` adds `@effective/rison` + `valibot`. All optional.
+> `@xtandard/lib/tanstack/server` is framework-free (zero deps);
+> `@xtandard/lib/tanstack/temporal` adds `@js-temporal/polyfill` + `valibot`;
+> `@xtandard/lib/tanstack/rison` adds `@effective/rison` + `valibot`. All optional.
 
 ## Setup
 
 Wrap the app **inside** `RouterProvider` (the adapter uses `useRouter`):
 
 ```tsx
-import { NuqsAdapter } from "xtandard/tanstack";
+import { NuqsAdapter } from "@xtandard/lib/tanstack";
 
 // in your root route component:
 <NuqsAdapter>{/* app */}</NuqsAdapter>;
@@ -31,7 +31,7 @@ import { NuqsAdapter } from "xtandard/tanstack";
 ## Usage
 
 ```tsx
-import { useQueryState, parseAsInteger, parseAsString } from "xtandard/tanstack";
+import { useQueryState, parseAsInteger, parseAsString } from "@xtandard/lib/tanstack";
 
 function SearchBox() {
   const [q, setQ] = useQueryState("q", parseAsString.withDefault(""));
@@ -48,7 +48,7 @@ function Pagination() {
 Multiple keys that move together:
 
 ```tsx
-import { useQueryStates, parseAsIndex, parseAsString } from "xtandard/tanstack";
+import { useQueryStates, parseAsIndex, parseAsString } from "@xtandard/lib/tanstack";
 
 const tableSearch = {
   pageIndex: parseAsIndex.withDefault(0),
@@ -97,7 +97,7 @@ A parser is a `parse`/`serialize` pair (`createParser` / `createMultiParser` for
 repeated keys):
 
 ```ts
-import { createParser } from "xtandard/tanstack";
+import { createParser } from "@xtandard/lib/tanstack";
 
 const parseAsDate = createParser({
   parse: (v) => (Number.isNaN(Date.parse(v)) ? null : new Date(v)),
@@ -113,15 +113,15 @@ combinators, both **synchronous** (URL parsing runs during render):
 // 1. Adapt a codec (data ⇄ token) — structurally compatible with xtandard's
 //    createCursorCodec(), so the same serializer/parser/encoder/decoder
 //    overrides back URL state, pagination, and drizzle-cursor.
-import { createCursorCodec } from "xtandard/pagination";
-import { parseAsCodec } from "xtandard/tanstack";
+import { createCursorCodec } from "@xtandard/lib/pagination";
+import { parseAsCodec } from "@xtandard/lib/tanstack";
 
 const codec = createCursorCodec<{ id: number }>(); // JSON + base64url by default
 const [cursor, setCursor] = useQueryState("cursor", parseAsCodec(codec));
 
 // 2. Wrap any parser with a transport (encoder/decoder) layer.
-import { encodeBase64Url, decodeBase64Url } from "xtandard";
-import { withTransport, parseAsJson } from "xtandard/tanstack";
+import { encodeBase64Url, decodeBase64Url } from "@xtandard/lib";
+import { withTransport, parseAsJson } from "@xtandard/lib/tanstack";
 
 const opaque = withTransport(parseAsJson(schema), {
   encode: encodeBase64Url,
@@ -135,7 +135,7 @@ here — parsing must be sync — but work fine in loaders/server functions.
 ### Standard Schema (Zod / Valibot / ArkType)
 
 ```ts
-import { parseAsJson, parseAsStandardSchema } from "xtandard/tanstack";
+import { parseAsJson, parseAsStandardSchema } from "@xtandard/lib/tanstack";
 import * as v from "valibot";
 
 // Structured JSON value validated by a schema:
@@ -148,14 +148,14 @@ const qty = parseAsStandardSchema(v.pipe(v.string(), v.transform(Number), v.numb
 `createStandardSchemaV1(parsers, { partialOutput })` goes the other direction —
 turning a parser map into a Standard Schema for `validateSearch` / tRPC.
 
-### Rison codec (`xtandard/tanstack/rison`)
+### Rison codec (`@xtandard/lib/tanstack/rison`)
 
 Store a validated value as readable, canonical [Rison](https://github.com/sebastian-software/effective-rison)
 (stable key order → the same value always yields the same URL):
 
 ```ts
-import { parseAsCodec } from "xtandard/tanstack";
-import { risonCodec } from "xtandard/tanstack/rison";
+import { parseAsCodec } from "@xtandard/lib/tanstack";
+import { risonCodec } from "@xtandard/lib/tanstack/rison";
 import * as v from "valibot";
 
 const FiltersSchema = v.object({ status: v.picklist(["open", "done"]), tags: v.array(v.string()) });
@@ -163,24 +163,24 @@ const filters = parseAsCodec(risonCodec(FiltersSchema));
 const [value, setValue] = useQueryState("filters", filters);
 ```
 
-Pair the adapter's `serializeSearch` with `keepSubDelims` (from `xtandard/web`)
+Pair the adapter's `serializeSearch` with `keepSubDelims` (from `@xtandard/lib/web`)
 to keep the Rison `( ) , : ! '` readable in the address bar instead of
 percent-encoded:
 
 ```tsx
-import { NuqsAdapter } from "xtandard/tanstack";
-import { keepSubDelims } from "xtandard/web";
+import { NuqsAdapter } from "@xtandard/lib/tanstack";
+import { keepSubDelims } from "@xtandard/lib/web";
 
 <NuqsAdapter serializeSearch={keepSubDelims}>{/* app */}</NuqsAdapter>;
 ```
 
-### Temporal parsers (`xtandard/tanstack/temporal`)
+### Temporal parsers (`@xtandard/lib/tanstack/temporal`)
 
 URL parsers for the six temporal "kinds" — each stores the canonical Temporal
 string and parses back to the live `Temporal.*` object:
 
 ```ts
-import { parseAsInstant, parseAsPlainDate, parseAsTimeZone } from "xtandard/tanstack/temporal";
+import { parseAsInstant, parseAsPlainDate, parseAsTimeZone } from "@xtandard/lib/tanstack/temporal";
 
 const [at, setAt] = useQueryState("at", parseAsInstant); // 2026-06-18T16:00:00Z
 const [day] = useQueryState("day", parseAsPlainDate); // 2026-12-25
@@ -188,7 +188,7 @@ const [tz] = useQueryState("tz", parseAsTimeZone); // America/Los_Angeles (valid
 ```
 
 `Temporal` comes from `@js-temporal/polyfill`; `parseAsTimeZone` validates IANA
-ids via the `xtandard/valibot` TimeZone schema. (Available:
+ids via the `@xtandard/lib/valibot` TimeZone schema. (Available:
 `parseAsInstant`, `parseAsPlainDate`, `parseAsPlainTime`, `parseAsPlainDateTime`,
 `parseAsZonedDateTime`, `parseAsDuration`, `parseAsTimeZone`.)
 
@@ -225,10 +225,14 @@ re-serializes search globally — so a **native array under `shallow: false`**
 will be written as `?tag=["a","b"]` (route-contract territory). For
 loader/SSR-bound arrays use `parseAsArrayOf` (comma) or a route `validateSearch`.
 
-## Server / route helpers (`xtandard/tanstack/server` — React-free)
+## Server / route helpers (`@xtandard/lib/tanstack/server` — React-free)
 
 ```ts
-import { createLoader, createSerializer, createStandardSchemaV1 } from "xtandard/tanstack/server";
+import {
+  createLoader,
+  createSerializer,
+  createStandardSchemaV1,
+} from "@xtandard/lib/tanstack/server";
 
 // Parse a URL / Request / URLSearchParams / record (sync or promise).
 const loadSearch = createLoader(tableSearch);
@@ -245,10 +249,10 @@ export const Route = createFileRoute("/users")({
 });
 ```
 
-## Testing (`xtandard/tanstack/testing`)
+## Testing (`@xtandard/lib/tanstack/testing`)
 
 ```tsx
-import { QueryStateTestingAdapter } from "xtandard/tanstack/testing";
+import { QueryStateTestingAdapter } from "@xtandard/lib/tanstack/testing";
 
 render(<Component />, {
   wrapper: ({ children }) => (

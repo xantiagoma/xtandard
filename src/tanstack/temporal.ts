@@ -3,7 +3,7 @@
  * canonical Temporal string and parses back to the live `Temporal.*` object —
  * the same model the rest of an app holds in state.
  *
- * Opt-in subpath (`xtandard/tanstack/temporal`): only this entry pulls in
+ * Opt-in subpath (`@xtandard/lib/tanstack/temporal`): only this entry pulls in
  * `@js-temporal/polyfill`, so the core stays dependency-free.
  *
  * `Temporal` is imported from `@js-temporal/polyfill` (the spec-reference impl;
@@ -75,7 +75,7 @@ export const parseAsDuration: Parser<Temporal.Duration> = temporalParser({
 });
 
 /** An IANA timezone id (`America/Los_Angeles`, `UTC`), validated via the
- * `xtandard/valibot` TimeZone schema. Returned as the branded `TimeZone`
+ * `@xtandard/lib/valibot` TimeZone schema. Returned as the branded `TimeZone`
  * string; an unknown id parses to `null`. Not a Temporal kind, but it travels
  * with them. */
 export const parseAsTimeZone: Parser<TimeZone> = temporalParser({

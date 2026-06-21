@@ -19,7 +19,7 @@ const SUBDELIM_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
  * (`(type:and,…)` instead of `%28type%3Aand%2C…`). Pass as a query-state
  * adapter's `serializeSearch`.
  *
- *   import { keepSubDelims } from "xtandard/web";
+ *   import { keepSubDelims } from "@xtandard/lib/web";
  *   <NuqsAdapter serializeSearch={keepSubDelims}>…</NuqsAdapter>
  */
 export function keepSubDelims(params: URLSearchParams): string {

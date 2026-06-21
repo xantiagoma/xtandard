@@ -1,5 +1,5 @@
 /**
- * Compile-time inference assertions for the public `xtandard/tanstack` types.
+ * Compile-time inference assertions for the public `@xtandard/lib/tanstack` types.
  * Not a runtime test: this `*.test-d.ts` file is statically type-checked by
  * `tsc --noEmit` (via `bun run check`), so it fails the build if the public
  * parser inference regresses. Uses `type-testing` (`Expect`/`Equal`) — the same

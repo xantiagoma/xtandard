@@ -29,7 +29,7 @@ export const fractionDomain: IntervalDomain<FractionValue> = {
 /**
  * Interval over fraction.js `Fraction` values — exact rationals, continuous.
  *
- *   import { FractionInterval } from "xtandard/fraction";
+ *   import { FractionInterval } from "@xtandard/lib/fraction";
  *   import Fraction from "fraction.js";
  *
  *   const third = (n: number) => new Fraction(n, 3);
