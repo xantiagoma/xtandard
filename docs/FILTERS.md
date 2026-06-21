@@ -437,6 +437,57 @@ db.select()
 > Use `buildOrderBy` with `db.select(...).orderBy(...)`, **not** the RQB query —
 > RQB aliases the root table and breaks column-referencing SQL.
 
+## Compact URL encoding
+
+The model is intentionally verbose — `{ kind, operator, value }` is great DX in
+code. But in a URL it's noisy: a three-clause group can run past 300 chars. The
+**compact codec** shrinks the wire form **without touching the model** — encode
+right before you put it in the address bar, decode right after you read it.
+
+It does three things: flattens the `filter` wrapper into the column node,
+collapses connectives to a single key (`{ and: [...] }` / `{ or: [...] }` /
+`{ not: … }`), and abbreviates keys + operators (`field`→`f`, `operator`→`o` with
+short codes like `contains`→`ct`, `inArray`→`iA`). It is also **spec-aware**:
+`kind` is **not stored** — it's recovered on decode from the `field → kind`
+allow-list the client already has (a resource's `_metadata`). Decode is
+defensive: a field not in the allow-list, an unknown operator code, or a
+wrong-typed argument is dropped (the same posture as the compiler), and you still
+validate the reconstructed model as usual.
+
+```ts
+import { compactFilterNode, expandFilterNode } from "@xtandard/lib/filters";
+
+const kinds = { title: "text", status: "enum", priority: "number" }; // from _metadata
+
+// FE → URL
+const { compact } = compactFilterNode({ node });
+const param = rison.encode(compact); // (or:!((f:title,o:ct,v:inves),(f:status,o:iA,vs:!(todo,in_progress)),(and:!((f:priority,o:eq,v:1)))))
+
+// URL → FE (kind restored from `kinds`)
+const { node } = expandFilterNode({ compact: rison.decode(param), kinds });
+```
+
+Versus the verbose form, the example above goes from ~330 → ~120 chars. The
+roughly equivalent verbose Rison was:
+
+```
+(nodes:!((field:title,filter:(kind:text,operator:contains,value:inves),type:column),(field:status,filter:(kind:enum,operator:inArray,values:!(todo,in_progress)),type:column),(nodes:!((field:priority,filter:(kind:number,operator:eq,value:1)),type:column)),type:and),type:or)
+```
+
+- **Flat lists**: `compactFilters({ filters })` / `expandFilters({ compact, kinds })`
+  for the `ColumnFilter[]` (implicit-AND) case — the compact form is just an
+  array of leaves.
+- **Bind once**: `createFilterUrlCodec({ kinds })` returns
+  `{ encodeNode, decodeNode, encodeFilters, decodeFilters }` — sugar for plugging
+  into a URL-state codec (e.g. `parseAsCodec(risonCodec(...))`).
+- The code tables are exported (`OPERATOR_CODE` / `operatorFromCode`,
+  `UNIT_CODE` / `unitFromCode`) if you need to read or extend them.
+
+> The codec is **frontend-safe and zero-dependency** (part of the core
+> `@xtandard/lib/filters`). The model is unchanged — adapters, validation, and
+> everything server-side still consume the verbose objects; the compact form
+> exists only between `encode` and `decode`.
+
 ## Describing filters (chip labels)
 
 `describeFieldFilter` / `describeColumnFilter` render short, human labels for
@@ -611,7 +662,10 @@ fields, so an adapter only maps the ~16 normalized leaf ops + and/or/not.
   `SortItem`, `SortDirection`, `FieldKindSpec`, `ScalarValue`.
 - **Compiled AST:** `CompiledWhere`, `CompiledCond`, `CompiledOp`, `TextMatchOp`.
 - **Compiler:** `compileFilters`, `compileFilterNode`, `DateFilterResolver`,
-  `escapeLike`, `sqlTextOp`.
+  `SqlDialect`, `escapeLike`, `sqlTextOp`.
+- **Compact URL codec:** `compactFilterNode`, `expandFilterNode`,
+  `compactFilters`, `expandFilters`, `createFilterUrlCodec`, `OPERATOR_CODE`,
+  `operatorFromCode`, `UNIT_CODE`, `unitFromCode`, `CompactNode`, `CompactLeaf`.
 - **Operators:** `OPERATORS_BY_KIND` and the `*_OPERATORS` constants +
   `*Operator` types.
 - **Sort:** `parseSortParam`, `serializeSort`.

@@ -7,6 +7,7 @@
 export * from "./types.ts";
 export * from "./operators.ts";
 export * from "./compile.ts";
+export * from "./url.ts";
 export * from "./describe.ts";
 export * from "./pagination.ts";
 export { parseSortParam, serializeSort } from "./sort.ts";
