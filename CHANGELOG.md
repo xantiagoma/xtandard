@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.0
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.4.2...v0.5.0)
+
+### 🚀 Enhancements
+
+- **filters:** Portable core, per-driver adapters & multi-validator schemas ([#7](https://github.com/xantiagoma/xtandard/pull/7))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.4.2
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.4.0...v0.4.2)
