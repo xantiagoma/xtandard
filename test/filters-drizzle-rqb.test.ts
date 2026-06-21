@@ -143,3 +143,113 @@ describe("drizzle-rqb adapter — column → RQBv2 condition object", () => {
     ).toBeUndefined();
   });
 });
+
+// A fake set of RQB v1 operators that records calls as plain S-expression-ish
+// objects, so we can assert the callback builds via the provided ops + fields
+// (not raw columns) without importing drizzle.
+type Node = { op: string; args: unknown[] };
+const ops: rqb.RqbV1Operators<Node> = {
+  eq: (c, v) => ({ op: "eq", args: [c, v] }),
+  ne: (c, v) => ({ op: "ne", args: [c, v] }),
+  gt: (c, v) => ({ op: "gt", args: [c, v] }),
+  gte: (c, v) => ({ op: "gte", args: [c, v] }),
+  lt: (c, v) => ({ op: "lt", args: [c, v] }),
+  lte: (c, v) => ({ op: "lte", args: [c, v] }),
+  like: (c, v) => ({ op: "like", args: [c, v] }),
+  ilike: (c, v) => ({ op: "ilike", args: [c, v] }),
+  notIlike: (c, v) => ({ op: "notIlike", args: [c, v] }),
+  inArray: (c, v) => ({ op: "inArray", args: [c, v] }),
+  notInArray: (c, v) => ({ op: "notInArray", args: [c, v] }),
+  isNull: (c) => ({ op: "isNull", args: [c] }),
+  isNotNull: (c) => ({ op: "isNotNull", args: [c] }),
+  arrayContains: (c, v) => ({ op: "arrayContains", args: [c, v] }),
+  arrayContained: (c, v) => ({ op: "arrayContained", args: [c, v] }),
+  arrayOverlaps: (c, v) => ({ op: "arrayOverlaps", args: [c, v] }),
+  and: (...xs) => ({ op: "and", args: xs.filter((x) => x !== undefined) }),
+  or: (...xs) => ({ op: "or", args: xs.filter((x) => x !== undefined) }),
+  not: (x) => ({ op: "not", args: [x] }),
+};
+// the (aliased) table fields the RQB v1 callback receives — keyed by property name
+const fields = { name: "F.name", amount: "F.amount", status: "F.status", tags: "F.tags" };
+
+describe("drizzle-rqb v1 callback adapter", () => {
+  test("builds via the callback ops + fields (resolves the aliased column, not raw)", () => {
+    const { where } = rqb.buildRqbV1Where({
+      spec,
+      filters: [{ field: "name", filter: { kind: "text", operator: "contains", value: "ab" } }],
+    });
+
+    expect(where(fields, ops)).toEqual({ op: "ilike", args: ["F.name", "%ab%"] });
+  });
+
+  test("AND list, set/array/null ops, between → and(gte,lte)", () => {
+    const { where } = rqb.buildRqbV1Where({
+      spec,
+      filters: [
+        { field: "status", filter: { kind: "enum", operator: "inArray", values: ["a"] } },
+        { field: "amount", filter: { kind: "number", operator: "between", from: 1, to: 9 } },
+        { field: "tags", filter: { kind: "array", operator: "arrayContains", values: ["x"] } },
+      ],
+    });
+
+    expect(where(fields, ops)).toEqual({
+      op: "and",
+      args: [
+        { op: "inArray", args: ["F.status", ["a"]] },
+        {
+          op: "and",
+          args: [
+            { op: "gte", args: ["F.amount", 1] },
+            { op: "lte", args: ["F.amount", 9] },
+          ],
+        },
+        { op: "arrayContains", args: ["F.tags", ["x"]] },
+      ],
+    });
+  });
+
+  test("buildRqbV1FilterNode → not(or(...))", () => {
+    const { where } = rqb.buildRqbV1FilterNode({
+      spec,
+      node: {
+        type: "not",
+        node: {
+          type: "or",
+          nodes: [
+            { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "a" } },
+            {
+              type: "column",
+              field: "amount",
+              filter: { kind: "number", operator: "gt", value: 5 },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(where(fields, ops)).toEqual({
+      op: "not",
+      args: [
+        {
+          op: "or",
+          args: [
+            { op: "eq", args: ["F.name", "a"] },
+            { op: "gt", args: ["F.amount", 5] },
+          ],
+        },
+      ],
+    });
+  });
+
+  test("empty / all-dropped callback → undefined", () => {
+    expect(rqb.buildRqbV1Where({ spec, filters: [] }).where(fields, ops)).toBeUndefined();
+    expect(
+      rqb
+        .buildRqbV1Where({
+          spec,
+          filters: [{ field: "ghost", filter: { kind: "text", operator: "eq", value: "x" } }],
+        })
+        .where(fields, ops),
+    ).toBeUndefined();
+  });
+});

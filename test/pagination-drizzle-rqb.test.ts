@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { createKeysetSpec } from "../src/keyset.ts";
-import { toDrizzleRqbKeyset } from "../src/pagination-drizzle-rqb.ts";
+import {
+  type RqbV1KeysetOperators,
+  type RqbV1OrderOperators,
+  toDrizzleRqbKeyset,
+  toDrizzleRqbV1Keyset,
+} from "../src/pagination-drizzle-rqb.ts";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -45,5 +50,50 @@ describe("toDrizzleRqbKeyset", () => {
   test("missing column mapping throws", () => {
     const bad = toDrizzleRqbKeyset({ createdAt: "createdAt" }); // no `id`
     expect(() => bad.orderBy(keyset.orderBy("forward"))).toThrow();
+  });
+});
+
+describe("toDrizzleRqbV1Keyset (legacy callbacks)", () => {
+  type Node = { op: string; args: unknown[] };
+  const whereOps: RqbV1KeysetOperators<Node> = {
+    eq: (c, v) => ({ op: "eq", args: [c, v] }),
+    gt: (c, v) => ({ op: "gt", args: [c, v] }),
+    lt: (c, v) => ({ op: "lt", args: [c, v] }),
+    and: (...xs) => ({ op: "and", args: xs.filter((x) => x !== undefined) }),
+    or: (...xs) => ({ op: "or", args: xs.filter((x) => x !== undefined) }),
+  };
+  const orderOps: RqbV1OrderOperators<Node> = {
+    asc: (c) => ({ op: "asc", args: [c] }),
+    desc: (c) => ({ op: "desc", args: [c] }),
+  };
+  const fields = { createdAt: "F.createdAt", id: "F.id" };
+  const rqbV1 = toDrizzleRqbV1Keyset({ createdAt: "createdAt", id: "id" });
+
+  test("orderBy callback → ordered asc/desc via the provided ops + fields", () => {
+    const cb = rqbV1.orderBy(keyset.orderBy("forward"));
+    expect(cb(fields, orderOps)).toEqual([
+      { op: "desc", args: ["F.createdAt"] },
+      { op: "asc", args: ["F.id"] },
+    ]);
+  });
+
+  test("null where → undefined (first page)", () => {
+    expect(rqbV1.where(keyset.where(null, "forward"))).toBeUndefined();
+  });
+
+  test("cursor where callback → or(and(...)) of eq/gt/lt via ops + fields", () => {
+    const cb = rqbV1.where(
+      keyset.where({ createdAt: "2026-02-14T00:00:00Z", id: "abc" }, "forward"),
+    );
+    const result = cb?.(fields, whereOps);
+
+    expect(result?.op).toBe("or");
+    for (const branch of (result?.args ?? []) as Node[]) {
+      expect(branch.op).toBe("and");
+      for (const term of branch.args as Node[]) {
+        expect(["eq", "gt", "lt"]).toContain(term.op);
+        expect(["F.createdAt", "F.id"]).toContain(term.args[0]);
+      }
+    }
   });
 });

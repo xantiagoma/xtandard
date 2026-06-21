@@ -356,6 +356,20 @@ reference to FROM-clause entry`). The native object references columns by their
 > `DrizzleRqbWhere`; if drizzle's generated per-table `where` type is stricter,
 > annotate at the call site.
 
+**Legacy RQB v1** (the older callback `where: (fields, operators) => SQL`, e.g.
+`db._query` on drizzle v1 or `db.query` on 0.x) is in the **same subpath**:
+`buildRqbV1Where`/`buildRqbV1FilterNode` return `{ where }` where `where` is that
+callback. It builds via the **operators and fields the callback provides** (not
+raw imported columns), so column refs resolve against the aliased table — same
+alias-safety as the v2 object.
+
+```ts
+import { buildRqbV1Where, textField } from "@xtandard/lib/filters/drizzle-rqb";
+
+const { where } = buildRqbV1Where({ spec: { name: textField({ column: "name" }) }, filters });
+const rows = await db._query.tasks.findMany({ where }); // where: (fields, ops) => SQL | undefined
+```
+
 ### Kysely — `@xtandard/lib/filters/kysely` (peer `kysely`)
 
 Columns are string references (passed to `sql.ref`) or `sql` `RawBuilder`s.
@@ -776,14 +790,14 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 
 ### Adapters
 
-| Entry          | Peer                       | Key exports                                                                                                                                                    |
-| -------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/drizzle`     | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf` |
-| `/drizzle-rqb` | —                          | `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `dateField`/…, `DrizzleRqbFilterSpec`, `DrizzleRqbWhere` (RQBv2 `where` OBJECT for `db.query`)           |
-| `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                              |
-| `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                 |
-| `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                             |
-| `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                             |
+| Entry          | Peer                       | Key exports                                                                                                                                                                                                                              |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/drizzle`     | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf`                                                                           |
+| `/drizzle-rqb` | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
+| `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                        |
+| `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                           |
+| `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                       |
+| `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                       |
 
 ## Gotchas & FAQ
 

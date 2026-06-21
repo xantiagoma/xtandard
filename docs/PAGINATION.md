@@ -563,6 +563,22 @@ Use the `db.select()` adapter (`toDrizzleKeyset`, above) for the core query
 builder; use this one when you want the RQB (relations, nested `with`). To filter
 the same RQB query, pair it with `@xtandard/lib/filters/drizzle-rqb`.
 
+For the **legacy RQB v1** (callback `where`/`orderBy`, e.g. `db._query`),
+`toDrizzleRqbV1Keyset` (same subpath) returns `where(...)`/`orderBy(...)` that
+yield those callbacks (`(fields, operators) => …`), building via the provided
+operators/fields:
+
+```ts
+import { toDrizzleRqbV1Keyset } from "@xtandard/lib/pagination/drizzle-rqb";
+
+const rqbV1 = toDrizzleRqbV1Keyset({ createdAt: "createdAt", id: "id" });
+const rows = await db._query.users.findMany({
+  where: rqbV1.where(keyset.where(cursor, direction)), // (fields, ops) => SQL | undefined
+  orderBy: rqbV1.orderBy(keyset.orderBy(direction)), //   (fields, { asc, desc }) => SQL[]
+  limit,
+});
+```
+
 ### Kysely
 
 ```ts
