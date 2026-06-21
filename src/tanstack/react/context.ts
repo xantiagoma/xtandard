@@ -19,7 +19,7 @@ export function useAdapterValue(): AdapterValue {
   if (value === null) {
     throw new Error(
       "useQueryState/useQueryStates require a query-params adapter. Wrap your " +
-        "app in <NuqsAdapter> from xtandard/tanstack.",
+        "app in <NuqsAdapter> from @xtandard/lib/tanstack.",
     );
   }
   return value;

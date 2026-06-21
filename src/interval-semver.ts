@@ -33,7 +33,7 @@ export const semverDomain: IntervalDomain<string> = {
 /**
  * Interval over semantic-version strings — exact precedence ordering, continuous.
  *
- *   import { SemverInterval } from "xtandard/semver";
+ *   import { SemverInterval } from "@xtandard/lib/semver";
  *
  *   const compatible = SemverInterval.closedOpen("1.2.0", "2.0.0"); // [1.2.0, 2.0.0)
  *   compatible.contains("1.5.3"); // true

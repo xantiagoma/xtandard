@@ -1,4 +1,4 @@
-// xtandard/interval — a generic, immutable Interval<T> over any ordered type
+// @xtandard/lib/interval — a generic, immutable Interval<T> over any ordered type
 // (Guava Range + DiscreteDomain model), plus built-in domains for the JS
 // primitives (number, integer, bigint, Date). Zero runtime dependencies.
 //

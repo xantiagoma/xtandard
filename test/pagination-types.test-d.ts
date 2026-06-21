@@ -1,5 +1,5 @@
 /**
- * Compile-time inference assertions for the public `xtandard/pagination`
+ * Compile-time inference assertions for the public `@xtandard/lib/pagination`
  * types — especially the sync/async-adaptive return inference, which no runtime
  * test catches (it can silently collapse to `Promise` or `unknown`).
  * Checked by `tsc --noEmit` (via `bun run check`); not run by the test runner.

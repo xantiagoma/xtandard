@@ -63,7 +63,7 @@ const filterFor = (op: KeysetCompareOp, value: unknown): PrismaKeysetFilter => {
  *
  * @example
  * ```ts
- * import { toPrismaKeyset } from "xtandard/pagination/prisma";
+ * import { toPrismaKeyset } from "@xtandard/lib/pagination/prisma";
  *
  * const prismaKeyset = toPrismaKeyset({
  *   createdAt: "createdAt",
