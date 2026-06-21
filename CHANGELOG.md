@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.3.0
+
+[compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.2.1...v0.3.0)
+
+### 🚀 Enhancements
+
+- ⚠️  Generic Interval<T> with ordered domains + 8 new entry points ([#1](https://github.com/xantiagoma/xantiagoma-lib/pull/1))
+
+### 📖 Documentation
+
+- Update v0.2.1 changelog ([5c5930a](https://github.com/xantiagoma/xantiagoma-lib/commit/5c5930a))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Generic Interval<T> with ordered domains + 8 new entry points ([#1](https://github.com/xantiagoma/xantiagoma-lib/pull/1))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+- Santiago Montoya ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.2.1
 
 [compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.2.0...v0.2.1)
