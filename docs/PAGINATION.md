@@ -279,7 +279,8 @@ the raw SQL helpers or plain fetcher examples directly.
 | In-memory arrays                      | `fetchOffset` with `slice`                             |
 | Raw SQL drivers (`pg`, `mysql2`, etc) | `toKeysetWhereSql` + `toKeysetOrderBySql`              |
 | Prisma Client                         | `@xtandard/lib/pagination/prisma` or Prisma raw SQL    |
-| Drizzle ORM                           | `@xtandard/lib/pagination/drizzle`                     |
+| Drizzle ORM (`db.select`)             | `@xtandard/lib/pagination/drizzle`                     |
+| Drizzle RQB v2 (`db.query`)           | `@xtandard/lib/pagination/drizzle-rqb`                 |
 | Kysely                                | `@xtandard/lib/pagination/kysely`                      |
 | MikroORM                              | QueryBuilder + raw SQL fragments                       |
 | TypeORM                               | QueryBuilder + `Brackets` + raw SQL fragments          |
@@ -524,6 +525,43 @@ const paginator = createPaginator({
 for existing Drizzle-only projects. The lower-level codec pipeline is
 signature-compatible (see [Cursor codecs](#cursor-codecs)), so custom cursor
 encoders/decoders can be shared.
+
+### Drizzle RQB v2
+
+For drizzle v1's **relational query builder** (`db.query.<table>.findMany`),
+`where`/`orderBy` are plain OBJECTS, not SQL. Use
+`@xtandard/lib/pagination/drizzle-rqb` to render the keyset AST to those objects.
+It **emits plain objects** — no `drizzle-orm` import, no peer. Column keys are the
+RQBv2 schema PROPERTY keys.
+
+```ts
+import { createKeysetSpec, createPaginator } from "@xtandard/lib/pagination";
+import { toDrizzleRqbKeyset } from "@xtandard/lib/pagination/drizzle-rqb";
+
+const keyset = createKeysetSpec({
+  sort: [
+    { key: "createdAt", order: "desc" },
+    { key: "id", order: "asc" },
+  ],
+});
+
+const rqb = toDrizzleRqbKeyset({ createdAt: "createdAt", id: "id" });
+
+const paginator = createPaginator({
+  fetchCursor: async ({ limit, cursor, direction }) => ({
+    items: await db.query.users.findMany({
+      where: rqb.where(keyset.where(cursor, direction)), // undefined = first page
+      orderBy: rqb.orderBy(keyset.orderBy(direction)), // { createdAt: "desc", id: "asc" }
+      limit,
+    }),
+  }),
+  cursor: { fromItem: (u) => ({ createdAt: u.createdAt, id: u.id }) },
+});
+```
+
+Use the `db.select()` adapter (`toDrizzleKeyset`, above) for the core query
+builder; use this one when you want the RQB (relations, nested `with`). To filter
+the same RQB query, pair it with `@xtandard/lib/filters/drizzle-rqb`.
 
 ### Kysely
 

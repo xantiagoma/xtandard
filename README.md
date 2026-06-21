@@ -271,25 +271,26 @@ Source-agnostic pagination: import from `@xtandard/lib/pagination`, provide fetc
 
 Sync/async adaptive: pass all-sync fetchers and codec (e.g. an in-memory array) and `paginate()` returns plain values — no `await` needed; any async piece (even just an async cursor encoder) makes results Promises, reflected in the types. The pattern is documented in [docs/sync-async-adaptive.md](./docs/sync-async-adaptive.md).
 
-| Import                             | Export                      | Description                                                                | Source                             | Tests                                      |
-| ---------------------------------- | --------------------------- | -------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
-| `@xtandard/lib/pagination`         | `createPaginator`           | Paginator over user-provided fetchers; `pages()`/`items()` async iteration | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
-| `@xtandard/lib/pagination`         | `toOffsetWindow`            | Page/offset input → `{ limit, offset }`                                    | [src](./src/pagination.ts)         | [tests](./test/pagination.test.ts)         |
-| `@xtandard/lib/pagination`         | `createCursorCodec`         | Pluggable opaque-cursor codec (JSON + base64url)                           | [src](./src/cursor-codec.ts)       | [tests](./test/cursor-codec.test.ts)       |
-| `@xtandard/lib/pagination`         | `createKeysetSpec`          | Portable keyset `where()`/`orderBy()` AST                                  | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `@xtandard/lib/pagination`         | `keysetSqlExpression`       | Mark server-owned computed SQL expressions for raw keyset helpers          | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `@xtandard/lib/pagination`         | `toKeysetWhereSql`          | Keyset `WHERE` → parameterized SQL + params                                | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `@xtandard/lib/pagination`         | `toKeysetOrderBySql`        | Keyset order → SQL `ORDER BY` fragment                                     | [src](./src/keyset.ts)             | [tests](./test/keyset.test.ts)             |
-| `@xtandard/lib/pagination/drizzle` | `toDrizzleKeyset`           | Keyset AST → Drizzle `where`/`orderBy` helpers                             | [src](./src/pagination-drizzle.ts) | [tests](./test/pagination-drizzle.test.ts) |
-| `@xtandard/lib/pagination/kysely`  | `toKyselyKeyset`            | Keyset AST → Kysely `where`/`orderBy` helpers                              | [src](./src/pagination-kysely.ts)  | [tests](./test/pagination-kysely.test.ts)  |
-| `@xtandard/lib/pagination/knex`    | `applyKeysetToKnex`         | Apply keyset AST to Knex `whereRaw`/`orderByRaw`                           | [src](./src/pagination-knex.ts)    | [tests](./test/pagination-knex.test.ts)    |
-| `@xtandard/lib/pagination/mongo`   | `toMongoKeyset`             | Keyset AST → Mongo/Mongoose `filter`/`sort` objects                        | [src](./src/pagination-mongo.ts)   | [tests](./test/pagination-mongo.test.ts)   |
-| `@xtandard/lib/pagination/prisma`  | `toPrismaKeyset`            | Keyset AST → Prisma `where`/`orderBy` objects                              | [src](./src/pagination-prisma.ts)  | [tests](./test/pagination-prisma.test.ts)  |
-| `@xtandard/lib/pagination`         | `parsePaginationParams`     | Query params → `PaginationInput` (with clamping)                           | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
-| `@xtandard/lib/pagination`         | `fromRelayArgs`             | Relay `first`/`after`/`last`/`before` → input                              | [src](./src/pagination-params.ts)  | [tests](./test/pagination-params.test.ts)  |
-| `@xtandard/lib/pagination`         | `toRelayConnection`         | Result → Relay connection (`edges`, `pageInfo`)                            | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
-| `@xtandard/lib/pagination`         | `toRestEnvelope`            | Result → `{ data, meta }` REST envelope                                    | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
-| `@xtandard/lib/pagination`         | `infinitePaginationOptions` | TanStack `useInfiniteQuery` config (dep-free)                              | [src](./src/pagination-output.ts)  | [tests](./test/pagination-output.test.ts)  |
+| Import                                 | Export                      | Description                                                                | Source                                 | Tests                                          |
+| -------------------------------------- | --------------------------- | -------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------- |
+| `@xtandard/lib/pagination`             | `createPaginator`           | Paginator over user-provided fetchers; `pages()`/`items()` async iteration | [src](./src/pagination.ts)             | [tests](./test/pagination.test.ts)             |
+| `@xtandard/lib/pagination`             | `toOffsetWindow`            | Page/offset input → `{ limit, offset }`                                    | [src](./src/pagination.ts)             | [tests](./test/pagination.test.ts)             |
+| `@xtandard/lib/pagination`             | `createCursorCodec`         | Pluggable opaque-cursor codec (JSON + base64url)                           | [src](./src/cursor-codec.ts)           | [tests](./test/cursor-codec.test.ts)           |
+| `@xtandard/lib/pagination`             | `createKeysetSpec`          | Portable keyset `where()`/`orderBy()` AST                                  | [src](./src/keyset.ts)                 | [tests](./test/keyset.test.ts)                 |
+| `@xtandard/lib/pagination`             | `keysetSqlExpression`       | Mark server-owned computed SQL expressions for raw keyset helpers          | [src](./src/keyset.ts)                 | [tests](./test/keyset.test.ts)                 |
+| `@xtandard/lib/pagination`             | `toKeysetWhereSql`          | Keyset `WHERE` → parameterized SQL + params                                | [src](./src/keyset.ts)                 | [tests](./test/keyset.test.ts)                 |
+| `@xtandard/lib/pagination`             | `toKeysetOrderBySql`        | Keyset order → SQL `ORDER BY` fragment                                     | [src](./src/keyset.ts)                 | [tests](./test/keyset.test.ts)                 |
+| `@xtandard/lib/pagination/drizzle`     | `toDrizzleKeyset`           | Keyset AST → Drizzle `where`/`orderBy` helpers                             | [src](./src/pagination-drizzle.ts)     | [tests](./test/pagination-drizzle.test.ts)     |
+| `@xtandard/lib/pagination/drizzle-rqb` | `toDrizzleRqbKeyset`        | Keyset AST → Drizzle RQB v2 `where`/`orderBy` objects (`db.query`)         | [src](./src/pagination-drizzle-rqb.ts) | [tests](./test/pagination-drizzle-rqb.test.ts) |
+| `@xtandard/lib/pagination/kysely`      | `toKyselyKeyset`            | Keyset AST → Kysely `where`/`orderBy` helpers                              | [src](./src/pagination-kysely.ts)      | [tests](./test/pagination-kysely.test.ts)      |
+| `@xtandard/lib/pagination/knex`        | `applyKeysetToKnex`         | Apply keyset AST to Knex `whereRaw`/`orderByRaw`                           | [src](./src/pagination-knex.ts)        | [tests](./test/pagination-knex.test.ts)        |
+| `@xtandard/lib/pagination/mongo`       | `toMongoKeyset`             | Keyset AST → Mongo/Mongoose `filter`/`sort` objects                        | [src](./src/pagination-mongo.ts)       | [tests](./test/pagination-mongo.test.ts)       |
+| `@xtandard/lib/pagination/prisma`      | `toPrismaKeyset`            | Keyset AST → Prisma `where`/`orderBy` objects                              | [src](./src/pagination-prisma.ts)      | [tests](./test/pagination-prisma.test.ts)      |
+| `@xtandard/lib/pagination`             | `parsePaginationParams`     | Query params → `PaginationInput` (with clamping)                           | [src](./src/pagination-params.ts)      | [tests](./test/pagination-params.test.ts)      |
+| `@xtandard/lib/pagination`             | `fromRelayArgs`             | Relay `first`/`after`/`last`/`before` → input                              | [src](./src/pagination-params.ts)      | [tests](./test/pagination-params.test.ts)      |
+| `@xtandard/lib/pagination`             | `toRelayConnection`         | Result → Relay connection (`edges`, `pageInfo`)                            | [src](./src/pagination-output.ts)      | [tests](./test/pagination-output.test.ts)      |
+| `@xtandard/lib/pagination`             | `toRestEnvelope`            | Result → `{ data, meta }` REST envelope                                    | [src](./src/pagination-output.ts)      | [tests](./test/pagination-output.test.ts)      |
+| `@xtandard/lib/pagination`             | `infinitePaginationOptions` | TanStack `useInfiniteQuery` config (dep-free)                              | [src](./src/pagination-output.ts)      | [tests](./test/pagination-output.test.ts)      |
 
 ```ts
 import {
@@ -438,17 +439,18 @@ const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate inj
 db.select().from(t).where(where);
 ```
 
-| Import                                               | Export                                                                                                      | Source                          |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `@xtandard/lib/filters`                              | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                                  | [src](./src/filters/types.ts)   |
-| `@xtandard/lib/filters`                              | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                             | [src](./src/filters/compile.ts) |
-| `@xtandard/lib/filters`                              | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata`         | [src](./src/filters/)           |
-| `@xtandard/lib/filters/{valibot,zod,arktype,effect}` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema` (same names per validator) | [src](./src/filters/)           |
-| `@xtandard/lib/filters/drizzle`                      | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                        | [src](./src/filters/drizzle/)   |
-| `@xtandard/lib/filters/kysely`                       | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                             | [src](./src/filters/kysely.ts)  |
-| `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)    |
-| `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)   |
-| `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)  |
+| Import                                               | Export                                                                                                      | Source                              |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `@xtandard/lib/filters`                              | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                                  | [src](./src/filters/types.ts)       |
+| `@xtandard/lib/filters`                              | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                             | [src](./src/filters/compile.ts)     |
+| `@xtandard/lib/filters`                              | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata`         | [src](./src/filters/)               |
+| `@xtandard/lib/filters/{valibot,zod,arktype,effect}` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema` (same names per validator) | [src](./src/filters/)               |
+| `@xtandard/lib/filters/drizzle`                      | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                        | [src](./src/filters/drizzle/)       |
+| `@xtandard/lib/filters/drizzle-rqb`                  | `buildWhere`/`buildFilterNode` → RQB v2 `where` object (`db.query`), `dateField`/…                          | [src](./src/filters/drizzle-rqb.ts) |
+| `@xtandard/lib/filters/kysely`                       | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                             | [src](./src/filters/kysely.ts)      |
+| `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)        |
+| `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)       |
+| `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)      |
 
 ## Recommended Libraries
 
