@@ -2,6 +2,41 @@
 
 This package publishes from GitHub Actions when a `v*` tag is pushed.
 
+## Versioning Policy
+
+This package intends to stay on `0.x` **indefinitely** — there is no planned
+`1.0.0` ("ZeroVer"). Staying pre-1.0 keeps iteration cheap and avoids the
+implicit "frozen forever" contract a `1.0.0` signals. A `1.0.0` is only on the
+table if the API surface genuinely stabilizes for a broad external audience.
+
+We follow **standard semver** within `0.x` to choose the bump direction (this
+matches changelogen's conventional-commit inference). The resulting version is
+still passed explicitly via `-r <version>` at release time — see
+[Pre-1.0 Versions](#important-pre-10-versions) for why.
+
+| Change                           | Bump             | Example         | Conventional commit                            |
+| -------------------------------- | ---------------- | --------------- | ---------------------------------------------- |
+| New feature, backward compatible | **minor**        | `0.4.0 → 0.5.0` | `feat:`                                        |
+| Bug fix, backward compatible     | **patch**        | `0.4.0 → 0.4.1` | `fix:`                                         |
+| Breaking change                  | **minor** + flag | `0.4.0 → 0.5.0` | `feat!:` / `fix!:` / `BREAKING CHANGE:` footer |
+
+Always **flag breaking changes** with a `!` (`feat!:`) or a `BREAKING CHANGE:`
+commit footer. changelogen renders them under a `⚠️ Breaking Changes` heading in
+the CHANGELOG and they surface in the GitHub release notes — that is how
+consumers are warned.
+
+Caveat (accepted): because a breaking change lands as a `0.x` **minor**, a
+`^0.x` range will still upgrade across it (the classic `^0.x` footgun). The
+primary consumers here pin exact versions (e.g. catalog versioning), so this is
+acceptable; anyone wanting hard protection should pin `~0.x`. If the package
+ever gains many external `^`-pinning consumers, switch to the caret-protective
+"0ver" convention (breaking → minor, everything else → patch) at that point.
+
+> Note: the `⚠️` heading changelogen emits can have a double space after the
+> emoji that oxfmt rewrites — after a breaking release run `bun run format` and
+> commit the CHANGELOG fix so `format:check` stays green (the publish workflow is
+> unaffected, but the `main` CI runs `format:check`).
+
 ## CI/CD Overview
 
 ### CI
