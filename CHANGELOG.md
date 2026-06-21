@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.3
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.5.2...v0.5.3)
+
+### 🚀 Enhancements
+
+- **filters:** KeepEmptyGroups opt-in on the compact URL decode ([#10](https://github.com/xantiagoma/xtandard/pull/10))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.5.2
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.5.1...v0.5.2)

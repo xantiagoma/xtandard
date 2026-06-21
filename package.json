@@ -1,6 +1,6 @@
 {
   "name": "@xtandard/lib",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Lightweight, type-safe TypeScript utilities",
   "keywords": [
     "async",
