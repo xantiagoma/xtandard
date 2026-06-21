@@ -43,6 +43,86 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./interval": {
+      "import": {
+        "types": "./dist/entry-interval.d.mts",
+        "default": "./dist/entry-interval.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-interval.d.cts",
+        "default": "./dist/entry-interval.cjs"
+      }
+    },
+    "./dinero": {
+      "import": {
+        "types": "./dist/entry-dinero.d.mts",
+        "default": "./dist/entry-dinero.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-dinero.d.cts",
+        "default": "./dist/entry-dinero.cjs"
+      }
+    },
+    "./decimal": {
+      "import": {
+        "types": "./dist/entry-decimal.d.mts",
+        "default": "./dist/entry-decimal.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-decimal.d.cts",
+        "default": "./dist/entry-decimal.cjs"
+      }
+    },
+    "./big": {
+      "import": {
+        "types": "./dist/entry-big.d.mts",
+        "default": "./dist/entry-big.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-big.d.cts",
+        "default": "./dist/entry-big.cjs"
+      }
+    },
+    "./bignumber": {
+      "import": {
+        "types": "./dist/entry-bignumber.d.mts",
+        "default": "./dist/entry-bignumber.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-bignumber.d.cts",
+        "default": "./dist/entry-bignumber.cjs"
+      }
+    },
+    "./fraction": {
+      "import": {
+        "types": "./dist/entry-fraction.d.mts",
+        "default": "./dist/entry-fraction.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-fraction.d.cts",
+        "default": "./dist/entry-fraction.cjs"
+      }
+    },
+    "./semver": {
+      "import": {
+        "types": "./dist/entry-semver.d.mts",
+        "default": "./dist/entry-semver.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-semver.d.cts",
+        "default": "./dist/entry-semver.cjs"
+      }
+    },
+    "./ip": {
+      "import": {
+        "types": "./dist/entry-ip.d.mts",
+        "default": "./dist/entry-ip.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-ip.d.cts",
+        "default": "./dist/entry-ip.cjs"
+      }
+    },
     "./web": {
       "import": {
         "types": "./dist/entry-web.d.mts",
@@ -200,14 +280,23 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.100.13",
+    "@types/big.js": "^7.0.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "@types/semver": "^7.7.1",
     "@vitest/coverage-v8": "4.1.6",
+    "big.js": "^7.0.1",
+    "bignumber.js": "^11.1.4",
     "changelogen": "^0.6.2",
     "dataloader": "^2.2.3",
+    "decimal.js": "^10.6.0",
+    "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.2",
+    "fraction.js": "^5.3.4",
     "husky": "^9.1.7",
+    "ipaddr.js": "^2.4.0",
     "itty-time": "^1.0.6",
     "kysely": "^0.29.2",
     "msw": "^2.14.6",
@@ -215,8 +304,8 @@
     "playwright": "^1.60.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "semver": "^7.8.5",
     "sonner": "^2.0.7",
-    "temporal-polyfill": "^0.3.0",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
     "up-fetch": "^2.6.0",
@@ -225,15 +314,22 @@
     "vitest-browser-react": "^2.2.0"
   },
   "peerDependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.0.0",
+    "big.js": "^7.0.1",
+    "bignumber.js": "^11.1.4",
     "dataloader": "^2.2.3",
+    "decimal.js": "^10.6.0",
+    "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.0",
+    "fraction.js": "^5.3.4",
+    "ipaddr.js": "^2.4.0",
     "itty-time": "^1.0.6",
     "kysely": "^0.29.0",
     "ohash": "^2.0.11",
     "react": "^18.0.0 || ^19.0.0",
+    "semver": "^7.8.5",
     "sonner": "^2.0.0",
-    "temporal-polyfill": "^0.3.0",
     "typescript": "^5",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
@@ -244,7 +340,28 @@
     "ulid": {
       "optional": true
     },
-    "temporal-polyfill": {
+    "@js-temporal/polyfill": {
+      "optional": true
+    },
+    "decimal.js": {
+      "optional": true
+    },
+    "big.js": {
+      "optional": true
+    },
+    "bignumber.js": {
+      "optional": true
+    },
+    "fraction.js": {
+      "optional": true
+    },
+    "semver": {
+      "optional": true
+    },
+    "ipaddr.js": {
+      "optional": true
+    },
+    "dinero.js": {
       "optional": true
     },
     "dataloader": {

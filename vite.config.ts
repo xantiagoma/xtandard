@@ -44,6 +44,14 @@ export default defineConfig({
   pack: {
     entry: [
       "src/index.ts",
+      "src/entry-interval.ts",
+      "src/entry-dinero.ts",
+      "src/entry-decimal.ts",
+      "src/entry-big.ts",
+      "src/entry-bignumber.ts",
+      "src/entry-fraction.ts",
+      "src/entry-semver.ts",
+      "src/entry-ip.ts",
       "src/entry-pagination.ts",
       "src/entry-pagination-drizzle.ts",
       "src/entry-pagination-kysely.ts",
