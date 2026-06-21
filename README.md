@@ -26,23 +26,31 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Entry Points
 
-| Import                          | Description                            | Dependencies                     |
-| ------------------------------- | -------------------------------------- | -------------------------------- |
-| `xantiagoma`                    | Core utilities (isomorphic, zero deps) | none                             |
-| `xantiagoma/pagination`         | Pagination + keyset helpers            | none                             |
-| `xantiagoma/pagination/drizzle` | Drizzle adapter for pagination keysets | `drizzle-orm`                    |
-| `xantiagoma/pagination/kysely`  | Kysely adapter for pagination keysets  | `kysely`                         |
-| `xantiagoma/pagination/knex`    | Knex adapter for pagination keysets    | none                             |
-| `xantiagoma/pagination/mongo`   | Mongo/Mongoose adapter for keysets     | none                             |
-| `xantiagoma/pagination/prisma`  | Prisma adapter for pagination keysets  | none                             |
-| `xantiagoma/web`                | Browser/FormData utilities             | none                             |
-| `xantiagoma/ulid`               | Prefixed ULID generation + helpers     | `ulid`                           |
-| `xantiagoma/temporal`           | Date/time/duration with Temporal API   | `temporal-polyfill`, `itty-time` |
-| `xantiagoma/dataloader`         | DataLoader factory                     | `dataloader`                     |
-| `xantiagoma/unstorage`          | Cache helpers with unstorage           | `unstorage`, `ohash`             |
-| `xantiagoma/valibot`            | TimeZone validation schema             | `valibot`                        |
-| `xantiagoma/sonner`             | Toast streaming for iterables          | `sonner`, `react`                |
-| `xantiagoma/react`              | React hooks + components               | `react`, `@tanstack/react-query` |
+| Import                          | Description                             | Dependencies                         |
+| ------------------------------- | --------------------------------------- | ------------------------------------ |
+| `xantiagoma`                    | Core utilities (isomorphic, zero deps)  | none                                 |
+| `xantiagoma/interval`           | Generic `Interval<T>` (Guava Range)     | none                                 |
+| `xantiagoma/dinero`             | Money intervals (`Interval` of money)   | `dinero.js`                          |
+| `xantiagoma/decimal`            | Exact-decimal intervals (decimal.js)    | `decimal.js`                         |
+| `xantiagoma/big`                | Exact-decimal intervals (big.js)        | `big.js`                             |
+| `xantiagoma/bignumber`          | Exact-decimal intervals (bignumber.js)  | `bignumber.js`                       |
+| `xantiagoma/fraction`           | Exact-rational intervals (fraction.js)  | `fraction.js`                        |
+| `xantiagoma/semver`             | Semantic-version range intervals        | `semver`                             |
+| `xantiagoma/ip`                 | IPv4/IPv6 address & CIDR intervals      | `ipaddr.js`                          |
+| `xantiagoma/pagination`         | Pagination + keyset helpers             | none                                 |
+| `xantiagoma/pagination/drizzle` | Drizzle adapter for pagination keysets  | `drizzle-orm`                        |
+| `xantiagoma/pagination/kysely`  | Kysely adapter for pagination keysets   | `kysely`                             |
+| `xantiagoma/pagination/knex`    | Knex adapter for pagination keysets     | none                                 |
+| `xantiagoma/pagination/mongo`   | Mongo/Mongoose adapter for keysets      | none                                 |
+| `xantiagoma/pagination/prisma`  | Prisma adapter for pagination keysets   | none                                 |
+| `xantiagoma/web`                | Browser/FormData utilities              | none                                 |
+| `xantiagoma/ulid`               | Prefixed ULID generation + helpers      | `ulid`                               |
+| `xantiagoma/temporal`           | Date/time/duration + Temporal intervals | `@js-temporal/polyfill`, `itty-time` |
+| `xantiagoma/dataloader`         | DataLoader factory                      | `dataloader`                         |
+| `xantiagoma/unstorage`          | Cache helpers with unstorage            | `unstorage`, `ohash`                 |
+| `xantiagoma/valibot`            | TimeZone validation schema              | `valibot`                            |
+| `xantiagoma/sonner`             | Toast streaming for iterables           | `sonner`, `react`                    |
+| `xantiagoma/react`              | React hooks + components                | `react`, `@tanstack/react-query`     |
 
 Sub-entry dependencies are **optional peer deps** — only install what you use.
 
@@ -113,6 +121,129 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 | `prepareLoaderResult`                       | Map DB rows to DataLoader key order     | [src](./src/prepare-loader-result.ts) | [tests](./test/prepare-loader-result.test.ts) |
 | `resolveStreamSource`                       | Resolve `StreamSource<T>`               | [src](./src/stream-source.ts)         | [tests](./test/stream-source.test.ts)         |
 | `secondsToMs` / `minutesToMs` / `hoursToMs` | Time unit converters                    | [src](./src/time-convert.ts)          | [tests](./test/time-convert.test.ts)          |
+
+## Interval Utilities (`xantiagoma/interval`)
+
+A generic, immutable `Interval<T>` over any ordered type — modeled on Guava's
+`Range` + `DiscreteDomain`. The engine knows nothing about `T` except through an
+injected `IntervalDomain<T>` (compare, optional successor/measure/format/parse,
+and the domain's `±∞` values). Zero dependencies. **Full guide:
+[docs/INTERVAL.md](./docs/INTERVAL.md).**
+
+```ts
+import { NumberInterval, IntegerInterval } from "xantiagoma/interval";
+
+const r = new NumberInterval({ start: 0, startClose: true, end: 10, endClose: false }); // [0,10)
+r.contains(5); // true
+r.union(NumberInterval.closedOpen(10, 20))?.toString(); // "[0,20)"
+NumberInterval.parse("(-Infinity,5]").contains(-3); // true
+
+// discrete domains merge epsilon-adjacent ranges:
+IntegerInterval.closed(1, 5).union(IntegerInterval.closed(6, 10))?.toString(); // "[1,10]"
+```
+
+| Export                                                                                      | Description                                             | Source                           | Tests                                    |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------- | ---------------------------------------- |
+| `Interval`                                                                                  | Immutable interval engine (set algebra over a domain)   | [src](./src/interval.ts)         | [tests](./test/interval.test.ts)         |
+| `defineIntervalType`                                                                        | Bind a domain → `new`-able interval class + statics     | [src](./src/interval.ts)         | [tests](./test/interval.test.ts)         |
+| `parseInterval` / `mergeIntervals`                                                          | Parse `[a,b)` strings; merge a bag into disjoint pieces | [src](./src/interval.ts)         | [tests](./test/interval.test.ts)         |
+| `numberDomain` / `integerDomain` / `bigIntDomain` / `dateDomain` / `stringDomain`           | Built-in `IntervalDomain<T>`s (zero-dep)                | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
+| `NumberInterval` / `IntegerInterval` / `BigIntInterval` / `DateInterval` / `StringInterval` | Ready-to-use classes (incl. lexicographic strings)      | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
+| `createOrdinalInterval(labels)`                                                             | Discrete intervals over an ordered label list (enums)   | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
+
+**Temporal intervals** (`xantiagoma/temporal`, peer `@js-temporal/polyfill`) — the
+same engine bound to the TC39 `Temporal` types:
+`InstantInterval`, `ZonedDateTimeInterval`, `PlainDateInterval` (discrete, ε 1 day),
+`PlainDateTimeInterval`, `PlainTimeInterval` (+ the matching `instantDomain` … exports).
+Ordering/membership are nanosecond-exact; `length()`/`middle()` are millisecond-granular
+(day-granular for `PlainDate`) — see [docs/INTERVAL.md](./docs/INTERVAL.md#temporal-intervals).
+
+```ts
+import { PlainTimeInterval, InstantInterval } from "xantiagoma/temporal";
+import { Temporal } from "@js-temporal/polyfill";
+
+const shift = PlainTimeInterval.closedOpen(
+  Temporal.PlainTime.from("09:00"),
+  Temporal.PlainTime.from("17:00"),
+);
+shift.contains(Temporal.PlainTime.from("12:30")); // true
+shift.length(); // 28_800_000 (ms = 8h)
+```
+
+**Money intervals** (`xantiagoma/dinero`, peer `dinero.js`) — the engine bound to
+dinero.js v2 values, **discrete** with the epsilon being one minor unit (1 cent for
+USD, 1 yen for JPY) so adjacent ranges merge and `length()` counts amounts. Build a
+class per currency with `createDineroInterval(currency)` — see
+[docs/INTERVAL.md](./docs/INTERVAL.md#money-intervals).
+
+```ts
+import { createDineroInterval } from "xantiagoma/dinero";
+import { dinero, USD } from "dinero.js";
+
+const UsdInterval = createDineroInterval(USD);
+const tier = UsdInterval.closed(
+  dinero({ amount: 5_000, currency: USD }),
+  dinero({ amount: 10_000, currency: USD }),
+);
+tier.contains(dinero({ amount: 7_500, currency: USD })); // true ($75 ∈ [$50, $100])
+tier.toString(); // "[5000,10000]"  (minor units)
+```
+
+**Decimal intervals** (`xantiagoma/decimal`, peer `decimal.js`) — an exact, continuous
+alternative to `NumberInterval` when IEEE-754 float fuzz is unacceptable. Ordering,
+membership, and the string form are exact arbitrary-precision; see
+[docs/INTERVAL.md](./docs/INTERVAL.md#decimal-intervals).
+
+```ts
+import { DecimalInterval } from "xantiagoma/decimal";
+import Decimal from "decimal.js";
+
+DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3")).length(); // 0.2 (not 0.19999999999999998)
+DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3")).toString(); // "[0.1,0.3]"
+```
+
+Same exact-decimal model, different backing library (pick the one you already use):
+**`xantiagoma/big`** (`BigInterval`, peer `big.js` — smaller) and **`xantiagoma/bignumber`**
+(`BigNumberInterval`, peer `bignumber.js`).
+
+**Fraction intervals** (`xantiagoma/fraction`, peer `fraction.js`) — exact **rationals**:
+`1/3` is lossless (never rounds, even where decimals can't) and renders as `"1/3"`. See
+[docs/INTERVAL.md](./docs/INTERVAL.md#fraction-intervals).
+
+```ts
+import { FractionInterval } from "xantiagoma/fraction";
+import Fraction from "fraction.js";
+
+const third = (n: number) => new Fraction(n, 3);
+FractionInterval.closed(third(1), third(2)).toString(); // "[1/3,2/3]"
+FractionInterval.closed(third(1), third(2)).contains(new Fraction(1, 2)); // true
+```
+
+**Semver intervals** (`xantiagoma/semver`, peer `semver`) — a version range IS an interval
+(`[">=1.2.0","<2.0.0")`). Exact precedence ordering; see
+[docs/INTERVAL.md](./docs/INTERVAL.md#semver-intervals).
+
+```ts
+import { SemverInterval } from "xantiagoma/semver";
+
+const compatible = SemverInterval.closedOpen("1.2.0", "2.0.0");
+compatible.contains("1.5.3"); // true
+compatible.contains("2.0.0"); // false
+```
+
+**IP intervals** (`xantiagoma/ip`, peer `ipaddr.js`) — IPv4/IPv6 ranges, discrete (ε = one
+address), CIDR-aware. See [docs/INTERVAL.md](./docs/INTERVAL.md#ip-intervals).
+
+```ts
+import { Ipv4Interval } from "xantiagoma/ip";
+
+const lan = Ipv4Interval.cidr("192.168.0.0/16");
+lan.contains(Ipv4Interval.ip("192.168.1.50")); // true
+lan.length(); // 65536
+```
+
+Strings and ordered enums need no extra dependency — `StringInterval` (lexicographic) and
+`createOrdinalInterval([...])` (ordered labels) ship in `xantiagoma/interval`.
 
 ## Pagination Utilities (`xantiagoma/pagination`)
 
@@ -230,6 +361,13 @@ These are libraries we use and recommend. They're not re-exported — install th
 | [portakal](https://www.npmjs.com/package/portakal)                         | Printer / ESC/POS                   |
 | [hucre](https://www.npmjs.com/package/hucre)                               | Spreadsheet utilities               |
 | [@gobrand/tiempo](https://www.npmjs.com/package/@gobrand/tiempo)           | Time formatting / parsing           |
+| [dinero.js](https://dinerojs.com/)                                         | Immutable, type-safe money handling |
+| [decimal.js](https://github.com/MikeMcl/decimal.js)                        | Arbitrary-precision decimals        |
+| [big.js](https://github.com/MikeMcl/big.js)                                | Minimalist arbitrary-precision dec. |
+| [bignumber.js](https://github.com/MikeMcl/bignumber.js)                    | Arbitrary-precision decimals/bases  |
+| [fraction.js](https://github.com/rawify/Fraction.js)                       | Exact rational numbers              |
+| [semver](https://github.com/npm/node-semver)                               | Semantic version parsing/compare    |
+| [ipaddr.js](https://github.com/whitequark/ipaddr.js)                       | IPv4/IPv6 address parsing           |
 | [tactus](https://www.npmjs.com/package/tactus)                             | Haptic feedback for web             |
 | [liveline](https://www.npmjs.com/package/liveline)                         | Animated line charts (React)        |
 | [react-lzy-img](https://www.npmjs.com/package/react-lzy-img)               | Lazy loading images (React)         |

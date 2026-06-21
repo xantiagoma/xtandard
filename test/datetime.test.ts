@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Temporal } from "temporal-polyfill";
+import { Temporal } from "@js-temporal/polyfill";
 
 import { dateToInstant, instantToDate, toDate, toInstant } from "../src/datetime-utils";
 

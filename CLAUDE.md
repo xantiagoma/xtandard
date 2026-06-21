@@ -41,12 +41,20 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 
 ```
 xantiagoma              → isomorphic core (zero deps)
+xantiagoma/interval     → generic Interval<T> + number/integer/bigint/Date/string domains + createOrdinalInterval (Guava Range/DiscreteDomain, zero deps)
+xantiagoma/dinero       → money intervals (Interval of dinero.js values) (peer: dinero.js)
+xantiagoma/decimal      → exact-decimal intervals (Interval of decimal.js values) (peer: decimal.js)
+xantiagoma/big          → exact-decimal intervals (Interval of big.js values) (peer: big.js)
+xantiagoma/bignumber    → exact-decimal intervals (Interval of bignumber.js values) (peer: bignumber.js)
+xantiagoma/fraction     → exact-rational intervals (Interval of fraction.js values) (peer: fraction.js)
+xantiagoma/semver       → semantic-version range intervals (peer: semver)
+xantiagoma/ip           → IPv4/IPv6 address & CIDR intervals (peer: ipaddr.js)
 xantiagoma/pagination   → pagination, keyset helpers + raw SQL adapters
 xantiagoma/web          → browser/FormData + fetchWithProgress (peer: up-fetch)
 xantiagoma/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
 xantiagoma/sonner       → toastStream (peer: sonner, react)
 xantiagoma/ulid         → ULID generation + helpers (peer: ulid)
-xantiagoma/temporal     → datetime + duration (peer: temporal-polyfill, itty-time)
+xantiagoma/temporal     → datetime + duration + Temporal interval types (peer: @js-temporal/polyfill, itty-time)
 xantiagoma/dataloader   → createLoader factory (peer: dataloader)
 xantiagoma/unstorage    → withCache, createCache (peer: unstorage, ohash)
 xantiagoma/valibot      → TimeZone validation (peer: valibot)
