@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.4.0
+
+[compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.3.0...v0.4.0)
+
+### 🚀 Enhancements
+
+- **tanstack:** Nuqs-style URL query state for TanStack Router ([#2](https://github.com/xantiagoma/xantiagoma-lib/pull/2))
+
+### 📖 Documentation
+
+- Format v0.3.0 changelog ([d81c71c](https://github.com/xantiagoma/xantiagoma-lib/commit/d81c71c))
+
+### ✅ Tests
+
+- **interval,pagination:** Compile-time type tests via type-testing ([#3](https://github.com/xantiagoma/xantiagoma-lib/pull/3))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+- Santiago Montoya ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.3.0
 
 [compare changes](https://github.com/xantiagoma/xantiagoma-lib/compare/v0.2.1...v0.3.0)
