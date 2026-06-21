@@ -203,6 +203,36 @@
         "default": "./dist/entry-filters-valibot.cjs"
       }
     },
+    "./filters/zod": {
+      "import": {
+        "types": "./dist/entry-filters-zod.d.mts",
+        "default": "./dist/entry-filters-zod.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-zod.d.cts",
+        "default": "./dist/entry-filters-zod.cjs"
+      }
+    },
+    "./filters/arktype": {
+      "import": {
+        "types": "./dist/entry-filters-arktype.d.mts",
+        "default": "./dist/entry-filters-arktype.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-arktype.d.cts",
+        "default": "./dist/entry-filters-arktype.cjs"
+      }
+    },
+    "./filters/effect": {
+      "import": {
+        "types": "./dist/entry-filters-effect.d.mts",
+        "default": "./dist/entry-filters-effect.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-effect.d.cts",
+        "default": "./dist/entry-filters-effect.cjs"
+      }
+    },
     "./filters/drizzle": {
       "import": {
         "types": "./dist/entry-filters-drizzle.d.mts",
@@ -409,6 +439,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/semver": "^7.7.1",
     "@vitest/coverage-v8": "4.1.6",
+    "arktype": "^2.0.0",
     "big.js": "^7.0.1",
     "bignumber.js": "^11.1.4",
     "changelogen": "^0.6.2",
@@ -416,6 +447,7 @@
     "decimal.js": "^10.6.0",
     "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.2",
+    "effect": "^3.10.0",
     "fraction.js": "^5.3.4",
     "husky": "^9.1.7",
     "ipaddr.js": "^2.4.0",
@@ -434,19 +466,22 @@
     "up-fetch": "^2.6.0",
     "valibot": "^1.0.0",
     "vite-plus": "^0.1.22",
-    "vitest-browser-react": "^2.2.0"
+    "vitest-browser-react": "^2.2.0",
+    "zod": "^4.0.0"
   },
   "peerDependencies": {
     "@effective/rison": "^2.0.0",
     "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-router": "^1.0.0",
+    "arktype": "^2.0.0",
     "big.js": "^7.0.1",
     "bignumber.js": "^11.1.4",
     "dataloader": "^2.2.3",
     "decimal.js": "^10.6.0",
     "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.0",
+    "effect": "^3.10.0",
     "fraction.js": "^5.3.4",
     "ipaddr.js": "^2.4.0",
     "itty-time": "^1.0.6",
@@ -459,7 +494,8 @@
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
     "up-fetch": "^2.6.0",
-    "valibot": "^1.0.0"
+    "valibot": "^1.0.0",
+    "zod": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "ulid": {
@@ -526,6 +562,15 @@
       "optional": true
     },
     "@tanstack/react-query": {
+      "optional": true
+    },
+    "arktype": {
+      "optional": true
+    },
+    "effect": {
+      "optional": true
+    },
+    "zod": {
       "optional": true
     }
   }

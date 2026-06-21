@@ -4,26 +4,18 @@
  */
 import type { Equal, Expect } from "type-testing";
 import type { SQL } from "drizzle-orm";
-import type * as v from "valibot";
 
 import type {
   ColumnFilter,
   DatePreset,
   FieldFilter,
   FieldKind,
-  FiltersRequest,
-  FilterNode,
   NumberFilter,
 } from "../src/filters/types.ts";
 import type { DateFilterResolver } from "../src/filters/compile.ts";
 import type { buildWhere } from "../src/filters/drizzle/where.ts";
 import type { FilterSpec } from "../src/filters/drizzle/spec.ts";
 import { dateField, numberField } from "../src/filters/drizzle/spec.ts";
-import type {
-  FieldFilterSchema,
-  FilterNodeSchema,
-  FiltersRequestSchema,
-} from "../src/filters/schemas.ts";
 
 // FieldFilter is a discriminated union over the six column kinds.
 export type _Kinds = Expect<
@@ -43,14 +35,8 @@ export type _Resolver = Expect<
   >
 >;
 
-// The (optional) valibot schemas validate INTO the model types — no drift.
-export type _SchemaFieldFilter = Expect<
-  Equal<v.InferOutput<typeof FieldFilterSchema>, FieldFilter>
->;
-export type _SchemaRequest = Expect<
-  Equal<v.InferOutput<typeof FiltersRequestSchema>, FiltersRequest>
->;
-export type _SchemaNode = Expect<Equal<v.InferOutput<typeof FilterNodeSchema>, FilterNode>>;
+// The ready-made schemas (valibot/zod/arktype/effect) validate INTO the model
+// types — those drift guards live in `filters-validator-schemas.test-d.ts`.
 
 // The Drizzle adapter's buildWhere returns a Drizzle SQL (or undefined).
 export type _BuildWhere = Expect<Equal<ReturnType<typeof buildWhere>, { where: SQL | undefined }>>;

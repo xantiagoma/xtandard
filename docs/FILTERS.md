@@ -7,9 +7,9 @@ render it (Drizzle, Kysely, Knex, Mongo, Prisma, or your own).
 
 - The **core** (`@xtandard/lib/filters`) is **validation-library-free** and
   **driver-free**: plain TS types + `compileFilters`.
-- **Validation is optional and pluggable**: ready-made valibot schemas at
-  `@xtandard/lib/filters/valibot`, or validate with any Standard Schema
-  (zod/arktype/effect/…) into the same shape.
+- **Validation is optional and pluggable**: ready-made schemas for **valibot,
+  Zod, ArkType, and Effect** (`@xtandard/lib/filters/{valibot,zod,arktype,effect}`),
+  or bring any Standard-Schema validator and target the same shape.
 - The **`date` kind is injected** (no date library is bundled).
 
 ```bash
@@ -138,323 +138,66 @@ const node: FilterNode = {
 // every adapter has a `buildFilterNode` (or `buildFilterNodeSql`) counterpart.
 ```
 
-## Validation — bring your own
+## Validation — ready-made schemas (or bring your own)
 
-The core consumes **plain typed objects** — it never imports a validation
-library. Validate the untrusted request with whatever you already use, then pass
-the result to an adapter's `buildWhere`. The model is a two-level discriminated
-union (outer `kind`, inner `operator` shape), so any validator can express it.
+Any request crossing a trust boundary (an HTTP body, a URL) must be validated
+before it reaches an adapter — `buildWhere` consumes already-typed objects and
+never validates. The library **ships ready-made schemas for four validators** as
+optional subpaths; import the one you already use:
 
-**Reuse the exported operator vocab.** The `*_OPERATORS` constants
-(`TEXT_SCALAR_OPERATORS`, `NUMBER_SCALAR_OPERATORS`, `EQUALITY_OPERATORS`,
-`RANGE_OPERATORS`, `SET_OPERATORS`, `ARRAY_COL_OPERATORS`, `UNARY_OPERATORS`,
-`DATE_PRESET_OPERATORS`) are exported from `@xtandard/lib/filters` — build your
-schema from them so it **can't drift** from the model. The date units aren't
-exported as a runtime list (only the `DateUnit` type is), so hardcode them:
-`millisecond` · `second` · `minute` · `hour` · `day` · `week` · `month` ·
-`quarter` · `halfYear` · `year`.
+| Validator     | Subpath                         | Peers                               |
+| ------------- | ------------------------------- | ----------------------------------- |
+| valibot       | `@xtandard/lib/filters/valibot` | `valibot` + `@js-temporal/polyfill` |
+| Zod           | `@xtandard/lib/filters/zod`     | `zod` + `@js-temporal/polyfill`     |
+| ArkType       | `@xtandard/lib/filters/arktype` | `arktype` + `@js-temporal/polyfill` |
+| Effect Schema | `@xtandard/lib/filters/effect`  | `effect` + `@js-temporal/polyfill`  |
 
-### valibot — ready-made (peer `valibot` + `@js-temporal/polyfill`)
-
-Nothing to write — import the schemas from the `/valibot` subpath:
+Each subpath exports the **same names** — `FieldFilterSchema`,
+`ColumnFilterSchema`, `FiltersRequestSchema` (the flat AND list),
+`FilterNodeSchema` (the recursive and/or/not tree), `SortSchema` / `SortItemSchema`,
+`DatePresetSchema`, and the per-kind variant schemas (`TextFilterSchema`, …).
+Every one validates `timeZone` as a real IANA id and `anchor`/`end` as
+`Temporal.PlainDateTime` strings, and a `*.test-d.ts` asserts each schema's
+inferred output **equals** the model type — so they can't drift.
 
 ```ts
-import {
-  FiltersRequestSchema, // ColumnFilter[]  (flat AND list)
-  FilterNodeSchema, //     and/or/not tree
-  SortSchema, //           { field, dir }[]
-} from "@xtandard/lib/filters/valibot";
+// pick one — the parsed result is the same `ColumnFilter[]` either way
+
+// valibot
 import * as v from "valibot";
-
+import { FiltersRequestSchema } from "@xtandard/lib/filters/valibot";
 const filters = v.parse(FiltersRequestSchema, await req.json());
-```
 
-`@xtandard/lib/filters/valibot` also exports `FieldFilterSchema`,
-`ColumnFilterSchema`, `SortItemSchema`, `DatePresetSchema`, and the per-kind
-variant schemas (`TextFilterSchema`, `NumberFilterSchema`, …). Here the `date`
-preset's `anchor`/`end` are validated as `Temporal.PlainDateTime` strings and
-`timeZone` as a real IANA id; a `*.test-d.ts` asserts every schema's output
-**equals** the model type. In the bring-your-own schemas below, those two are
-plain strings unless you add a refinement (see the note at the end).
+// Zod
+import { FiltersRequestSchema } from "@xtandard/lib/filters/zod";
+const filters = FiltersRequestSchema.parse(await req.json());
 
-### Zod
+// ArkType (throws on invalid)
+import { FiltersRequestSchema } from "@xtandard/lib/filters/arktype";
+const filters = FiltersRequestSchema.assert(await req.json());
 
-Zod's `discriminatedUnion` needs a single literal discriminator per member, but
-each `kind` has several operator shapes — so discriminate the leaves with a plain
-`z.union` (the `kind` literal + the extra field disambiguate):
-
-```ts
-import { z } from "zod";
-import type { FilterNode } from "@xtandard/lib/filters";
-import {
-  ARRAY_COL_OPERATORS,
-  DATE_PRESET_OPERATORS,
-  EQUALITY_OPERATORS,
-  NUMBER_SCALAR_OPERATORS,
-  RANGE_OPERATORS,
-  SET_OPERATORS,
-  TEXT_SCALAR_OPERATORS,
-  UNARY_OPERATORS,
-} from "@xtandard/lib/filters";
-
-const DATE_UNITS = [
-  "millisecond",
-  "second",
-  "minute",
-  "hour",
-  "day",
-  "week",
-  "month",
-  "quarter",
-  "halfYear",
-  "year",
-] as const;
-
-const FieldFilter = z.union([
-  // text
-  z.object({ kind: z.literal("text"), operator: z.enum(TEXT_SCALAR_OPERATORS), value: z.string() }),
-  z.object({
-    kind: z.literal("text"),
-    operator: z.enum(SET_OPERATORS),
-    values: z.string().array(),
-  }),
-  z.object({ kind: z.literal("text"), operator: z.enum(UNARY_OPERATORS) }),
-  // number
-  z.object({
-    kind: z.literal("number"),
-    operator: z.enum(NUMBER_SCALAR_OPERATORS),
-    value: z.number(),
-  }),
-  z.object({
-    kind: z.literal("number"),
-    operator: z.enum(RANGE_OPERATORS),
-    from: z.number(),
-    to: z.number(),
-  }),
-  z.object({
-    kind: z.literal("number"),
-    operator: z.enum(SET_OPERATORS),
-    values: z.number().array(),
-  }),
-  z.object({ kind: z.literal("number"), operator: z.enum(UNARY_OPERATORS) }),
-  // enum
-  z.object({ kind: z.literal("enum"), operator: z.enum(EQUALITY_OPERATORS), value: z.string() }),
-  z.object({
-    kind: z.literal("enum"),
-    operator: z.enum(SET_OPERATORS),
-    values: z.string().array(),
-  }),
-  z.object({ kind: z.literal("enum"), operator: z.enum(UNARY_OPERATORS) }),
-  // boolean
-  z.object({
-    kind: z.literal("boolean"),
-    operator: z.enum(EQUALITY_OPERATORS),
-    value: z.boolean(),
-  }),
-  z.object({ kind: z.literal("boolean"), operator: z.enum(UNARY_OPERATORS) }),
-  // date — preset + unary
-  z.object({
-    kind: z.literal("date"),
-    operator: z.enum(DATE_PRESET_OPERATORS),
-    unit: z.enum(DATE_UNITS),
-    timeZone: z.string(),
-    anchor: z.string(),
-    end: z.string().optional(),
-    weekStartsOn: z.number().int().min(0).max(6).optional(),
-  }),
-  z.object({ kind: z.literal("date"), operator: z.enum(UNARY_OPERATORS) }),
-  // array
-  z.object({
-    kind: z.literal("array"),
-    operator: z.enum(ARRAY_COL_OPERATORS),
-    values: z.union([z.string(), z.number()]).array(),
-  }),
-  z.object({ kind: z.literal("array"), operator: z.enum(UNARY_OPERATORS) }),
-]);
-
-const ColumnFilter = z.object({ field: z.string(), filter: FieldFilter });
-export const FiltersRequest = z.array(ColumnFilter); // the flat AND list
-
-// recursive and/or/not tree — annotate the type so z.lazy stays inferable
-export const FilterNodeSchema: z.ZodType<FilterNode> = z.lazy(() =>
-  z.union([
-    z.object({ type: z.literal("column"), field: z.string(), filter: FieldFilter }),
-    z.object({ type: z.literal("and"), nodes: z.array(FilterNodeSchema) }),
-    z.object({ type: z.literal("or"), nodes: z.array(FilterNodeSchema) }),
-    z.object({ type: z.literal("not"), node: FilterNodeSchema }),
-  ]),
-);
-
-export const Sort = z.array(z.object({ field: z.string(), dir: z.enum(["asc", "desc"]) }));
-
-const filters = FiltersRequest.parse(await req.json());
-```
-
-### ArkType
-
-```ts
-import { type } from "arktype";
-import {
-  ARRAY_COL_OPERATORS,
-  DATE_PRESET_OPERATORS,
-  EQUALITY_OPERATORS,
-  NUMBER_SCALAR_OPERATORS,
-  RANGE_OPERATORS,
-  SET_OPERATORS,
-  TEXT_SCALAR_OPERATORS,
-  UNARY_OPERATORS,
-} from "@xtandard/lib/filters";
-
-const unary = type.enumerated(...UNARY_OPERATORS);
-
-const fieldFilter = type({
-  kind: "'text'",
-  operator: type.enumerated(...TEXT_SCALAR_OPERATORS),
-  value: "string",
-})
-  .or({ kind: "'text'", operator: type.enumerated(...SET_OPERATORS), values: "string[]" })
-  .or({ kind: "'text'", operator: unary })
-  .or({ kind: "'number'", operator: type.enumerated(...NUMBER_SCALAR_OPERATORS), value: "number" })
-  .or({
-    kind: "'number'",
-    operator: type.enumerated(...RANGE_OPERATORS),
-    from: "number",
-    to: "number",
-  })
-  .or({ kind: "'number'", operator: type.enumerated(...SET_OPERATORS), values: "number[]" })
-  .or({ kind: "'number'", operator: unary })
-  .or({ kind: "'enum'", operator: type.enumerated(...EQUALITY_OPERATORS), value: "string" })
-  .or({ kind: "'enum'", operator: type.enumerated(...SET_OPERATORS), values: "string[]" })
-  .or({ kind: "'enum'", operator: unary })
-  .or({ kind: "'boolean'", operator: type.enumerated(...EQUALITY_OPERATORS), value: "boolean" })
-  .or({ kind: "'boolean'", operator: unary })
-  .or({
-    kind: "'date'",
-    operator: type.enumerated(...DATE_PRESET_OPERATORS),
-    unit: "'millisecond'|'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'halfYear'|'year'",
-    timeZone: "string",
-    anchor: "string",
-    "end?": "string",
-    "weekStartsOn?": "0 <= number.integer <= 6",
-  })
-  .or({ kind: "'date'", operator: unary })
-  .or({
-    kind: "'array'",
-    operator: type.enumerated(...ARRAY_COL_OPERATORS),
-    values: "(string | number)[]",
-  })
-  .or({ kind: "'array'", operator: unary });
-
-const filtersRequest = type({ field: "string", filter: fieldFilter }).array();
-const filters = filtersRequest.assert(await req.json()); // throws on invalid, returns typed
-// for the recursive tree, define a scope so the node can reference itself.
-```
-
-### Effect Schema
-
-```ts
+// Effect Schema
 import { Schema } from "effect";
-import {
-  ARRAY_COL_OPERATORS,
-  DATE_PRESET_OPERATORS,
-  EQUALITY_OPERATORS,
-  NUMBER_SCALAR_OPERATORS,
-  RANGE_OPERATORS,
-  SET_OPERATORS,
-  TEXT_SCALAR_OPERATORS,
-  UNARY_OPERATORS,
-} from "@xtandard/lib/filters";
-
-const lit = (xs: readonly string[]) => Schema.Literal(...xs);
-
-const FieldFilter = Schema.Union(
-  Schema.Struct({
-    kind: Schema.Literal("text"),
-    operator: lit(TEXT_SCALAR_OPERATORS),
-    value: Schema.String,
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("text"),
-    operator: lit(SET_OPERATORS),
-    values: Schema.Array(Schema.String),
-  }),
-  Schema.Struct({ kind: Schema.Literal("text"), operator: lit(UNARY_OPERATORS) }),
-  Schema.Struct({
-    kind: Schema.Literal("number"),
-    operator: lit(NUMBER_SCALAR_OPERATORS),
-    value: Schema.Number,
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("number"),
-    operator: lit(RANGE_OPERATORS),
-    from: Schema.Number,
-    to: Schema.Number,
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("number"),
-    operator: lit(SET_OPERATORS),
-    values: Schema.Array(Schema.Number),
-  }),
-  Schema.Struct({ kind: Schema.Literal("number"), operator: lit(UNARY_OPERATORS) }),
-  Schema.Struct({
-    kind: Schema.Literal("enum"),
-    operator: lit(EQUALITY_OPERATORS),
-    value: Schema.String,
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("enum"),
-    operator: lit(SET_OPERATORS),
-    values: Schema.Array(Schema.String),
-  }),
-  Schema.Struct({ kind: Schema.Literal("enum"), operator: lit(UNARY_OPERATORS) }),
-  Schema.Struct({
-    kind: Schema.Literal("boolean"),
-    operator: lit(EQUALITY_OPERATORS),
-    value: Schema.Boolean,
-  }),
-  Schema.Struct({ kind: Schema.Literal("boolean"), operator: lit(UNARY_OPERATORS) }),
-  Schema.Struct({
-    kind: Schema.Literal("date"),
-    operator: lit(DATE_PRESET_OPERATORS),
-    unit: Schema.Literal(
-      "millisecond",
-      "second",
-      "minute",
-      "hour",
-      "day",
-      "week",
-      "month",
-      "quarter",
-      "halfYear",
-      "year",
-    ),
-    timeZone: Schema.String,
-    anchor: Schema.String,
-    end: Schema.optional(Schema.String),
-    weekStartsOn: Schema.optional(Schema.Number.pipe(Schema.int(), Schema.between(0, 6))),
-  }),
-  Schema.Struct({ kind: Schema.Literal("date"), operator: lit(UNARY_OPERATORS) }),
-  Schema.Struct({
-    kind: Schema.Literal("array"),
-    operator: lit(ARRAY_COL_OPERATORS),
-    values: Schema.Array(Schema.Union(Schema.String, Schema.Number)),
-  }),
-  Schema.Struct({ kind: Schema.Literal("array"), operator: lit(UNARY_OPERATORS) }),
-);
-
-const FiltersRequest = Schema.Array(Schema.Struct({ field: Schema.String, filter: FieldFilter }));
-const filters = Schema.decodeUnknownSync(FiltersRequest)(await req.json());
-// recursive tree: wrap the node union in Schema.suspend(() => FilterNode).
+import { FiltersRequestSchema } from "@xtandard/lib/filters/effect";
+const filters = Schema.decodeUnknownSync(FiltersRequestSchema)(await req.json());
 ```
 
-> **Parity with the ready-made schemas.** The bring-your-own examples validate
-> `timeZone`/`anchor`/`end` as plain strings. To match `/valibot` exactly, refine
-> `timeZone` to a real IANA id and `anchor`/`end` to `Temporal.PlainDateTime`
-> strings — e.g. zod `z.string().refine(isIanaZone)` and a `Temporal.PlainDateTime.from`
-> round-trip check. The `@xtandard/lib/valibot` subpath exposes `isValidTimeZone`
-> and the temporal-kind schemas if you want to borrow the checks. Whichever
-> validator you pick, its **output** must be the `ColumnFilter[]` / `FilterNode`
-> shape — that's all `buildWhere` consumes.
+Then hand the result to any adapter's `buildWhere({ spec, filters, resolveDate })`.
+
+### Bring your own validator
+
+The core is **validation-library-free** — the model is just plain TS types, so
+any Standard-Schema validator works if your stack uses something else. Write a
+schema whose **output** is the `ColumnFilter[]` / `FilterNode` shape and reuse
+the exported operator vocab so it can't drift from the model:
+`TEXT_SCALAR_OPERATORS`, `NUMBER_SCALAR_OPERATORS`, `EQUALITY_OPERATORS`,
+`RANGE_OPERATORS`, `SET_OPERATORS`, `ARRAY_COL_OPERATORS`, `UNARY_OPERATORS`,
+`DATE_PRESET_OPERATORS` (all exported from `@xtandard/lib/filters`; the date
+units are the `DateUnit` type). The four shipped schemas
+(`src/filters/schemas*.ts`) are worked examples to copy from — each is a
+two-level union (outer `kind`, inner `operator` shape). For IANA /
+`Temporal.PlainDateTime` parity, `@xtandard/lib/valibot` exports `isValidTimeZone`
+and the temporal-kind schemas.
 
 ## The `date` kind is injected
 
@@ -971,12 +714,14 @@ fields, so an adapter only maps the ~16 normalized leaf ops + and/or/not.
 - **Pagination re-exports:** `parsePaginationParams`, `fromRelayArgs`,
   `toRelayConnection`, `toRestEnvelope`, `infinitePaginationOptions` (+ types).
 
-### `@xtandard/lib/filters/valibot` (peer `valibot`, `@js-temporal/polyfill`)
+### `@xtandard/lib/filters/{valibot,zod,arktype,effect}` (each + `@js-temporal/polyfill`)
 
-`FieldFilterSchema`, `TextFilterSchema`, `NumberFilterSchema`, `EnumFilterSchema`,
-`BooleanFilterSchema`, `DateFilterSchema`, `DatePresetSchema`, `ArrayFilterSchema`,
-`ColumnFilterSchema`, `FiltersRequestSchema`, `FilterNodeSchema`, `SortItemSchema`,
-`SortSchema`.
+The four ready-made schema subpaths export the **same names**: `FieldFilterSchema`,
+`TextFilterSchema`, `NumberFilterSchema`, `EnumFilterSchema`, `BooleanFilterSchema`,
+`DateFilterSchema`, `DatePresetSchema`, `ArrayFilterSchema`, `ColumnFilterSchema`,
+`FiltersRequestSchema`, `FilterNodeSchema`, `SortItemSchema`, `SortSchema`. Peer is
+the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
+`*.test-d.ts` asserts each schema's inferred output equals the model type.
 
 ### Adapters
 
