@@ -183,6 +183,106 @@
         "default": "./dist/entry-tanstack-rison.cjs"
       }
     },
+    "./filters": {
+      "import": {
+        "types": "./dist/entry-filters.d.mts",
+        "default": "./dist/entry-filters.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters.d.cts",
+        "default": "./dist/entry-filters.cjs"
+      }
+    },
+    "./filters/valibot": {
+      "import": {
+        "types": "./dist/entry-filters-valibot.d.mts",
+        "default": "./dist/entry-filters-valibot.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-valibot.d.cts",
+        "default": "./dist/entry-filters-valibot.cjs"
+      }
+    },
+    "./filters/zod": {
+      "import": {
+        "types": "./dist/entry-filters-zod.d.mts",
+        "default": "./dist/entry-filters-zod.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-zod.d.cts",
+        "default": "./dist/entry-filters-zod.cjs"
+      }
+    },
+    "./filters/arktype": {
+      "import": {
+        "types": "./dist/entry-filters-arktype.d.mts",
+        "default": "./dist/entry-filters-arktype.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-arktype.d.cts",
+        "default": "./dist/entry-filters-arktype.cjs"
+      }
+    },
+    "./filters/effect": {
+      "import": {
+        "types": "./dist/entry-filters-effect.d.mts",
+        "default": "./dist/entry-filters-effect.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-effect.d.cts",
+        "default": "./dist/entry-filters-effect.cjs"
+      }
+    },
+    "./filters/drizzle": {
+      "import": {
+        "types": "./dist/entry-filters-drizzle.d.mts",
+        "default": "./dist/entry-filters-drizzle.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-drizzle.d.cts",
+        "default": "./dist/entry-filters-drizzle.cjs"
+      }
+    },
+    "./filters/kysely": {
+      "import": {
+        "types": "./dist/entry-filters-kysely.d.mts",
+        "default": "./dist/entry-filters-kysely.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-kysely.d.cts",
+        "default": "./dist/entry-filters-kysely.cjs"
+      }
+    },
+    "./filters/knex": {
+      "import": {
+        "types": "./dist/entry-filters-knex.d.mts",
+        "default": "./dist/entry-filters-knex.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-knex.d.cts",
+        "default": "./dist/entry-filters-knex.cjs"
+      }
+    },
+    "./filters/mongo": {
+      "import": {
+        "types": "./dist/entry-filters-mongo.d.mts",
+        "default": "./dist/entry-filters-mongo.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-mongo.d.cts",
+        "default": "./dist/entry-filters-mongo.cjs"
+      }
+    },
+    "./filters/prisma": {
+      "import": {
+        "types": "./dist/entry-filters-prisma.d.mts",
+        "default": "./dist/entry-filters-prisma.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-prisma.d.cts",
+        "default": "./dist/entry-filters-prisma.cjs"
+      }
+    },
     "./pagination": {
       "import": {
         "types": "./dist/entry-pagination.d.mts",
@@ -293,6 +393,36 @@
         "default": "./dist/entry-valibot.cjs"
       }
     },
+    "./zod": {
+      "import": {
+        "types": "./dist/entry-zod.d.mts",
+        "default": "./dist/entry-zod.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-zod.d.cts",
+        "default": "./dist/entry-zod.cjs"
+      }
+    },
+    "./arktype": {
+      "import": {
+        "types": "./dist/entry-arktype.d.mts",
+        "default": "./dist/entry-arktype.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-arktype.d.cts",
+        "default": "./dist/entry-arktype.cjs"
+      }
+    },
+    "./effect": {
+      "import": {
+        "types": "./dist/entry-effect.d.mts",
+        "default": "./dist/entry-effect.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-effect.d.cts",
+        "default": "./dist/entry-effect.cjs"
+      }
+    },
     "./sonner": {
       "import": {
         "types": "./dist/entry-sonner.d.mts",
@@ -339,6 +469,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/semver": "^7.7.1",
     "@vitest/coverage-v8": "4.1.6",
+    "arktype": "^2.0.0",
     "big.js": "^7.0.1",
     "bignumber.js": "^11.1.4",
     "changelogen": "^0.6.2",
@@ -346,6 +477,7 @@
     "decimal.js": "^10.6.0",
     "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.2",
+    "effect": "^3.10.0",
     "fraction.js": "^5.3.4",
     "husky": "^9.1.7",
     "ipaddr.js": "^2.4.0",
@@ -364,19 +496,22 @@
     "up-fetch": "^2.6.0",
     "valibot": "^1.0.0",
     "vite-plus": "^0.1.22",
-    "vitest-browser-react": "^2.2.0"
+    "vitest-browser-react": "^2.2.0",
+    "zod": "^4.0.0"
   },
   "peerDependencies": {
     "@effective/rison": "^2.0.0",
     "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-router": "^1.0.0",
+    "arktype": "^2.0.0",
     "big.js": "^7.0.1",
     "bignumber.js": "^11.1.4",
     "dataloader": "^2.2.3",
     "decimal.js": "^10.6.0",
     "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.0",
+    "effect": "^3.10.0",
     "fraction.js": "^5.3.4",
     "ipaddr.js": "^2.4.0",
     "itty-time": "^1.0.6",
@@ -389,7 +524,8 @@
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
     "up-fetch": "^2.6.0",
-    "valibot": "^1.0.0"
+    "valibot": "^1.0.0",
+    "zod": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "ulid": {
@@ -456,6 +592,15 @@
       "optional": true
     },
     "@tanstack/react-query": {
+      "optional": true
+    },
+    "arktype": {
+      "optional": true
+    },
+    "effect": {
+      "optional": true
+    },
+    "zod": {
       "optional": true
     }
   }

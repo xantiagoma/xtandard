@@ -7,7 +7,9 @@ types**.
 
 Used by: [`createCursorCodec`](../src/cursor-codec.ts),
 [`createPaginator`](../src/pagination.ts), [`tryCatch`](../src/try-catch.ts),
-[`collect`](../src/collect.ts), [`enumerate`](../src/enumerate.ts).
+[`collect`](../src/collect.ts), [`enumerate`](../src/enumerate.ts),
+[`resolveFieldOptions`](../src/filters/resource-options.ts) — a resource field's
+options may be a static list or a sync/async getter (`FieldOptions`).
 
 ## Background
 
