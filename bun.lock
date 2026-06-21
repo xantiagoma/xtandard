@@ -55,7 +55,7 @@
         "dataloader": "^2.2.3",
         "decimal.js": "^10.6.0",
         "dinero.js": "^2.0.2",
-        "drizzle-orm": "^0.45.0",
+        "drizzle-orm": ">=0.45.0 || >=1.0.0-0",
         "effect": "^3.10.0",
         "fraction.js": "^5.3.4",
         "ipaddr.js": "^2.4.0",
