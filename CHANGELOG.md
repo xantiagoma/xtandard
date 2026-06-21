@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.1
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.5.0...v0.5.1)
+
+### 🩹 Fixes
+
+- **filters,pagination:** Widen drizzle-orm peer to v0.45 ∪ v1 incl 1.0.0-beta ([#8](https://github.com/xantiagoma/xtandard/pull/8))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.5.0
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.4.2...v0.5.0)
