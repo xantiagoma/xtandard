@@ -3,10 +3,10 @@
  * `./server.ts`) + the React hooks + the TanStack Router adapter.
  *
  * The framework-free subset is also available without React at
- * `xantiagoma/tanstack/server`; the testing adapter at
- * `xantiagoma/tanstack/testing`; temporal parsers at
- * `xantiagoma/tanstack/temporal`; the Rison codec at
- * `xantiagoma/tanstack/rison`.
+ * `xtandard/tanstack/server`; the testing adapter at
+ * `xtandard/tanstack/testing`; temporal parsers at
+ * `xtandard/tanstack/temporal`; the Rison codec at
+ * `xtandard/tanstack/rison`.
  */
 
 export * from "./server.ts";

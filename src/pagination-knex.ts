@@ -5,7 +5,7 @@ import { toKeysetOrderBySql, toKeysetWhereSql } from "./keyset.ts";
  * Minimal structural subset of a Knex query builder used by
  * {@link applyKeysetToKnex}.
  *
- * `xantiagoma/pagination/knex` does not import `knex`; any object with these
+ * `xtandard/pagination/knex` does not import `knex`; any object with these
  * methods works, which keeps Knex as your application's dependency rather than
  * a peer dependency of this package.
  */
@@ -33,8 +33,8 @@ export type ApplyKeysetToKnexOptions = ToKeysetSqlOptions & {
  *
  * @example
  * ```ts
- * import { createKeysetSpec } from "xantiagoma/pagination";
- * import { applyKeysetToKnex } from "xantiagoma/pagination/knex";
+ * import { createKeysetSpec } from "xtandard/pagination";
+ * import { applyKeysetToKnex } from "xtandard/pagination/knex";
  *
  * const keyset = createKeysetSpec({
  *   sort: [

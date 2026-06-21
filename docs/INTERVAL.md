@@ -1,13 +1,13 @@
-# `Interval<T>` (`xantiagoma/interval`)
+# `Interval<T>` (`xtandard/interval`)
 
 A generic, immutable interval over any ordered type — modeled on Guava's
 `Range` + `DiscreteDomain`. The engine and the built-in primitive domains live in
-`xantiagoma/interval` (zero dependencies). Temporal-typed intervals (Instant,
-ZonedDateTime, …) ship from `xantiagoma/temporal` (peer `@js-temporal/polyfill`) —
+`xtandard/interval` (zero dependencies). Temporal-typed intervals (Instant,
+ZonedDateTime, …) ship from `xtandard/temporal` (peer `@js-temporal/polyfill`) —
 see [Temporal intervals](#temporal-intervals).
 
 ```ts
-import { NumberInterval } from "xantiagoma/interval";
+import { NumberInterval } from "xtandard/interval";
 
 const range = new NumberInterval({ start: 0, startClose: true, end: 10, endClose: false }); // [0,10)
 range.contains(5); // true
@@ -29,7 +29,7 @@ Each is a `new`-able class; the same-named `type` is its instance type.
 
 Plus `createOrdinalInterval([...])` for an ordered-label "enum" domain (discrete) — also
 zero-dep, see [Ordinal intervals](#ordinal-intervals). The TC39 `Temporal` types get
-ready-made classes from `xantiagoma/temporal` (see [Temporal intervals](#temporal-intervals)),
+ready-made classes from `xtandard/temporal` (see [Temporal intervals](#temporal-intervals)),
 and there are dedicated entries for money, exact numbers, semver, and IP addresses (below).
 You can also define your own for any ordered `T` (see [Custom types](#custom-types)).
 
@@ -119,7 +119,7 @@ NumberInterval.closed(1, 5).isDiscrete; // false
 **Implementing each:**
 
 ```ts
-import type { IntervalDomain } from "xantiagoma/interval";
+import type { IntervalDomain } from "xtandard/interval";
 
 // CONTINUOUS — just compare (+ optional measure/format/parse). No next/prev.
 const tempDomain: IntervalDomain<number> = {
@@ -187,7 +187,7 @@ element, so an unbounded side is always **open** — `[-Infinity,…]` normalize
 
 ## Temporal intervals
 
-`xantiagoma/temporal` ships the engine bound to the TC39 `Temporal` types (peer
+`xtandard/temporal` ships the engine bound to the TC39 `Temporal` types (peer
 dependency `@js-temporal/polyfill`):
 
 | Class                   | Element `T`              | Kind               |
@@ -202,7 +202,7 @@ The matching domains (`instantDomain`, `zonedDateTimeDomain`, …) are exported 
 for use with `defineIntervalType` or `parseInterval`.
 
 ```ts
-import { PlainDateInterval, InstantInterval } from "xantiagoma/temporal";
+import { PlainDateInterval, InstantInterval } from "xtandard/temporal";
 import { Temporal } from "@js-temporal/polyfill";
 
 // Discrete calendar days merge gap-free:
@@ -235,12 +235,12 @@ instance methods), so values from any TC39-compatible polyfill order correctly.
 
 ## Decimal intervals
 
-`xantiagoma/decimal` binds the engine to [decimal.js](https://github.com/MikeMcl/decimal.js)
+`xtandard/decimal` binds the engine to [decimal.js](https://github.com/MikeMcl/decimal.js)
 `Decimal` values (peer dependency `decimal.js`) — an **exact, continuous** alternative to
 `NumberInterval` for when IEEE-754 float fuzz is unacceptable:
 
 ```ts
-import { DecimalInterval } from "xantiagoma/decimal";
+import { DecimalInterval } from "xtandard/decimal";
 import Decimal from "decimal.js";
 
 const d = (s: string) => new Decimal(s);
@@ -261,21 +261,21 @@ cleanly. Members must be finite (`NaN`/`±Infinity` are rejected by `contains`).
 **Same model, different backing library** — pick the one you already use; the API and
 behavior are identical:
 
-| Entry                  | Class               | Peer dep       | Notes                               |
-| ---------------------- | ------------------- | -------------- | ----------------------------------- |
-| `xantiagoma/decimal`   | `DecimalInterval`   | `decimal.js`   | Most full-featured (irrational ops) |
-| `xantiagoma/big`       | `BigInterval`       | `big.js`       | Smallest footprint; always finite   |
-| `xantiagoma/bignumber` | `BigNumberInterval` | `bignumber.js` | Base conversion; common in finance  |
+| Entry                | Class               | Peer dep       | Notes                               |
+| -------------------- | ------------------- | -------------- | ----------------------------------- |
+| `xtandard/decimal`   | `DecimalInterval`   | `decimal.js`   | Most full-featured (irrational ops) |
+| `xtandard/big`       | `BigInterval`       | `big.js`       | Smallest footprint; always finite   |
+| `xtandard/bignumber` | `BigNumberInterval` | `bignumber.js` | Base conversion; common in finance  |
 
 ## Fraction intervals
 
-`xantiagoma/fraction` binds the engine to [fraction.js](https://github.com/rawify/Fraction.js)
+`xtandard/fraction` binds the engine to [fraction.js](https://github.com/rawify/Fraction.js)
 `Fraction` values (peer dependency `fraction.js`) — exact **rationals**. Unlike the decimal
 libraries, `1/3` is represented losslessly (it has no finite decimal expansion) and the string
 form is `"1/3"`:
 
 ```ts
-import { FractionInterval } from "xantiagoma/fraction";
+import { FractionInterval } from "xtandard/fraction";
 import Fraction from "fraction.js";
 
 const third = (n: number) => new Fraction(n, 3);
@@ -291,7 +291,7 @@ length is a floating-point magnitude even though the endpoints stay exact).
 
 ## Money intervals
 
-`xantiagoma/dinero` binds the engine to [dinero.js](https://dinerojs.com/) v2 values
+`xtandard/dinero` binds the engine to [dinero.js](https://dinerojs.com/) v2 values
 (peer dependency `dinero.js`). Money is **discrete**: the epsilon is one minor unit at
 the currency's standard `exponent` (1 cent for USD, 1 whole yen for JPY), so adjacent
 ranges merge gap-free and `length()` counts representable amounts.
@@ -300,7 +300,7 @@ Because a `Dinero` value carries its currency, an interval is bound to **one cur
 build a class with `createDineroInterval(currency)`:
 
 ```ts
-import { createDineroInterval } from "xantiagoma/dinero";
+import { createDineroInterval } from "xtandard/dinero";
 import { dinero, USD } from "dinero.js";
 
 const UsdInterval = createDineroInterval(USD);
@@ -328,13 +328,13 @@ rounded to cents there. Use whole minor units for predictable discrete behavior.
 
 ## String intervals
 
-`StringInterval` (in `xantiagoma/interval`, **zero-dep**) orders strings
+`StringInterval` (in `xtandard/interval`, **zero-dep**) orders strings
 lexicographically (UTF-16 code-unit order — deterministic, not locale-aware). CONTINUOUS:
 no successor and no `length()`. Useful for keyspace/shard partitioning, prefix scans, and
 geohash spatial ranges (geohashes sort lexicographically).
 
 ```ts
-import { StringInterval } from "xantiagoma/interval";
+import { StringInterval } from "xtandard/interval";
 
 StringInterval.closedOpen("a", "n").contains("mango"); // true
 // idiomatic prefix scan: [prefix, prefix + '￿')
@@ -346,14 +346,14 @@ are not round-trippable through `parse`/`toString` (every other operation is una
 
 ## Ordinal intervals
 
-`createOrdinalInterval(labels)` (in `xantiagoma/interval`, **zero-dep**) builds a DISCRETE
+`createOrdinalInterval(labels)` (in `xtandard/interval`, **zero-dep**) builds a DISCRETE
 class over an ordered list of string labels — a small "enum" (sizes, priority/log levels).
 Ordering is list position, so adjacent labels merge and `length()` counts labels. The
 interval operates on the label **index**; `.index(label)` / `.label(i)` convert, and
 `toString()`/`parse()` use the labels.
 
 ```ts
-import { createOrdinalInterval } from "xantiagoma/interval";
+import { createOrdinalInterval } from "xtandard/interval";
 
 const Size = createOrdinalInterval(["XS", "S", "M", "L", "XL"]);
 const r = Size.closed(Size.index("S"), Size.index("L"));
@@ -364,12 +364,12 @@ r.contains(Size.index("M")); // true
 
 ## Semver intervals
 
-`xantiagoma/semver` binds the engine to [semver](https://github.com/npm/node-semver) version
+`xtandard/semver` binds the engine to [semver](https://github.com/npm/node-semver) version
 strings (peer dependency `semver`) — a version range _is_ an interval. Useful for
 compatibility windows, "affected versions" in advisories, and release gates.
 
 ```ts
-import { SemverInterval } from "xantiagoma/semver";
+import { SemverInterval } from "xtandard/semver";
 
 const compatible = SemverInterval.closedOpen("1.2.0", "2.0.0"); // [1.2.0, 2.0.0)
 compatible.contains("1.5.3"); // true
@@ -384,13 +384,13 @@ with `defineIntervalType`/`parseInterval`.
 
 ## IP intervals
 
-`xantiagoma/ip` binds the engine to IPv4/IPv6 addresses via
+`xtandard/ip` binds the engine to IPv4/IPv6 addresses via
 [ipaddr.js](https://github.com/whitequark/ipaddr.js) (peer dependency). DISCRETE (ε = one
 address), so a CIDR block is a clean range, adjacent ranges merge, and `length()` counts
 addresses. Useful for firewall rules, allowlists, CIDR math, and geo-IP buckets.
 
 ```ts
-import { Ipv4Interval, Ipv6Interval } from "xantiagoma/ip";
+import { Ipv4Interval, Ipv6Interval } from "xtandard/ip";
 
 const lan = Ipv4Interval.cidr("192.168.0.0/16"); // or .closed(Ipv4Interval.ip("192.168.0.0"), …)
 lan.contains(Ipv4Interval.ip("192.168.1.50")); // true
@@ -444,7 +444,7 @@ Unlike Guava (which requires `T extends Comparable`), you **inject** the orderin
 | `negativeInfinity` / `positiveInfinity` | includable `±∞` (extended line)                     |
 
 ```ts
-import { defineIntervalType, type IntervalDomain } from "xantiagoma/interval";
+import { defineIntervalType, type IntervalDomain } from "xtandard/interval";
 import { dinero, lessThan, greaterThan, toSnapshot, type Dinero } from "dinero.js";
 
 const dineroDomain: IntervalDomain<Dinero<number>> = {

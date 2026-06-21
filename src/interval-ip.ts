@@ -82,7 +82,7 @@ const Ipv6Base = defineIntervalType(ipDomain("ipv6", 16, ipaddr.IPv6));
 /**
  * Interval over IPv4 addresses (discrete, ε = one address).
  *
- *   import { Ipv4Interval } from "xantiagoma/ip";
+ *   import { Ipv4Interval } from "xtandard/ip";
  *
  *   const lan = Ipv4Interval.cidr("192.168.0.0/16");      // or .closed(Ipv4Interval.ip("192.168.0.0"), …)
  *   lan.contains(Ipv4Interval.ip("192.168.1.50"));        // true

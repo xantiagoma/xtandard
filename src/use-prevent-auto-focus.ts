@@ -12,7 +12,7 @@ import { useCallback, useRef } from "react";
  *
  * @example
  * ```tsx
- * import { usePreventAutoFocus } from "xantiagoma/react";
+ * import { usePreventAutoFocus } from "xtandard/react";
  *
  * function MyDialog() {
  *   const preventAutoFocus = usePreventAutoFocus();

@@ -1,6 +1,6 @@
 # Pagination
 
-Source-agnostic, type-safe pagination for `xantiagoma/pagination` (zero
+Source-agnostic, type-safe pagination for `xtandard/pagination` (zero
 dependencies). One paginator handles every input style, every data source,
 and every output shape:
 
@@ -28,7 +28,7 @@ The design splits pagination into three concerns:
 Import pagination APIs from the sub-entry:
 
 ```ts
-import { createPaginator, parsePaginationParams } from "xantiagoma/pagination";
+import { createPaginator, parsePaginationParams } from "xtandard/pagination";
 ```
 
 Everything is [sync/async adaptive](./sync-async-adaptive.md): pass all-sync
@@ -40,7 +40,7 @@ fetchers (an in-memory array) and results come back as plain values with no
 ## Quick start
 
 ```ts
-import { createPaginator, parsePaginationParams, toRestEnvelope } from "xantiagoma/pagination";
+import { createPaginator, parsePaginationParams, toRestEnvelope } from "xtandard/pagination";
 
 const userPaginator = createPaginator({
   // offset-capable source (SQL OFFSET, Mongo .skip(), array.slice...)
@@ -278,13 +278,13 @@ the raw SQL helpers or plain fetcher examples directly.
 | ------------------------------------- | ------------------------------------------------------ |
 | In-memory arrays                      | `fetchOffset` with `slice`                             |
 | Raw SQL drivers (`pg`, `mysql2`, etc) | `toKeysetWhereSql` + `toKeysetOrderBySql`              |
-| Prisma Client                         | `xantiagoma/pagination/prisma` or Prisma raw SQL       |
-| Drizzle ORM                           | `xantiagoma/pagination/drizzle`                        |
-| Kysely                                | `xantiagoma/pagination/kysely`                         |
+| Prisma Client                         | `xtandard/pagination/prisma` or Prisma raw SQL         |
+| Drizzle ORM                           | `xtandard/pagination/drizzle`                          |
+| Kysely                                | `xtandard/pagination/kysely`                           |
 | MikroORM                              | QueryBuilder + raw SQL fragments                       |
 | TypeORM                               | QueryBuilder + `Brackets` + raw SQL fragments          |
 | Sequelize                             | `Op.or` / `Op.and` objects or raw SQL fragments        |
-| Knex.js                               | `xantiagoma/pagination/knex`                           |
+| Knex.js                               | `xtandard/pagination/knex`                             |
 | Objection.js                          | Knex adapter through `query()`                         |
 | AdonisJS Lucid                        | Knex-style `whereRaw` / `orderByRaw`                   |
 | Slonik                                | raw SQL helper params passed through `sql.array`-style |
@@ -298,7 +298,7 @@ the raw SQL helpers or plain fetcher examples directly.
 | Bookshelf.js                          | Knex adapter via `query((qb) => ...)`                  |
 | Waterline                             | offset pagination; cursor recipe when datastore allows |
 | MassiveJS                             | raw SQL helper params                                  |
-| MongoDB / Mongoose                    | `xantiagoma/pagination/mongo`                          |
+| MongoDB / Mongoose                    | `xtandard/pagination/mongo`                            |
 | Firestore                             | native ordered cursors (`startAfter`, `endBefore`)     |
 | DynamoDB                              | `LastEvaluatedKey` / `ExclusiveStartKey`               |
 | Redis sorted sets                     | `ZRANGE`/`ZREVRANGE` by score + member                 |
@@ -363,7 +363,7 @@ import {
   keysetSqlExpression,
   toKeysetOrderBySql,
   toKeysetWhereSql,
-} from "xantiagoma/pagination";
+} from "xtandard/pagination";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -418,7 +418,7 @@ For a cursor `{ createdAt: "2024-01-01", id: 42 }`, the helper emits:
 bindings. Use `?` placeholders:
 
 ```ts
-import { applyKeysetToKnex } from "xantiagoma/pagination/knex";
+import { applyKeysetToKnex } from "xtandard/pagination/knex";
 
 fetchCursor: async ({ limit, cursor, direction }) => {
   const q = applyKeysetToKnex(
@@ -434,7 +434,7 @@ fetchCursor: async ({ limit, cursor, direction }) => {
 
 `applyKeysetToKnex` is zero-dependency: it targets Knex's structural
 `whereRaw(sql, bindings)` / `orderByRaw(sql)` shape, so `knex` remains your
-application dependency rather than a peer dependency of `xantiagoma`.
+application dependency rather than a peer dependency of `xtandard`.
 
 #### Prisma raw queries
 
@@ -473,14 +473,14 @@ Knex, and carefully-used Prisma raw queries.
 
 ### Drizzle ORM
 
-Use `xantiagoma/pagination/drizzle` to turn the portable keyset AST into
+Use `xtandard/pagination/drizzle` to turn the portable keyset AST into
 Drizzle `where` and `orderBy` SQL expressions. The adapter accepts Drizzle
 columns or `sql` expressions; cursor keys remain logical names.
 
 ```ts
 import { sql } from "drizzle-orm";
-import { createKeysetSpec, createPaginator } from "xantiagoma/pagination";
-import { toDrizzleKeyset } from "xantiagoma/pagination/drizzle";
+import { createKeysetSpec, createPaginator } from "xtandard/pagination";
+import { toDrizzleKeyset } from "xtandard/pagination/drizzle";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -529,8 +529,8 @@ encoders/decoders can be shared.
 
 ```ts
 import { sql } from "kysely";
-import { createKeysetSpec, createPaginator } from "xantiagoma/pagination";
-import { toKyselyKeyset } from "xantiagoma/pagination/kysely";
+import { createKeysetSpec, createPaginator } from "xtandard/pagination";
+import { toKyselyKeyset } from "xtandard/pagination/kysely";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -583,8 +583,8 @@ const paginator = createPaginator({
 ### Prisma
 
 ```ts
-import { createKeysetSpec, createPaginator } from "xantiagoma/pagination";
-import { toPrismaKeyset } from "xantiagoma/pagination/prisma";
+import { createKeysetSpec, createPaginator } from "xtandard/pagination";
+import { toPrismaKeyset } from "xtandard/pagination/prisma";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -624,8 +624,8 @@ arbitrary computed SQL keysets; use the raw SQL helpers (`toKeysetWhereSql` /
 ### MongoDB / Mongoose
 
 ```ts
-import { createKeysetSpec, createPaginator } from "xantiagoma/pagination";
-import { toMongoKeyset } from "xantiagoma/pagination/mongo";
+import { createKeysetSpec, createPaginator } from "xtandard/pagination";
+import { toMongoKeyset } from "xtandard/pagination/mongo";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -669,7 +669,7 @@ import {
   keysetSqlExpression,
   toKeysetOrderBySql,
   toKeysetWhereSql,
-} from "xantiagoma/pagination";
+} from "xtandard/pagination";
 
 const keyset = createKeysetSpec({
   sort: [
@@ -739,7 +739,7 @@ expressions and keep cursor values bound.
 
 ```ts
 import { Op } from "sequelize";
-import { createKeysetSpec } from "xantiagoma/pagination";
+import { createKeysetSpec } from "xtandard/pagination";
 
 const sequelizeOps = { ">": Op.gt, ">=": Op.gte, "<": Op.lt, "<=": Op.lte, "=": Op.eq };
 
@@ -768,7 +768,7 @@ fetchCursor: async ({ limit, cursor, direction }) => ({
 Objection is Knex-backed, so use the Knex adapter against `Model.query()`.
 
 ```ts
-import { applyKeysetToKnex } from "xantiagoma/pagination/knex";
+import { applyKeysetToKnex } from "xtandard/pagination/knex";
 
 fetchCursor: async ({ limit, cursor, direction }) => {
   const q = applyKeysetToKnex(
@@ -1248,8 +1248,8 @@ Common third-party param names (map in your fetcher, not in
 nobody gets to ask for `?page_size=99999`), and alias support.
 
 ```ts
-import { tryCatch } from "xantiagoma";
-import { parsePaginationParams, toRestEnvelope } from "xantiagoma/pagination";
+import { tryCatch } from "xtandard";
+import { parsePaginationParams, toRestEnvelope } from "xtandard/pagination";
 
 Bun.serve({
   routes: {
@@ -1271,8 +1271,8 @@ Bun.serve({
 #### Next.js Route Handler
 
 ```ts
-import { tryCatch } from "xantiagoma";
-import { parsePaginationParams, toRestEnvelope } from "xantiagoma/pagination";
+import { tryCatch } from "xtandard";
+import { parsePaginationParams, toRestEnvelope } from "xtandard/pagination";
 
 export async function GET(req: Request) {
   const input = parsePaginationParams(new URL(req.url).searchParams);
@@ -1286,8 +1286,8 @@ export async function GET(req: Request) {
 
 ```ts
 import { Hono } from "hono";
-import { tryCatch } from "xantiagoma";
-import { parsePaginationParams, toRestEnvelope } from "xantiagoma/pagination";
+import { tryCatch } from "xtandard";
+import { parsePaginationParams, toRestEnvelope } from "xtandard/pagination";
 
 const app = new Hono();
 app.get("/api/users", async (c) => {
@@ -1302,7 +1302,7 @@ app.get("/api/users", async (c) => {
 
 ```ts
 import { z } from "zod";
-import { parsePaginationParams, toRestEnvelope } from "xantiagoma/pagination";
+import { parsePaginationParams, toRestEnvelope } from "xtandard/pagination";
 
 listUsers: publicProcedure
   .input(
@@ -1369,7 +1369,7 @@ spec-compliant connection; pass `paginator.cursorFor` so every edge gets its
 own cursor:
 
 ```ts
-import { fromRelayArgs, toRelayConnection } from "xantiagoma/pagination";
+import { fromRelayArgs, toRelayConnection } from "xtandard/pagination";
 
 const resolvers = {
   Query: {
@@ -1400,7 +1400,7 @@ but `pageInfo.startCursor`/`endCursor` from the paginator are still copied.
 ### With DataLoader
 
 `Paginated<T>` results compose with `createLoader` (from
-`xantiagoma/dataloader`) — paginate the _page of IDs_, batch-load the rows:
+`xtandard/dataloader`) — paginate the _page of IDs_, batch-load the rows:
 
 ```ts
 const idPaginator = createPaginator({
@@ -1425,7 +1425,7 @@ data ◀───parser───── string ◀──decoder── token
 ```
 
 ```ts
-import { createCursorCodec } from "xantiagoma/pagination";
+import { createCursorCodec } from "xtandard/pagination";
 
 createCursorCodec(); // JSON + base64url (sync)
 createCursorCodec({ reviveDates: false }); // skip ISO-string → Date revival on decode
@@ -1592,7 +1592,7 @@ adapters alike):
 
 ```tsx
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { createPaginator, infinitePaginationOptions } from "xantiagoma/pagination";
+import { createPaginator, infinitePaginationOptions } from "xtandard/pagination";
 
 // client-side paginator that calls your API
 const apiPaginator = createPaginator({

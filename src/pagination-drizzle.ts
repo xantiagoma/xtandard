@@ -29,7 +29,7 @@ const resolveColumn = (columns: DrizzleKeysetColumns, key: string): DrizzleKeyse
  *
  * @example
  * ```ts
- * import { toDrizzleKeyset } from "xantiagoma/pagination/drizzle";
+ * import { toDrizzleKeyset } from "xtandard/pagination/drizzle";
  *
  * const drizzleKeyset = toDrizzleKeyset({
  *   createdAt: posts.createdAt,

@@ -1,5 +1,5 @@
 /**
- * Compile-time inference assertions for the public `xantiagoma/interval` types.
+ * Compile-time inference assertions for the public `xtandard/interval` types.
  * Statically checked by `tsc --noEmit` (via `bun run check`); not run by the
  * test runner. See CLAUDE.md → Testing for the `*.test-d.ts` convention.
  */
