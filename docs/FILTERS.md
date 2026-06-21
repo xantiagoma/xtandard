@@ -586,6 +586,20 @@ roughly equivalent verbose Rison was:
   into a URL-state codec (e.g. `parseAsCodec(risonCodec(...))`).
 - The code tables are exported (`OPERATOR_CODE` / `operatorFromCode`,
   `UNIT_CODE` / `unitFromCode`) if you need to read or extend them.
+- **Interactive filter-builders**: by default `decodeNode`/`expandFilterNode`
+  PRUNE an `and`/`or` group that decodes to zero children (defensive — a stale or
+  hand-edited URL collapses to a valid subset). When the URL is the source of
+  truth for a tree being **edited**, that drops a just-added still-empty group
+  (the "Add group" → empty box pattern) on the next round-trip. Pass
+  `keepEmptyGroups: true` (on `expandFilterNode` or `createFilterUrlCodec`) to
+  keep empty containers — invalid LEAVES (non-allow-listed field, unknown
+  operator, bad value) are still dropped in both modes; only the empty-container
+  collapse changes.
+
+  ```ts
+  const codec = createFilterUrlCodec({ kinds, keepEmptyGroups: true });
+  codec.decodeNode({ and: [] }); // → { type: "and", nodes: [] } (kept, not null)
+  ```
 
 > The codec is **frontend-safe and zero-dependency** (part of the core
 > `@xtandard/lib/filters`). The model is unchanged — adapters, validation, and
