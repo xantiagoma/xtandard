@@ -268,7 +268,7 @@ Every adapter exposes typed `dateField`/`textField`/`numberField`/`enumField`/
 mapping) and `buildWhere` / `buildFilterNode`. They differ only in the column
 reference type and the WHERE representation.
 
-### Drizzle — `@xtandard/lib/filters/drizzle` (peer `drizzle-orm`)
+### Drizzle — `@xtandard/lib/filters/drizzle` (peer `drizzle-orm` v0.45+ **or** v1, incl. `1.0.0-beta`)
 
 The spec builders constrain the column by its SELECT type, so a kind↔column
 mismatch is a **compile error** (`dateField` needs `ColumnOf<Date>`, etc.).
@@ -306,9 +306,16 @@ const rows = await db
 
 For cursor pagination, `createDrizzleKeyset({ sort, columns })` returns
 `keys()`/`orderBy()`/`where()` (rendered from the portable `@xtandard/lib/pagination`
-keyset, avoiding the `^0.45` `drizzle-orm` peer of `pagination/drizzle`), and
+keyset — self-contained, no separate `pagination/drizzle` import needed), and
 `combineWhere(...)` ANDs the filter WHERE with the keyset seek. Use
 `toDrizzleWhere({ where, columns })` to render a pre-compiled AST directly.
+
+> **drizzle-orm v0.45 and v1 are both supported.** The peer range is
+> `>=0.45.0 || >=1.0.0-0`, so this adapter works on **`1.0.0-beta`** and the
+> stable v1 line too — only the core SQL expression builders (`eq`/`and`/`or`/
+> `ilike`/`arrayContains`/…, `SQL`, `AnyColumn`) are used, which are unchanged
+> across the v1 RQBv2 break. A consumer pinned to a single v1-beta install gets
+> no second `drizzle-orm` copy.
 
 ### Kysely — `@xtandard/lib/filters/kysely` (peer `kysely`)
 
