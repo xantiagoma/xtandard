@@ -274,7 +274,8 @@ keyset, avoiding the `^0.45` `drizzle-orm` peer of `pagination/drizzle`), and
 ### Kysely — `@xtandard/lib/filters/kysely` (peer `kysely`)
 
 Columns are string references (passed to `sql.ref`) or `sql` `RawBuilder`s.
-PostgreSQL flavor (`ilike`, array `@>`/`<@`/`&&`).
+**Dialect-aware** via `dialect` (default `"postgres"`) — see
+[SQL dialects](#sql-dialects-array-ops--ilike) below.
 
 ```ts
 import { buildWhere, buildOrderBy, textField, dateField } from "@xtandard/lib/filters/kysely";
@@ -285,7 +286,7 @@ const spec = {
 };
 
 let q = db.selectFrom("tasks").selectAll();
-const { where } = buildWhere({ spec, filters, resolveDate });
+const { where } = buildWhere({ spec, filters, resolveDate }); // dialect: "mysql" | "sqlite" to switch
 if (where) q = q.where(where);
 for (const o of buildOrderBy({ sort, columns: { name: "tasks.name" } }).orderBy) q = q.orderBy(o);
 ```
@@ -294,6 +295,7 @@ for (const o of buildOrderBy({ sort, columns: { name: "tasks.name" } }).orderBy)
 
 Renders raw, **parameterized** SQL (`?` bindings); column identifiers are
 server-owned and validated (`col` or `table.col`, quoted per part).
+**Dialect-aware** via `dialect` (default `"postgres"`).
 
 ```ts
 import {
@@ -307,8 +309,8 @@ const spec = { name: textField({ column: "name" }), amount: numberField({ column
 
 // apply directly:
 const rows = await applyFiltersToKnex(knex("tasks"), { spec, filters, resolveDate });
-// or get the fragment:
-const fragment = buildWhereSql({ spec, filters, resolveDate }); // { sql, bindings } | null
+// or get the fragment (pass dialect for MySQL/SQLite):
+const fragment = buildWhereSql({ spec, filters, resolveDate, dialect: "mysql" }); // { sql, bindings } | null
 if (fragment) query.whereRaw(fragment.sql, fragment.bindings);
 ```
 
@@ -363,17 +365,52 @@ the pattern allows (`%x%`/`x%`/`%x`); patterns with internal `%`/`_` throw (use
 | `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |
 | `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        |
 | `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |
-| `arrayContains` (`@>`)                  |    ✅    |    ✅    |    ✅    |     ✅ `$all`     |    ✅ `hasEvery`     |
-| `arrayOverlaps` (`&&`)                  |    ✅    |    ✅    |    ✅    |     ✅ `$in`      |     ✅ `hasSome`     |
-| `arrayContained` (`<@`)                 |    ✅    |    ✅    |    ✅    | ✅ `$setIsSubset` |      ❌ throws       |
+| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     |
+| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     |
+| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       |
 | date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |
 
-> **The `array` kind is PostgreSQL-specific.** The SQL adapters emit the PG array
-> operators `@>` / `<@` / `&&`, which require a real Postgres `array` column.
-> **MySQL/SQLite have no native array type** (lists are modeled as JSON) — these
-> adapters do not emit `JSON_CONTAINS` (MySQL) / `json_each` (SQLite) equivalents,
-> so don't use the `array` kind there. For a JSON-list column on MySQL/SQLite,
-> model it differently (e.g. a join table) or write that predicate by hand.
+> **drizzle** emits the PG array operators only — its array helpers are
+> Postgres-specific. **kysely / knex** (`multi`) render the `array` ops for all
+> three SQL dialects via their `dialect` option — see below. For MySQL/SQLite the
+> "array" column is a **JSON column** (no native array type).
+
+### SQL dialects (array ops + `ilike`)
+
+The kysely and knex adapters take an optional `dialect: "postgres" | "mysql" |
+"sqlite"` (default `"postgres"`). It only changes the ops with no portable
+spelling — the **array** ops and case-insensitive **`ilike`**; everything else
+is identical across dialects.
+
+| op                        | `postgres`    | `mysql` (JSON column)   | `sqlite` (JSON column, JSON1)                           |
+| ------------------------- | ------------- | ----------------------- | ------------------------------------------------------- |
+| `arrayContains` (A ⊇ B)   | `col @> ?`    | `JSON_CONTAINS(col, ?)` | `NOT EXISTS (… json_each(?) … NOT IN (json_each(col)))` |
+| `arrayContained` (A ⊆ B)  | `col <@ ?`    | `JSON_CONTAINS(?, col)` | `NOT EXISTS (… json_each(col) … NOT IN (json_each(?)))` |
+| `arrayOverlaps` (A ∩ B≠∅) | `col && ?`    | `JSON_OVERLAPS(col, ?)` | `EXISTS (… json_each(col) … IN (json_each(?)))`         |
+| `contains`/…/`ilike`      | `col ILIKE ?` | `col LIKE ?`            | `col LIKE ?`                                            |
+
+```ts
+// MySQL: arrayContains on a JSON column → JSON_CONTAINS, candidate bound as JSON text
+buildWhereSql({
+  spec: { tags: arrayField({ column: "tags" }) },
+  filters: [
+    { field: "tags", filter: { kind: "array", operator: "arrayContains", values: ["a", "b"] } },
+  ],
+  dialect: "mysql",
+});
+// → { sql: 'JSON_CONTAINS("tags", ?)', bindings: ['["a","b"]'] }
+```
+
+Notes:
+
+- **MySQL** needs the column typed `JSON`; `JSON_OVERLAPS` requires MySQL 8.0.17+.
+- **SQLite** needs the JSON1 extension (bundled by default since 3.38) and the
+  list stored as a JSON array text; the `json_each(…)` subqueries handle
+  duplicates correctly (set semantics).
+- **`ilike`** is Postgres-only syntax — on MySQL/SQLite it folds to `LIKE`
+  (case-insensitive by collation / ASCII), the closest portable spelling. `like`
+  (case-sensitive intent) is unchanged everywhere.
+- **drizzle** has no `dialect` option (PG-only array helpers).
 
 ## Sorting
 
@@ -596,8 +633,8 @@ fields, so an adapter only maps the ~16 normalized leaf ops + and/or/not.
 | Entry      | Peer          | Key exports                                                                                                                                                    |
 | ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/drizzle` | `drizzle-orm` | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf` |
-| `/kysely`  | `kysely`      | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`                                                            |
-| `/knex`    | —             | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`                                               |
+| `/kysely`  | `kysely`      | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                              |
+| `/knex`    | —             | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                 |
 | `/mongo`   | —             | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                             |
 | `/prisma`  | —             | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                             |
 
@@ -613,9 +650,12 @@ fields, so an adapter only maps the ~16 normalized leaf ops + and/or/not.
   `$queryRaw`.
 - **A filter "disappeared".** Its field isn't in the spec, or its kind doesn't
   match the spec's kind — it was dropped (by design; never trust client fields).
-- **Array ops are Postgres-only on SQL adapters.** `@>`/`<@`/`&&` need a PG
-  `array` column — they break on **MySQL/SQLite** (no native array type; lists
-  there are JSON, which these adapters don't target). Mongo/Prisma approximate
+- **Array ops need a `dialect` outside Postgres.** On `kysely`/`knex` they
+  default to PG `@>`/`<@`/`&&` (real `array` column); pass `dialect: "mysql"`
+  (JSON column, `JSON_CONTAINS`/`JSON_OVERLAPS`) or `dialect: "sqlite"` (JSON1
+  `json_each` subqueries) for those engines — see
+  [SQL dialects](#sql-dialects-array-ops--ilike). **drizzle** is PG-only (its
+  array helpers are Postgres-specific). Mongo/Prisma approximate
   (`$all`/`$setIsSubset`/`hasEvery`/…); Prisma's `arrayContained` throws.
 - **Frontend bundle stays lean.** Import only `@xtandard/lib/filters` (types +
   compile + describe, zero deps) on the client; keep the adapter import on the

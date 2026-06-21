@@ -41,6 +41,18 @@ export type DateFilterResolver = (input: { value: DatePreset }) => {
   end: Date | null;
 };
 
+/**
+ * SQL dialect for the SQL adapters (kysely/knex). Affects only the ops with no
+ * portable spelling: the `array` ops and case-insensitive `ilike`. `postgres`
+ * (default) uses native `@>`/`<@`/`&&` + `ILIKE`; `mysql` renders the array ops
+ * as `JSON_CONTAINS`/`JSON_OVERLAPS` over JSON columns and lowers `ilike` →
+ * `LIKE` (case-insensitive by collation); `sqlite` renders the array ops as
+ * `json_each(…)` `EXISTS`/`NOT EXISTS` subqueries and lowers `ilike` → `LIKE`
+ * (case-insensitive ASCII). MySQL needs JSON-typed columns (8.0.17+ for
+ * `JSON_OVERLAPS`); SQLite needs the JSON1 extension (bundled since 3.38).
+ */
+export type SqlDialect = "postgres" | "mysql" | "sqlite";
+
 // Postgres-style LIKE/ILIKE wildcards escaped for the ergonomic
 // contains/startsWith/endsWith affordances (default escape char is backslash).
 export function escapeLike(value: string): string {

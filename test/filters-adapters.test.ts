@@ -559,3 +559,138 @@ describe("kysely adapter", () => {
     expect(orderBy[0]?.compile(kdb).sql.toLowerCase()).toContain("desc");
   });
 });
+
+// ── dialect-aware array ops + ilike (knex / kysely) ─────────────────────────
+
+const arrayOps = ["arrayContains", "arrayContained", "arrayOverlaps"] as const;
+
+describe("knex dialect (array ops + ilike per dialect)", () => {
+  const spec = {
+    name: knex.textField({ column: "name" }),
+    tags: knex.arrayField({ column: "tags" }),
+  };
+  const arrayCond = (op: (typeof arrayOps)[number], dialect: knex.SqlDialect) =>
+    knex.buildWhereSql({
+      spec,
+      filters: [{ field: "tags", filter: { kind: "array", operator: op, values: ["x"] } }],
+      dialect,
+    });
+
+  test("postgres (default) uses native @>/<@/&& with the array bound directly", () => {
+    expect(arrayCond("arrayContains", "postgres")).toEqual({
+      sql: '"tags" @> ?',
+      bindings: [["x"]],
+    });
+    expect(arrayCond("arrayContained", "postgres")).toEqual({
+      sql: '"tags" <@ ?',
+      bindings: [["x"]],
+    });
+    expect(arrayCond("arrayOverlaps", "postgres")).toEqual({
+      sql: '"tags" && ?',
+      bindings: [["x"]],
+    });
+  });
+
+  test("mysql uses JSON_CONTAINS / JSON_OVERLAPS with a bound JSON candidate", () => {
+    expect(arrayCond("arrayContains", "mysql")).toEqual({
+      sql: 'JSON_CONTAINS("tags", ?)',
+      bindings: ['["x"]'],
+    });
+    expect(arrayCond("arrayContained", "mysql")).toEqual({
+      sql: 'JSON_CONTAINS(?, "tags")',
+      bindings: ['["x"]'],
+    });
+    expect(arrayCond("arrayOverlaps", "mysql")).toEqual({
+      sql: 'JSON_OVERLAPS("tags", ?)',
+      bindings: ['["x"]'],
+    });
+  });
+
+  test("sqlite uses json_each(…) EXISTS / NOT EXISTS subqueries", () => {
+    expect(arrayCond("arrayContains", "sqlite")).toEqual({
+      sql: 'NOT EXISTS (SELECT 1 FROM json_each(?) je WHERE je.value NOT IN (SELECT value FROM json_each("tags")))',
+      bindings: ['["x"]'],
+    });
+    expect(arrayCond("arrayContained", "sqlite")).toEqual({
+      sql: 'NOT EXISTS (SELECT 1 FROM json_each("tags") je WHERE je.value NOT IN (SELECT value FROM json_each(?)))',
+      bindings: ['["x"]'],
+    });
+    expect(arrayCond("arrayOverlaps", "sqlite")).toEqual({
+      sql: 'EXISTS (SELECT 1 FROM json_each("tags") je WHERE je.value IN (SELECT value FROM json_each(?)))',
+      bindings: ['["x"]'],
+    });
+  });
+
+  test("ilike folds to LIKE on mysql/sqlite, stays ILIKE on postgres", () => {
+    const contains = (dialect: knex.SqlDialect) =>
+      knex.buildWhereSql({
+        spec,
+        filters: [{ field: "name", filter: { kind: "text", operator: "contains", value: "a" } }],
+        dialect,
+      });
+    const notIlike = (dialect: knex.SqlDialect) =>
+      knex.buildWhereSql({
+        spec,
+        filters: [{ field: "name", filter: { kind: "text", operator: "notIlike", value: "a%" } }],
+        dialect,
+      });
+
+    expect(contains("postgres")).toEqual({ sql: '"name" ILIKE ?', bindings: ["%a%"] });
+    expect(contains("mysql")).toEqual({ sql: '"name" LIKE ?', bindings: ["%a%"] });
+    expect(contains("sqlite")).toEqual({ sql: '"name" LIKE ?', bindings: ["%a%"] });
+    expect(notIlike("postgres")).toEqual({ sql: '"name" NOT ILIKE ?', bindings: ["a%"] });
+    expect(notIlike("mysql")).toEqual({ sql: '"name" NOT LIKE ?', bindings: ["a%"] });
+  });
+});
+
+describe("kysely dialect (array ops + ilike per dialect)", () => {
+  const spec = {
+    name: kysely.textField({ column: "name" }),
+    tags: kysely.arrayField({ column: "tags" }),
+  };
+  const arraySql = (op: (typeof arrayOps)[number], dialect: kysely.SqlDialect) =>
+    kysely
+      .buildWhere({
+        spec,
+        filters: [{ field: "tags", filter: { kind: "array", operator: op, values: ["x"] } }],
+        dialect,
+      })
+      .where?.compile(kdb)
+      .sql.toLowerCase() ?? "";
+
+  test("postgres (default) compiles native set operators", () => {
+    expect(arraySql("arrayContains", "postgres")).toContain("@>");
+    expect(arraySql("arrayContained", "postgres")).toContain("<@");
+    expect(arraySql("arrayOverlaps", "postgres")).toContain("&&");
+  });
+
+  test("mysql compiles JSON_CONTAINS / JSON_OVERLAPS", () => {
+    expect(arraySql("arrayContains", "mysql")).toContain("json_contains(");
+    expect(arraySql("arrayContained", "mysql")).toContain("json_contains(");
+    expect(arraySql("arrayOverlaps", "mysql")).toContain("json_overlaps(");
+  });
+
+  test("sqlite compiles json_each(…) EXISTS / NOT EXISTS subqueries", () => {
+    expect(arraySql("arrayContains", "sqlite")).toContain("not exists");
+    expect(arraySql("arrayContains", "sqlite")).toContain("json_each(");
+    expect(arraySql("arrayContained", "sqlite")).toContain("not exists");
+    expect(arraySql("arrayOverlaps", "sqlite")).toMatch(/(?<!not )exists/);
+  });
+
+  test("ilike folds to LIKE on mysql/sqlite, stays ILIKE on postgres", () => {
+    const contains = (dialect: kysely.SqlDialect) =>
+      kysely
+        .buildWhere({
+          spec,
+          filters: [{ field: "name", filter: { kind: "text", operator: "contains", value: "a" } }],
+          dialect,
+        })
+        .where?.compile(kdb)
+        .sql.toLowerCase() ?? "";
+
+    expect(contains("postgres")).toContain("ilike");
+    expect(contains("mysql")).toContain("like");
+    expect(contains("mysql")).not.toContain("ilike");
+    expect(contains("sqlite")).not.toContain("ilike");
+  });
+});

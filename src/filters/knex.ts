@@ -1,10 +1,12 @@
 /**
  * Knex adapter — renders the portable filter AST to raw parameterized SQL and
- * applies it via `whereRaw`. **PostgreSQL flavor**: `ILIKE` and the `array` ops
- * (`@>`/`<@`/`&&`) are PG-specific — the `array` kind is not supported on
- * MySQL/SQLite. No `knex` import: any object with `whereRaw(sql, bindings)` works,
- * keeping Knex your app's dependency. Column identifiers are server-owned and
- * validated; values are bound (`?`).
+ * applies it via `whereRaw`. **Dialect-aware** (`dialect`, default `"postgres"`):
+ * the `array` ops and `ILIKE` are spelled per dialect — PG native `@>`/`<@`/`&&`
+ * + `ILIKE`, MySQL `JSON_CONTAINS`/`JSON_OVERLAPS` + `LIKE`, SQLite
+ * `json_each(…)` subqueries + `LIKE` (see {@link SqlDialect}). No `knex` import:
+ * any object with `whereRaw(sql, bindings)` works, keeping Knex your app's
+ * dependency. Column identifiers are server-owned and validated; values are
+ * bound (`?`).
  *
  * @example
  * ```ts
@@ -20,9 +22,12 @@ import {
   compileFilterNode,
   compileFilters,
   type DateFilterResolver,
+  type SqlDialect,
   sqlTextOp,
 } from "./compile.ts";
 import type { ColumnFilter, CompiledCond, CompiledWhere, FieldKind, FilterNode } from "./types.ts";
+
+export type { SqlDialect } from "./compile.ts";
 
 export type KnexFieldSpec = { kind: FieldKind; column: string };
 export type KnexFilterSpec = Record<string, KnexFieldSpec>;
@@ -53,7 +58,54 @@ function quoteIdentifier(identifier: string): string {
 
 type Fragment = { sql: string; bindings: unknown[] };
 
-function condSql(cond: CompiledCond, ident: string): Fragment {
+// The `array` ops have no portable spelling — render per dialect. PG uses the
+// native set operators (the array binds directly); MySQL the JSON functions
+// (JSON-typed column, 8.0.17+ for JSON_OVERLAPS); SQLite a json_each(…) subquery
+// (JSON1, bundled since 3.38). `col` is already a quoted identifier; the
+// candidate array binds as a JSON string for MySQL/SQLite.
+function arrayOpSql(
+  op: "arrayContains" | "arrayContained" | "arrayOverlaps",
+  col: string,
+  values: (string | number)[],
+  dialect: SqlDialect,
+): Fragment {
+  if (dialect === "postgres") {
+    if (op === "arrayContains") return { sql: `${col} @> ?`, bindings: [values] };
+    if (op === "arrayContained") return { sql: `${col} <@ ?`, bindings: [values] };
+
+    return { sql: `${col} && ?`, bindings: [values] };
+  }
+
+  const json = JSON.stringify(values);
+
+  if (dialect === "mysql") {
+    if (op === "arrayContains") return { sql: `JSON_CONTAINS(${col}, ?)`, bindings: [json] };
+    if (op === "arrayContained") return { sql: `JSON_CONTAINS(?, ${col})`, bindings: [json] };
+
+    return { sql: `JSON_OVERLAPS(${col}, ?)`, bindings: [json] };
+  }
+
+  // sqlite — every element of A is in B ⇔ no element of A is absent from B.
+  if (op === "arrayContains") {
+    return {
+      sql: `NOT EXISTS (SELECT 1 FROM json_each(?) je WHERE je.value NOT IN (SELECT value FROM json_each(${col})))`,
+      bindings: [json],
+    };
+  }
+  if (op === "arrayContained") {
+    return {
+      sql: `NOT EXISTS (SELECT 1 FROM json_each(${col}) je WHERE je.value NOT IN (SELECT value FROM json_each(?)))`,
+      bindings: [json],
+    };
+  }
+
+  return {
+    sql: `EXISTS (SELECT 1 FROM json_each(${col}) je WHERE je.value IN (SELECT value FROM json_each(?)))`,
+    bindings: [json],
+  };
+}
+
+function condSql(cond: CompiledCond, ident: string, dialect: SqlDialect): Fragment {
   const col = quoteIdentifier(ident);
   switch (cond.op) {
     case "eq":
@@ -75,7 +127,18 @@ function condSql(cond: CompiledCond, ident: string): Fragment {
     case "ilike":
     case "notIlike": {
       const { op, pattern } = sqlTextOp(cond.op, cond.value);
-      const sqlOp = op === "like" ? "LIKE" : op === "ilike" ? "ILIKE" : "NOT ILIKE";
+      // ILIKE is PG-only; on MySQL/SQLite fold to LIKE (case-insensitive by
+      // collation / ASCII), the closest portable spelling of the intent.
+      const sqlOp =
+        op === "like"
+          ? "LIKE"
+          : op === "ilike"
+            ? dialect === "postgres"
+              ? "ILIKE"
+              : "LIKE"
+            : dialect === "postgres"
+              ? "NOT ILIKE"
+              : "NOT LIKE";
 
       return { sql: `${col} ${sqlOp} ?`, bindings: [pattern] };
     }
@@ -87,11 +150,9 @@ function condSql(cond: CompiledCond, ident: string): Fragment {
       return { sql: `${col} ${kw} (${placeholders})`, bindings: [...cond.values] };
     }
     case "arrayContains":
-      return { sql: `${col} @> ?`, bindings: [cond.values] };
     case "arrayContained":
-      return { sql: `${col} <@ ?`, bindings: [cond.values] };
     case "arrayOverlaps":
-      return { sql: `${col} && ?`, bindings: [cond.values] };
+      return arrayOpSql(cond.op, col, cond.values, dialect);
     case "isNull":
       return { sql: `${col} IS NULL`, bindings: [] };
     case "isNotNull":
@@ -103,13 +164,15 @@ function condSql(cond: CompiledCond, ident: string): Fragment {
 export function toFilterWhereSql(input: {
   where: CompiledWhere | null;
   columns: Record<string, string>;
+  dialect?: SqlDialect;
 }): Fragment | null {
+  const dialect = input.dialect ?? "postgres";
   const render = (node: CompiledWhere): Fragment | undefined => {
     switch (node.type) {
       case "cond": {
         const ident = input.columns[node.cond.field];
 
-        return ident === undefined ? undefined : condSql(node.cond, ident);
+        return ident === undefined ? undefined : condSql(node.cond, ident, dialect);
       }
       case "and":
       case "or": {
@@ -146,6 +209,7 @@ export function buildWhereSql(input: {
   spec: KnexFilterSpec;
   filters: ColumnFilter[];
   resolveDate?: DateFilterResolver;
+  dialect?: SqlDialect;
 }): Fragment | null {
   const { where } = compileFilters({
     spec: kindsOf(input.spec),
@@ -153,7 +217,7 @@ export function buildWhereSql(input: {
     resolveDate: input.resolveDate,
   });
 
-  return toFilterWhereSql({ where, columns: columnsOf(input.spec) });
+  return toFilterWhereSql({ where, columns: columnsOf(input.spec), dialect: input.dialect });
 }
 
 /** Minimal structural Knex query (no `knex` import). */
@@ -162,7 +226,12 @@ export type KnexFilterQuery = { whereRaw(sql: string, bindings?: unknown[]): unk
 /** Apply a portable filter `WHERE` to a Knex query builder via `whereRaw`. */
 export function applyFiltersToKnex<Q extends KnexFilterQuery>(
   query: Q,
-  input: { spec: KnexFilterSpec; filters: ColumnFilter[]; resolveDate?: DateFilterResolver },
+  input: {
+    spec: KnexFilterSpec;
+    filters: ColumnFilter[];
+    resolveDate?: DateFilterResolver;
+    dialect?: SqlDialect;
+  },
 ): Q {
   const fragment = buildWhereSql(input);
   if (fragment) query.whereRaw(fragment.sql, fragment.bindings);
@@ -175,6 +244,7 @@ export function buildFilterNodeSql(input: {
   spec: KnexFilterSpec;
   node: FilterNode;
   resolveDate?: DateFilterResolver;
+  dialect?: SqlDialect;
 }): Fragment | null {
   const { where } = compileFilterNode({
     spec: kindsOf(input.spec),
@@ -182,5 +252,5 @@ export function buildFilterNodeSql(input: {
     resolveDate: input.resolveDate,
   });
 
-  return toFilterWhereSql({ where, columns: columnsOf(input.spec) });
+  return toFilterWhereSql({ where, columns: columnsOf(input.spec), dialect: input.dialect });
 }

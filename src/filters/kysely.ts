@@ -1,9 +1,11 @@
 /**
  * Kysely adapter — renders the portable filter AST to a Kysely raw boolean
- * expression. **PostgreSQL flavor**: `ilike` and the `array` ops (`@>`/`<@`/`&&`)
- * are PG-specific — the `array` kind is not supported on MySQL/SQLite. Peer `kysely`.
- * String columns are passed to `sql.ref` (server-owned identifiers); computed
- * values use the `sql` tag. Validation-library-free.
+ * expression. **Dialect-aware** (`dialect`, default `"postgres"`): the `array`
+ * ops and `ilike` are spelled per dialect — PG native `@>`/`<@`/`&&` + `ILIKE`,
+ * MySQL `JSON_CONTAINS`/`JSON_OVERLAPS` + `LIKE`, SQLite `json_each(…)`
+ * subqueries + `LIKE` (see {@link SqlDialect}). Peer `kysely`. String columns
+ * are passed to `sql.ref` (server-owned identifiers); computed values use the
+ * `sql` tag. Validation-library-free.
  *
  * @example
  * ```ts
@@ -23,6 +25,7 @@ import {
   compileFilterNode,
   compileFilters,
   type DateFilterResolver,
+  type SqlDialect,
   sqlTextOp,
 } from "./compile.ts";
 import type {
@@ -33,6 +36,8 @@ import type {
   FilterNode,
   Sort,
 } from "./types.ts";
+
+export type { SqlDialect } from "./compile.ts";
 
 export type KyselyTarget = string | RawBuilder<unknown>;
 export type KyselyFieldSpec = { kind: FieldKind; column: KyselyTarget };
@@ -52,7 +57,48 @@ export const arrayField = field("array");
 const ref = (col: KyselyTarget): RawBuilder<unknown> =>
   typeof col === "string" ? sql.ref(col) : col;
 
-function condSql(cond: CompiledCond, col: RawBuilder<unknown>): RawBuilder<SqlBool> {
+// The `array` ops have no portable spelling — render per dialect. PG uses the
+// native set operators; MySQL the JSON functions (JSON-typed column, 8.0.17+ for
+// JSON_OVERLAPS); SQLite a json_each(…) subquery (JSON1, bundled since 3.38).
+// The candidate array is passed as a bound JSON string for MySQL/SQLite.
+function arrayOpSql(
+  op: "arrayContains" | "arrayContained" | "arrayOverlaps",
+  col: RawBuilder<unknown>,
+  values: (string | number)[],
+  dialect: SqlDialect,
+): RawBuilder<SqlBool> {
+  if (dialect === "postgres") {
+    if (op === "arrayContains") return sql<SqlBool>`${col} @> ${values}`;
+    if (op === "arrayContained") return sql<SqlBool>`${col} <@ ${values}`;
+
+    return sql<SqlBool>`${col} && ${values}`;
+  }
+
+  const json = JSON.stringify(values);
+
+  if (dialect === "mysql") {
+    if (op === "arrayContains") return sql<SqlBool>`json_contains(${col}, ${json})`;
+    if (op === "arrayContained") return sql<SqlBool>`json_contains(${json}, ${col})`;
+
+    return sql<SqlBool>`json_overlaps(${col}, ${json})`;
+  }
+
+  // sqlite — every element of A is in B ⇔ no element of A is absent from B.
+  if (op === "arrayContains") {
+    return sql<SqlBool>`not exists (select 1 from json_each(${json}) je where je.value not in (select value from json_each(${col})))`;
+  }
+  if (op === "arrayContained") {
+    return sql<SqlBool>`not exists (select 1 from json_each(${col}) je where je.value not in (select value from json_each(${json})))`;
+  }
+
+  return sql<SqlBool>`exists (select 1 from json_each(${col}) je where je.value in (select value from json_each(${json})))`;
+}
+
+function condSql(
+  cond: CompiledCond,
+  col: RawBuilder<unknown>,
+  dialect: SqlDialect,
+): RawBuilder<SqlBool> {
   switch (cond.op) {
     case "eq":
       return sql<SqlBool>`${col} = ${cond.value}`;
@@ -74,20 +120,26 @@ function condSql(cond: CompiledCond, col: RawBuilder<unknown>): RawBuilder<SqlBo
     case "notIlike": {
       const { op, pattern } = sqlTextOp(cond.op, cond.value);
       if (op === "like") return sql<SqlBool>`${col} like ${pattern}`;
-      if (op === "ilike") return sql<SqlBool>`${col} ilike ${pattern}`;
+      // ILIKE is PG-only; on MySQL/SQLite fold to LIKE (case-insensitive by
+      // collation / ASCII), the closest portable spelling of the intent.
+      if (op === "ilike") {
+        return dialect === "postgres"
+          ? sql<SqlBool>`${col} ilike ${pattern}`
+          : sql<SqlBool>`${col} like ${pattern}`;
+      }
 
-      return sql<SqlBool>`${col} not ilike ${pattern}`;
+      return dialect === "postgres"
+        ? sql<SqlBool>`${col} not ilike ${pattern}`
+        : sql<SqlBool>`${col} not like ${pattern}`;
     }
     case "inArray":
       return sql<SqlBool>`${col} in (${sql.join(cond.values)})`;
     case "notInArray":
       return sql<SqlBool>`${col} not in (${sql.join(cond.values)})`;
     case "arrayContains":
-      return sql<SqlBool>`${col} @> ${cond.values}`;
     case "arrayContained":
-      return sql<SqlBool>`${col} <@ ${cond.values}`;
     case "arrayOverlaps":
-      return sql<SqlBool>`${col} && ${cond.values}`;
+      return arrayOpSql(cond.op, col, cond.values, dialect);
     case "isNull":
       return sql<SqlBool>`${col} is null`;
     case "isNotNull":
@@ -99,13 +151,15 @@ function condSql(cond: CompiledCond, col: RawBuilder<unknown>): RawBuilder<SqlBo
 export function toKyselyWhere(input: {
   where: CompiledWhere | null;
   columns: Record<string, KyselyTarget>;
+  dialect?: SqlDialect;
 }): RawBuilder<SqlBool> | undefined {
+  const dialect = input.dialect ?? "postgres";
   const render = (node: CompiledWhere): RawBuilder<SqlBool> | undefined => {
     switch (node.type) {
       case "cond": {
         const col = input.columns[node.cond.field];
 
-        return col === undefined ? undefined : condSql(node.cond, ref(col));
+        return col === undefined ? undefined : condSql(node.cond, ref(col), dialect);
       }
       case "and":
       case "or": {
@@ -137,6 +191,7 @@ export function buildWhere(input: {
   spec: KyselyFilterSpec;
   filters: ColumnFilter[];
   resolveDate?: DateFilterResolver;
+  dialect?: SqlDialect;
 }): { where: RawBuilder<SqlBool> | undefined } {
   const { where } = compileFilters({
     spec: kindsOf(input.spec),
@@ -144,7 +199,9 @@ export function buildWhere(input: {
     resolveDate: input.resolveDate,
   });
 
-  return { where: toKyselyWhere({ where, columns: columnsOf(input.spec) }) };
+  return {
+    where: toKyselyWhere({ where, columns: columnsOf(input.spec), dialect: input.dialect }),
+  };
 }
 
 /** Recursive and/or/not tree → a Kysely boolean expression (or undefined). */
@@ -152,6 +209,7 @@ export function buildFilterNode(input: {
   spec: KyselyFilterSpec;
   node: FilterNode;
   resolveDate?: DateFilterResolver;
+  dialect?: SqlDialect;
 }): { where: RawBuilder<SqlBool> | undefined } {
   const { where } = compileFilterNode({
     spec: kindsOf(input.spec),
@@ -159,7 +217,9 @@ export function buildFilterNode(input: {
     resolveDate: input.resolveDate,
   });
 
-  return { where: toKyselyWhere({ where, columns: columnsOf(input.spec) }) };
+  return {
+    where: toKyselyWhere({ where, columns: columnsOf(input.spec), dialect: input.dialect }),
+  };
 }
 
 /** Render a `Sort` to Kysely `orderBy` expressions, allow-listed to `columns`. */
