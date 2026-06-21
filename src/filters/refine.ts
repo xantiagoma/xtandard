@@ -9,27 +9,17 @@
 
 import { Temporal } from "@js-temporal/polyfill";
 
-/** Whether `value` is a valid IANA time-zone id (checked via `Intl`). */
-export function isIanaTimeZone(value: string): boolean {
-  try {
-    Intl.DateTimeFormat("en-US", { timeZone: value });
+import { tryCatch } from "../try-catch.ts";
+import { isValidTimeZone } from "../timezone.ts";
 
-    return true;
-  } catch {
-    return false;
-  }
-}
+/** Whether `value` is a valid IANA time-zone id (the shared dependency-free
+ * check — `(string) => boolean` for use as a refine/filter/narrow callback). */
+export const isIanaTimeZone = (value: string): boolean =>
+  isValidTimeZone({ timeZone: value }).valid;
 
 /** Whether `value` is a valid floating `Temporal.PlainDateTime` string. */
-export function isPlainDateTimeString(value: string): boolean {
-  try {
-    Temporal.PlainDateTime.from(value);
-
-    return true;
-  } catch {
-    return false;
-  }
-}
+export const isPlainDateTimeString = (value: string): boolean =>
+  tryCatch(() => Temporal.PlainDateTime.from(value))[1] === null;
 
 /** The ten `DateUnit` literals, as a runtime tuple (the type-only `DateUnit`
  * lives in `./types`). Reused by every ready-made schema. */

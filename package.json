@@ -393,6 +393,36 @@
         "default": "./dist/entry-valibot.cjs"
       }
     },
+    "./zod": {
+      "import": {
+        "types": "./dist/entry-zod.d.mts",
+        "default": "./dist/entry-zod.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-zod.d.cts",
+        "default": "./dist/entry-zod.cjs"
+      }
+    },
+    "./arktype": {
+      "import": {
+        "types": "./dist/entry-arktype.d.mts",
+        "default": "./dist/entry-arktype.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-arktype.d.cts",
+        "default": "./dist/entry-arktype.cjs"
+      }
+    },
+    "./effect": {
+      "import": {
+        "types": "./dist/entry-effect.d.mts",
+        "default": "./dist/entry-effect.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-effect.d.cts",
+        "default": "./dist/entry-effect.cjs"
+      }
+    },
     "./sonner": {
       "import": {
         "types": "./dist/entry-sonner.d.mts",

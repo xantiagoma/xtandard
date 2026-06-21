@@ -1,4 +1,4 @@
-export { TimeZoneSchema, isValidTimeZone, parseTimeZone } from "./valibot-utils.ts";
+export { TimeZoneSchema, isValidTimeZone, asTimeZone, parseTimeZone } from "./valibot-utils.ts";
 export type { TimeZone } from "./valibot-utils.ts";
 
 export {

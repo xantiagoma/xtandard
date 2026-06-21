@@ -45,6 +45,9 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/pagination/prisma`  | Prisma adapter for pagination keysets                    | none                                 |
 | `@xtandard/lib/filters`            | Filter model (types) + portable compiler + sort/describe | none                                 |
 | `@xtandard/lib/filters/valibot`    | Ready-made valibot schemas for the model                 | `valibot`, `@js-temporal/polyfill`   |
+| `@xtandard/lib/filters/zod`        | Ready-made Zod schemas for the model                     | `zod`, `@js-temporal/polyfill`       |
+| `@xtandard/lib/filters/arktype`    | Ready-made ArkType schemas for the model                 | `arktype`, `@js-temporal/polyfill`   |
+| `@xtandard/lib/filters/effect`     | Ready-made Effect schemas for the model                  | `effect`, `@js-temporal/polyfill`    |
 | `@xtandard/lib/filters/drizzle`    | Drizzle WHERE builder + keyset from filters              | `drizzle-orm`                        |
 | `@xtandard/lib/filters/kysely`     | Kysely WHERE builder from filters                        | `kysely`                             |
 | `@xtandard/lib/filters/knex`       | Knex raw-SQL WHERE builder from filters                  | none                                 |
@@ -60,7 +63,10 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/temporal`           | Date/time/duration + Temporal intervals                  | `@js-temporal/polyfill`, `itty-time` |
 | `@xtandard/lib/dataloader`         | DataLoader factory                                       | `dataloader`                         |
 | `@xtandard/lib/unstorage`          | Cache helpers with unstorage                             | `unstorage`, `ohash`                 |
-| `@xtandard/lib/valibot`            | TimeZone validation schema                               | `valibot`                            |
+| `@xtandard/lib/valibot`            | Branded `TimeZone` schema (valibot)                      | `valibot`                            |
+| `@xtandard/lib/zod`                | Branded `TimeZone` schema (Zod)                          | `zod`                                |
+| `@xtandard/lib/arktype`            | Branded `TimeZone` schema (ArkType)                      | `arktype`                            |
+| `@xtandard/lib/effect`             | Branded `TimeZone` schema (Effect)                       | `effect`                             |
 | `@xtandard/lib/sonner`             | Toast streaming for iterables                            | `sonner`, `react`                    |
 | `@xtandard/lib/react`              | React hooks + components                                 | `react`, `@tanstack/react-query`     |
 
@@ -405,9 +411,10 @@ One typed filter system spanning frontend ↔ API ↔ any query builder, built l
 resolveDate })` lowers a request to a **portable `CompiledWhere` AST**. Validate
   the request with whatever you use (valibot/zod/arktype/effect/…) — the core
   never imports one.
-- **Validation (optional):** ready-made **valibot** schemas at
-  `@xtandard/lib/filters/valibot` that validate into the model types (a
-  `*.test-d.ts` asserts no drift). Or bring your own Standard Schema.
+- **Validation (optional):** ready-made schemas for **valibot, Zod, ArkType, and
+  Effect** at `@xtandard/lib/filters/{valibot,zod,arktype,effect}` that validate
+  into the model types (a `*.test-d.ts` asserts each one has no drift). Or bring
+  your own Standard Schema.
 - **Adapters** render the AST per driver:
   `@xtandard/lib/filters/{drizzle,kysely,knex,mongo,prisma}` — each with typed
   `dateField`/`textField`/… spec builders (allow-list) + `buildWhere`.
@@ -429,17 +436,17 @@ const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate inj
 db.select().from(t).where(where);
 ```
 
-| Import                          | Export                                                                                              | Source                          |
-| ------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `@xtandard/lib/filters`         | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                          | [src](./src/filters/types.ts)   |
-| `@xtandard/lib/filters`         | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                     | [src](./src/filters/compile.ts) |
-| `@xtandard/lib/filters`         | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata` | [src](./src/filters/)           |
-| `@xtandard/lib/filters/valibot` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema`                    | [src](./src/filters/schemas.ts) |
-| `@xtandard/lib/filters/drizzle` | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                | [src](./src/filters/drizzle/)   |
-| `@xtandard/lib/filters/kysely`  | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                     | [src](./src/filters/kysely.ts)  |
-| `@xtandard/lib/filters/knex`    | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                           | [src](./src/filters/knex.ts)    |
-| `@xtandard/lib/filters/mongo`   | `buildFilter` → Mongo filter object                                                                 | [src](./src/filters/mongo.ts)   |
-| `@xtandard/lib/filters/prisma`  | `buildWhere` → Prisma `where` object                                                                | [src](./src/filters/prisma.ts)  |
+| Import                                               | Export                                                                                                      | Source                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `@xtandard/lib/filters`                              | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                                  | [src](./src/filters/types.ts)   |
+| `@xtandard/lib/filters`                              | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                             | [src](./src/filters/compile.ts) |
+| `@xtandard/lib/filters`                              | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata`         | [src](./src/filters/)           |
+| `@xtandard/lib/filters/{valibot,zod,arktype,effect}` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema` (same names per validator) | [src](./src/filters/)           |
+| `@xtandard/lib/filters/drizzle`                      | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                        | [src](./src/filters/drizzle/)   |
+| `@xtandard/lib/filters/kysely`                       | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                             | [src](./src/filters/kysely.ts)  |
+| `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)    |
+| `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)   |
+| `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)  |
 
 ## Recommended Libraries
 
