@@ -358,6 +358,7 @@
     "react-dom": "^19.2.6",
     "semver": "^7.8.5",
     "sonner": "^2.0.7",
+    "type-testing": "^0.2.0",
     "ulid": "^2.3.0",
     "unstorage": "^1.14.4",
     "up-fetch": "^2.6.0",

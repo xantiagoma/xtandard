@@ -36,6 +36,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 - Node tests: `test/**/*.test.ts` — run in node environment with MSW for HTTP mocking
 - React/browser tests: `test/**/*.test.tsx` — run in Chromium via playwright + vitest-browser-react
 - MSW setup in `test/setup-msw.ts` (node project only)
+- Type tests: `test/*.test-d.ts` — compile-time assertions with `type-testing` (`Expect`/`Equal`/`NotEqual`/`IsNever`/`IsUnion`…), the standard for any module whose public type inference matters. They are NOT run by the test runner (the `.test-d.ts` suffix is excluded from the vitest `include`); they are enforced by `tsc --noEmit` in `bun run check`. `export` each assertion so it doesn't trip unused-decl lint; a wrong assertion fails as `error TS2344: Type 'false' does not satisfy the constraint 'true'`.
 
 ## Entry Points
 
@@ -89,6 +90,7 @@ src/
 test/
   *.test.ts             — node tests (vitest)
   *.test.tsx            — browser tests (vitest-browser-react + playwright)
+  *.test-d.ts           — type tests (type-testing; checked by tsc, not the runner)
   setup-msw.ts          — MSW server setup for node tests
 ```
 
