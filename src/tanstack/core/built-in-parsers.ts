@@ -217,7 +217,7 @@ export function parseAsStandardSchema<T>(
 
 /**
  * A value codec: structured data ⇄ opaque token. Structurally matches
- * xantiagoma's `CursorCodec<T>` (from `createCursorCodec`), so a single codec —
+ * xtandard's `CursorCodec<T>` (from `createCursorCodec`), so a single codec —
  * with its own serializer/parser/encoder/decoder overrides — can back URL
  * state, pagination, and drizzle-cursor at once.
  *
@@ -262,7 +262,7 @@ export function parseAsCodec<T>(
  * Useful for base64url / signing on top of any existing parser. Apply
  * `.withDefault()` after wrapping.
  *
- *   import { encodeBase64Url, decodeBase64Url } from "xantiagoma";
+ *   import { encodeBase64Url, decodeBase64Url } from "xtandard";
  *   const opaque = withTransport(parseAsJson(schema), {
  *     encode: encodeBase64Url,
  *     decode: decodeBase64Url,

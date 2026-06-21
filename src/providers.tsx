@@ -41,7 +41,7 @@ type ProviderPropsArg<TProps extends AnyProps> =
  *
  * @example
  * ```tsx
- * import { provider, Providers } from "xantiagoma/react";
+ * import { provider, Providers } from "xtandard/react";
  *
  * // Provider with required props
  * provider(ThemeProvider, { theme: "dark" })
@@ -94,7 +94,7 @@ function ProviderComponent({
  *
  * @example
  * ```tsx
- * import { Providers, provider } from "xantiagoma/react";
+ * import { Providers, provider } from "xtandard/react";
  *
  * <Providers
  *   providers={[

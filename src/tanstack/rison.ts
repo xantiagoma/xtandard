@@ -2,7 +2,7 @@
  * A `query-params` {@link ValueCodec} backed by Rison
  * ([@effective/rison](https://github.com/effective-stack/rison)) + valibot.
  *
- * Opt-in subpath (`xantiagoma/tanstack/rison`): only this entry pulls in
+ * Opt-in subpath (`xtandard/tanstack/rison`): only this entry pulls in
  * `@effective/rison` and `valibot`.
  */
 
@@ -19,8 +19,8 @@ import type { ValueCodec } from "./core/built-in-parsers.ts";
  * token or failed validation) into `null`, so a stale/tampered URL resolves to
  * the parser's default instead of crashing.
  *
- *   import { parseAsCodec } from "xantiagoma/tanstack";
- *   import { risonCodec } from "xantiagoma/tanstack/rison";
+ *   import { parseAsCodec } from "xtandard/tanstack";
+ *   import { risonCodec } from "xtandard/tanstack/rison";
  *
  *   const filters = parseAsCodec(risonCodec(FiltersSchema));
  *   const [value, setValue] = useQueryState("filters", filters);

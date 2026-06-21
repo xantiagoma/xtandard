@@ -197,7 +197,7 @@ describe("parseAsStandardSchema (Zod/Valibot/ArkType)", () => {
 });
 
 describe("parseAsCodec (custom encoder/decoder via a codec)", () => {
-  // A trivial sync codec, signature-compatible with xantiagoma's CursorCodec.
+  // A trivial sync codec, signature-compatible with xtandard's CursorCodec.
   const codec: ValueCodec<{ id: number }> = {
     encode: (data) => `id:${data.id}`,
     decode: (token) => {

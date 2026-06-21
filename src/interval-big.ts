@@ -1,6 +1,6 @@
 /**
  * Exact-decimal intervals backed by [big.js](https://github.com/MikeMcl/big.js) —
- * a minimalist arbitrary-precision decimal. Same model as `xantiagoma/decimal`
+ * a minimalist arbitrary-precision decimal. Same model as `xtandard/decimal`
  * (decimal.js) but a much smaller dependency; pick whichever big-number library
  * you already use. CONTINUOUS (decimals are dense). big.js is a **peer dependency**.
  *
@@ -29,7 +29,7 @@ export const bigDomain: IntervalDomain<BigValue> = {
 /**
  * Interval over big.js `Big` values — exact, continuous.
  *
- *   import { BigInterval } from "xantiagoma/big";
+ *   import { BigInterval } from "xtandard/big";
  *   import Big from "big.js";
  *
  *   BigInterval.closed(new Big("0.1"), new Big("0.3")).length(); // 0.2 (exact)

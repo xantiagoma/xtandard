@@ -1,5 +1,5 @@
 {
-  "name": "xantiagoma",
+  "name": "xtandard",
   "version": "0.4.0",
   "description": "Lightweight, type-safe TypeScript utilities",
   "keywords": [
@@ -9,17 +9,17 @@
     "try-catch",
     "typescript",
     "utilities",
-    "xantiagoma"
+    "xtandard"
   ],
-  "homepage": "https://github.com/xantiagoma/xantiagoma-lib#readme",
+  "homepage": "https://github.com/xantiagoma/xtandard#readme",
   "bugs": {
-    "url": "https://github.com/xantiagoma/xantiagoma-lib/issues"
+    "url": "https://github.com/xantiagoma/xtandard/issues"
   },
   "license": "MIT",
   "author": "Santiago Montoya <xantiagoma@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xantiagoma/xantiagoma-lib.git"
+    "url": "https://github.com/xantiagoma/xtandard.git"
   },
   "files": [
     "dist",

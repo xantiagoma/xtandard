@@ -94,7 +94,7 @@ export function createStandardSchemaV1<
   return {
     "~standard": {
       version: 1,
-      vendor: "xantiagoma/tanstack",
+      vendor: "xtandard/tanstack",
       validate: (value) => {
         if (typeof value !== "object" || value === null) {
           return { issues: [{ message: "Expected a search params object" }] };

@@ -1,4 +1,4 @@
-# TanStack URL State (`xantiagoma/tanstack`)
+# TanStack URL State (`xtandard/tanstack`)
 
 nuqs-style, **component-owned** URL query state for TanStack Router (and
 TanStack Start). `useQueryState` behaves like `useState`, but backed by the
@@ -13,16 +13,16 @@ default updates) on top of TanStack navigation — and bridges _into_ the router
 only when you opt in.
 
 > Peer deps: `react` + `@tanstack/react-router` for the hooks/adapter;
-> `xantiagoma/tanstack/server` is framework-free (zero deps);
-> `xantiagoma/tanstack/temporal` adds `@js-temporal/polyfill` + `valibot`;
-> `xantiagoma/tanstack/rison` adds `@effective/rison` + `valibot`. All optional.
+> `xtandard/tanstack/server` is framework-free (zero deps);
+> `xtandard/tanstack/temporal` adds `@js-temporal/polyfill` + `valibot`;
+> `xtandard/tanstack/rison` adds `@effective/rison` + `valibot`. All optional.
 
 ## Setup
 
 Wrap the app **inside** `RouterProvider` (the adapter uses `useRouter`):
 
 ```tsx
-import { NuqsAdapter } from "xantiagoma/tanstack";
+import { NuqsAdapter } from "xtandard/tanstack";
 
 // in your root route component:
 <NuqsAdapter>{/* app */}</NuqsAdapter>;
@@ -31,7 +31,7 @@ import { NuqsAdapter } from "xantiagoma/tanstack";
 ## Usage
 
 ```tsx
-import { useQueryState, parseAsInteger, parseAsString } from "xantiagoma/tanstack";
+import { useQueryState, parseAsInteger, parseAsString } from "xtandard/tanstack";
 
 function SearchBox() {
   const [q, setQ] = useQueryState("q", parseAsString.withDefault(""));
@@ -48,7 +48,7 @@ function Pagination() {
 Multiple keys that move together:
 
 ```tsx
-import { useQueryStates, parseAsIndex, parseAsString } from "xantiagoma/tanstack";
+import { useQueryStates, parseAsIndex, parseAsString } from "xtandard/tanstack";
 
 const tableSearch = {
   pageIndex: parseAsIndex.withDefault(0),
@@ -97,7 +97,7 @@ A parser is a `parse`/`serialize` pair (`createParser` / `createMultiParser` for
 repeated keys):
 
 ```ts
-import { createParser } from "xantiagoma/tanstack";
+import { createParser } from "xtandard/tanstack";
 
 const parseAsDate = createParser({
   parse: (v) => (Number.isNaN(Date.parse(v)) ? null : new Date(v)),
@@ -110,18 +110,18 @@ Need a separate **encoder/decoder** (opaque/transport-safe) stage on top? Two
 combinators, both **synchronous** (URL parsing runs during render):
 
 ```ts
-// 1. Adapt a codec (data ⇄ token) — structurally compatible with xantiagoma's
+// 1. Adapt a codec (data ⇄ token) — structurally compatible with xtandard's
 //    createCursorCodec(), so the same serializer/parser/encoder/decoder
 //    overrides back URL state, pagination, and drizzle-cursor.
-import { createCursorCodec } from "xantiagoma/pagination";
-import { parseAsCodec } from "xantiagoma/tanstack";
+import { createCursorCodec } from "xtandard/pagination";
+import { parseAsCodec } from "xtandard/tanstack";
 
 const codec = createCursorCodec<{ id: number }>(); // JSON + base64url by default
 const [cursor, setCursor] = useQueryState("cursor", parseAsCodec(codec));
 
 // 2. Wrap any parser with a transport (encoder/decoder) layer.
-import { encodeBase64Url, decodeBase64Url } from "xantiagoma";
-import { withTransport, parseAsJson } from "xantiagoma/tanstack";
+import { encodeBase64Url, decodeBase64Url } from "xtandard";
+import { withTransport, parseAsJson } from "xtandard/tanstack";
 
 const opaque = withTransport(parseAsJson(schema), {
   encode: encodeBase64Url,
@@ -135,7 +135,7 @@ here — parsing must be sync — but work fine in loaders/server functions.
 ### Standard Schema (Zod / Valibot / ArkType)
 
 ```ts
-import { parseAsJson, parseAsStandardSchema } from "xantiagoma/tanstack";
+import { parseAsJson, parseAsStandardSchema } from "xtandard/tanstack";
 import * as v from "valibot";
 
 // Structured JSON value validated by a schema:
@@ -148,14 +148,14 @@ const qty = parseAsStandardSchema(v.pipe(v.string(), v.transform(Number), v.numb
 `createStandardSchemaV1(parsers, { partialOutput })` goes the other direction —
 turning a parser map into a Standard Schema for `validateSearch` / tRPC.
 
-### Rison codec (`xantiagoma/tanstack/rison`)
+### Rison codec (`xtandard/tanstack/rison`)
 
 Store a validated value as readable, canonical [Rison](https://github.com/sebastian-software/effective-rison)
 (stable key order → the same value always yields the same URL):
 
 ```ts
-import { parseAsCodec } from "xantiagoma/tanstack";
-import { risonCodec } from "xantiagoma/tanstack/rison";
+import { parseAsCodec } from "xtandard/tanstack";
+import { risonCodec } from "xtandard/tanstack/rison";
 import * as v from "valibot";
 
 const FiltersSchema = v.object({ status: v.picklist(["open", "done"]), tags: v.array(v.string()) });
@@ -163,24 +163,24 @@ const filters = parseAsCodec(risonCodec(FiltersSchema));
 const [value, setValue] = useQueryState("filters", filters);
 ```
 
-Pair the adapter's `serializeSearch` with `keepSubDelims` (from `xantiagoma/web`)
+Pair the adapter's `serializeSearch` with `keepSubDelims` (from `xtandard/web`)
 to keep the Rison `( ) , : ! '` readable in the address bar instead of
 percent-encoded:
 
 ```tsx
-import { NuqsAdapter } from "xantiagoma/tanstack";
-import { keepSubDelims } from "xantiagoma/web";
+import { NuqsAdapter } from "xtandard/tanstack";
+import { keepSubDelims } from "xtandard/web";
 
 <NuqsAdapter serializeSearch={keepSubDelims}>{/* app */}</NuqsAdapter>;
 ```
 
-### Temporal parsers (`xantiagoma/tanstack/temporal`)
+### Temporal parsers (`xtandard/tanstack/temporal`)
 
 URL parsers for the six temporal "kinds" — each stores the canonical Temporal
 string and parses back to the live `Temporal.*` object:
 
 ```ts
-import { parseAsInstant, parseAsPlainDate, parseAsTimeZone } from "xantiagoma/tanstack/temporal";
+import { parseAsInstant, parseAsPlainDate, parseAsTimeZone } from "xtandard/tanstack/temporal";
 
 const [at, setAt] = useQueryState("at", parseAsInstant); // 2026-06-18T16:00:00Z
 const [day] = useQueryState("day", parseAsPlainDate); // 2026-12-25
@@ -188,7 +188,7 @@ const [tz] = useQueryState("tz", parseAsTimeZone); // America/Los_Angeles (valid
 ```
 
 `Temporal` comes from `@js-temporal/polyfill`; `parseAsTimeZone` validates IANA
-ids via the `xantiagoma/valibot` TimeZone schema. (Available:
+ids via the `xtandard/valibot` TimeZone schema. (Available:
 `parseAsInstant`, `parseAsPlainDate`, `parseAsPlainTime`, `parseAsPlainDateTime`,
 `parseAsZonedDateTime`, `parseAsDuration`, `parseAsTimeZone`.)
 
@@ -225,10 +225,10 @@ re-serializes search globally — so a **native array under `shallow: false`**
 will be written as `?tag=["a","b"]` (route-contract territory). For
 loader/SSR-bound arrays use `parseAsArrayOf` (comma) or a route `validateSearch`.
 
-## Server / route helpers (`xantiagoma/tanstack/server` — React-free)
+## Server / route helpers (`xtandard/tanstack/server` — React-free)
 
 ```ts
-import { createLoader, createSerializer, createStandardSchemaV1 } from "xantiagoma/tanstack/server";
+import { createLoader, createSerializer, createStandardSchemaV1 } from "xtandard/tanstack/server";
 
 // Parse a URL / Request / URLSearchParams / record (sync or promise).
 const loadSearch = createLoader(tableSearch);
@@ -245,10 +245,10 @@ export const Route = createFileRoute("/users")({
 });
 ```
 
-## Testing (`xantiagoma/tanstack/testing`)
+## Testing (`xtandard/tanstack/testing`)
 
 ```tsx
-import { QueryStateTestingAdapter } from "xantiagoma/tanstack/testing";
+import { QueryStateTestingAdapter } from "xtandard/tanstack/testing";
 
 render(<Component />, {
   wrapper: ({ children }) => (

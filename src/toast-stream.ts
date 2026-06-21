@@ -349,7 +349,7 @@ async function consumeStream<TYield, TReturn>(
  *
  * @example Async generator with progress and return value
  * ```ts
- * import { toastStream } from "xantiagoma/sonner";
+ * import { toastStream } from "xtandard/sonner";
  *
  * async function* importUsers() {
  *   yield { id: 1, name: "Ada" };
@@ -510,7 +510,7 @@ type ToastStreamReturn<TYield, TReturn> = (string | number) & {
  *
  * @example
  * ```ts
- * import { toastStreamAsync } from "xantiagoma/sonner";
+ * import { toastStreamAsync } from "xtandard/sonner";
  *
  * const toastId = toastStreamAsync(importUsers, {
  *   loading: "Importing users...",

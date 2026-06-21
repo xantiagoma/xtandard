@@ -5,7 +5,7 @@
  *
  * @example
  * ```ts
- * import { createHttpInterceptor } from "xantiagoma/web";
+ * import { createHttpInterceptor } from "xtandard/web";
  *
  * const interceptor = createHttpInterceptor();
  *

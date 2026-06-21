@@ -1,4 +1,4 @@
-# xantiagoma
+# xtandard
 
 Lightweight, type-safe TypeScript utilities with zero deps for the core.
 
@@ -41,29 +41,29 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 ## Entry Points
 
 ```
-xantiagoma              → isomorphic core (zero deps)
-xantiagoma/interval     → generic Interval<T> + number/integer/bigint/Date/string domains + createOrdinalInterval (Guava Range/DiscreteDomain, zero deps)
-xantiagoma/dinero       → money intervals (Interval of dinero.js values) (peer: dinero.js)
-xantiagoma/decimal      → exact-decimal intervals (Interval of decimal.js values) (peer: decimal.js)
-xantiagoma/big          → exact-decimal intervals (Interval of big.js values) (peer: big.js)
-xantiagoma/bignumber    → exact-decimal intervals (Interval of bignumber.js values) (peer: bignumber.js)
-xantiagoma/fraction     → exact-rational intervals (Interval of fraction.js values) (peer: fraction.js)
-xantiagoma/semver       → semantic-version range intervals (peer: semver)
-xantiagoma/ip           → IPv4/IPv6 address & CIDR intervals (peer: ipaddr.js)
-xantiagoma/pagination   → pagination, keyset helpers + raw SQL adapters
-xantiagoma/web          → browser/FormData + fetchWithProgress + keepSubDelims (peer: up-fetch)
-xantiagoma/tanstack     → nuqs-style URL query state for TanStack Router (peer: react, @tanstack/react-router)
-xantiagoma/tanstack/server   → framework-free parsers/serializer/loader/standard-schema (zero deps)
-xantiagoma/tanstack/testing  → headless QueryStateTestingAdapter (peer: react)
-xantiagoma/tanstack/temporal → URL parsers for the six Temporal kinds (peer: @js-temporal/polyfill, valibot)
-xantiagoma/tanstack/rison    → risonCodec for parseAsCodec (peer: @effective/rison, valibot)
-xantiagoma/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
-xantiagoma/sonner       → toastStream (peer: sonner, react)
-xantiagoma/ulid         → ULID generation + helpers (peer: ulid)
-xantiagoma/temporal     → datetime + duration + Temporal interval types (peer: @js-temporal/polyfill, itty-time)
-xantiagoma/dataloader   → createLoader factory (peer: dataloader)
-xantiagoma/unstorage    → withCache, createCache (peer: unstorage, ohash)
-xantiagoma/valibot      → TimeZone validation (peer: valibot)
+xtandard              → isomorphic core (zero deps)
+xtandard/interval     → generic Interval<T> + number/integer/bigint/Date/string domains + createOrdinalInterval (Guava Range/DiscreteDomain, zero deps)
+xtandard/dinero       → money intervals (Interval of dinero.js values) (peer: dinero.js)
+xtandard/decimal      → exact-decimal intervals (Interval of decimal.js values) (peer: decimal.js)
+xtandard/big          → exact-decimal intervals (Interval of big.js values) (peer: big.js)
+xtandard/bignumber    → exact-decimal intervals (Interval of bignumber.js values) (peer: bignumber.js)
+xtandard/fraction     → exact-rational intervals (Interval of fraction.js values) (peer: fraction.js)
+xtandard/semver       → semantic-version range intervals (peer: semver)
+xtandard/ip           → IPv4/IPv6 address & CIDR intervals (peer: ipaddr.js)
+xtandard/pagination   → pagination, keyset helpers + raw SQL adapters
+xtandard/web          → browser/FormData + fetchWithProgress + keepSubDelims (peer: up-fetch)
+xtandard/tanstack     → nuqs-style URL query state for TanStack Router (peer: react, @tanstack/react-router)
+xtandard/tanstack/server   → framework-free parsers/serializer/loader/standard-schema (zero deps)
+xtandard/tanstack/testing  → headless QueryStateTestingAdapter (peer: react)
+xtandard/tanstack/temporal → URL parsers for the six Temporal kinds (peer: @js-temporal/polyfill, valibot)
+xtandard/tanstack/rison    → risonCodec for parseAsCodec (peer: @effective/rison, valibot)
+xtandard/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
+xtandard/sonner       → toastStream (peer: sonner, react)
+xtandard/ulid         → ULID generation + helpers (peer: ulid)
+xtandard/temporal     → datetime + duration + Temporal interval types (peer: @js-temporal/polyfill, itty-time)
+xtandard/dataloader   → createLoader factory (peer: dataloader)
+xtandard/unstorage    → withCache, createCache (peer: unstorage, ohash)
+xtandard/valibot      → TimeZone validation (peer: valibot)
 ```
 
 All sub-entry deps are optional peer dependencies.

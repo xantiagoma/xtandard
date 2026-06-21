@@ -96,7 +96,7 @@ gh run watch <run-id>
 5. Confirm npm and GitHub release state:
 
 ```bash
-npm view xantiagoma version
+npm view xtandard version
 gh release list --limit 5
 ```
 
