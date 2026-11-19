@@ -59,6 +59,15 @@ import { isPromise, chainMaybePromise, resolveMaybePromise } from "@xtandard/lib
 - `resolveMaybePromise(value)` — always-async normalizer, for the boundary
   where you _want_ a Promise (e.g. feeding TanStack Query).
 
+`chainMaybePromise(value, fn)` decides per value:
+
+```mermaid
+flowchart LR
+  V["value: MaybePromise#lt;T#gt;"] --> IP{"isPromise(value)?"}
+  IP -->|no| SYNC["fn(value) right now<br/>(no microtask)"]
+  IP -->|yes| ASYNC["value.then(fn)<br/>returns a Promise"]
+```
+
 ## Recipe 1 — Adaptive factory (the codec/paginator shape)
 
 Three pieces: paired option types, paired result types, overloads + one
@@ -87,6 +96,15 @@ Why this works: a sync function `(d) => string` is assignable to
 overloads — and TypeScript takes the first. An `async` function only matches
 the second. The sync caller gets `string`, the async caller gets honest types,
 and there is exactly one implementation.
+
+```mermaid
+flowchart TD
+  CALL["createThing(options)"] --> MATCH{"options match<br/>ThingOptionsSync#lt;T#gt;?"}
+  MATCH -->|"yes: all callbacks sync"| O1["overload 1 (listed first)<br/>Thing#lt;T#gt;: run() returns string"]
+  MATCH -->|"no: some callback async"| O2["overload 2<br/>ThingMaybeAsync#lt;T#gt;: run() returns MaybePromise#lt;string#gt;"]
+  O1 --> IMPL["one implementation,<br/>composed with chainMaybePromise"]
+  O2 --> IMPL
+```
 
 ### Variant: distributive conditional return
 

@@ -83,6 +83,18 @@ NumberInterval.closed(3, 10).difference(NumberInterval.open(4, 6)); // [3,4] ∪
 NumberInterval.closed(3, 10).difference(NumberInterval.closed(4, 6)); // [3,4) ∪ (6,10]
 ```
 
+How the pairwise operations relate, for two non-empty intervals `a` and `b`
+(`span` is always the smallest interval enclosing both):
+
+```mermaid
+flowchart TD
+  AB["a, b (both non-empty)"] --> CONN{"a.isConnected(b)?"}
+  CONN -->|"no: disjoint"| DIS["intersection: empty<br/>union: null<br/>gap: the hole between them"]
+  CONN -->|yes| OVL{"a.overlaps(b)?"}
+  OVL -->|yes| OV["intersection: the shared part<br/>union: same as span<br/>gap: null"]
+  OVL -->|"no: isAdjacent"| ADJ["intersection: empty<br/>union: same as span<br/>gap: null"]
+```
+
 ## String form
 
 `[a,b]` `(a,b)` `[a,b)` `(a,b]`, unbounded `(-Infinity,5]` / `[0,+Infinity)`, empty `∅`.
@@ -98,6 +110,13 @@ successor `next` (the "epsilon" / step). It is **not** a class hierarchy — see
 [Why composition, not inheritance](#why-composition-not-inheritance).
 
 **Check at runtime** with `interval.isDiscrete` (`= domain.next !== undefined`).
+
+```mermaid
+flowchart LR
+  DOM["IntervalDomain#lt;T#gt;"] --> NEXT{"provides next + prev?"}
+  NEXT -->|yes| DISC["discrete<br/>stored canonical [closed, open)<br/>length() counts elements<br/>[1,5] and [6,10] merge"]
+  NEXT -->|no| CONT["continuous<br/>bounds stored verbatim<br/>length() is a measure<br/>[1,5] and [6,10] leave a gap"]
+```
 
 |               | Continuous                                                  | Discrete                                                   |
 | ------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
@@ -164,6 +183,14 @@ There is a single `Interval<T>` engine; the domain is injected (Guava's `Range<C
 - New types need **one object** (`IntervalDomain<T>`), not a new subclass + re-implemented
   operations.
 - All the set algebra lives once on `Interval<T>` and works for every domain.
+
+```mermaid
+flowchart LR
+  ND["numberDomain"] --> DT1["defineIntervalType"] --> NI["NumberInterval"]
+  ID["integerDomain"] --> DT2["defineIntervalType"] --> II["IntegerInterval"]
+  NI -->|extends| ENG["Interval#lt;number#gt;<br/>(one engine, one set algebra)"]
+  II -->|extends| ENG
+```
 
 `defineIntervalType(domain)` still gives you a real `new`-able subclass per type for
 ergonomics + `instanceof`, but discreteness rides on the domain, not the class.

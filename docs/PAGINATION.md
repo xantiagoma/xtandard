@@ -4,15 +4,28 @@ Source-agnostic, type-safe pagination for `@xtandard/lib/pagination` (zero
 dependencies). One paginator handles every input style, every data source,
 and every output shape:
 
-```
-        inputs                    core                      outputs
-┌─────────────────────┐   ┌──────────────────┐   ┌─────────────────────────┐
-│ ?page=2&per_page=20 │   │                  │   │ { data, meta }   (REST) │
-│ ?limit=20&offset=40 │ → │ createPaginator( │ → │ { edges, pageInfo }     │
-│ ?cursor=abc         │   │   your fetchers  │   │            (Relay)      │
-│ { first, after }    │   │ )                │   │ useInfiniteQuery config │
-└─────────────────────┘   └──────────────────┘   │ paginator.pages/items() │
-                                                 └─────────────────────────┘
+```mermaid
+flowchart LR
+  subgraph inputs
+    direction TB
+    I1["?#8288;page=2&per_page=20"]
+    I2["?#8288;limit=20&offset=40"]
+    I3["?cursor=abc"]
+    I4["{ first, after }"]
+    I1 ~~~ I2 ~~~ I3 ~~~ I4
+  end
+  subgraph core
+    CORE["createPaginator(<br/>your fetchers<br/>)"]
+  end
+  subgraph outputs
+    direction TB
+    O1["{ data, meta } (REST)"]
+    O2["{ edges, pageInfo } (Relay)"]
+    O3["useInfiniteQuery config"]
+    O4["paginator.pages/items()"]
+    O1 ~~~ O2 ~~~ O3 ~~~ O4
+  end
+  inputs --> core --> outputs
 ```
 
 The design splits pagination into three concerns:
@@ -87,14 +100,14 @@ type Paginated<T> = {
 
 ## Choosing a pagination style
 
-```
-Need "jump to page N" or total page count?
-├─ yes → offset/page (provide fetchOffset, optionally totalItems)
-└─ no
-   ├─ data changes while user paginates (feeds, live tables)?
-   │  └─ yes → cursor (provide fetchCursor + cursor.fromItem)
-   └─ small/static dataset, in-memory only?
-      └─ offset/page with sync fetchOffset is enough
+```mermaid
+flowchart TD
+  Q1{"Need #quot;jump to page N#quot;<br/>or total page count?"}
+  Q1 -->|yes| A1["offset/page<br/>(provide fetchOffset, optionally totalItems)"]
+  Q1 -->|no| Q2{"data changes while user paginates<br/>(feeds, live tables)?"}
+  Q2 -->|yes| A2["cursor<br/>(provide fetchCursor + cursor.fromItem)"]
+  Q2 -->|no| Q3{"small/static dataset,<br/>in-memory only?"}
+  Q3 -->|yes| A3["offset/page with sync fetchOffset is enough"]
 ```
 
 Support both when you have mixed clients: admin UIs on `?page=` and mobile
@@ -233,6 +246,30 @@ cursor: {
 
 `paginator.cursorFor(item)` encodes the token for any item — useful for
 per-edge cursors in GraphQL or for "start reading from this row" links.
+
+One cursor request, end to end (forward, `limit: 20`):
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant H as Endpoint
+  participant P as Paginator
+  participant K as Cursor codec
+  participant F as fetchCursor
+  C->>H: GET /posts?cursor=token&limit=20
+  H->>P: paginate(parsePaginationParams(...))
+  P->>K: decode(token)
+  K-->>P: { createdAt, id }
+  P->>F: { limit: 21, cursor: { createdAt, id }, direction }
+  Note over F: keyset WHERE (created_at, id) > cursor<br/>ORDER BY created_at, id LIMIT 21
+  F-->>P: up to 21 rows
+  Note over P: a 21st row means hasNextPage<br/>keep 20, reverse if backward
+  P->>K: encode(fromItem(first)), encode(fromItem(last))
+  K-->>P: startCursor, endCursor
+  P-->>H: { items, pageInfo }
+  H-->>C: toRestEnvelope: { data, meta: { endCursor } }
+  Note over C: next request sends ?cursor=endCursor
+```
 
 ### Empty pages
 
@@ -1473,9 +1510,17 @@ const users = await Promise.all(page.items.map((row) => userLoader.load(row.id))
 Tokens are produced by a two-stage pipeline, every stage replaceable
 (signature-compatible with drizzle-cursor, so custom stages can be shared):
 
-```
-data ──serializer──▶ string ──encoder──▶ token        default: JSON → base64url
-data ◀───parser───── string ◀──decoder── token
+```mermaid
+flowchart TB
+  subgraph encode["encode (default: JSON → base64url)"]
+    direction LR
+    D1["data"] -->|serializer| S1["string"] -->|encoder| T1["token"]
+  end
+  subgraph decode["decode"]
+    direction RL
+    T2["token"] -->|decoder| S2["string"] -->|parser| D2["data"]
+  end
+  encode ~~~ decode
 ```
 
 ```ts
@@ -1634,6 +1679,25 @@ for await (const [i, row] of enumerate(paginator.items({ type: "cursor", limit: 
 - Always `AsyncGenerator` (even on a sync paginator) — `for await` handles
   sync pages transparently.
 
+The loop `pages()` runs:
+
+```mermaid
+flowchart TD
+  START["pages(input)"] --> FETCH["paginate(current)"]
+  FETCH --> YIELD["yield page"]
+  YIELD --> EMPTY{"items empty?"}
+  EMPTY -->|yes| STOP(["done"])
+  EMPTY -->|no| TYPE{"input type"}
+  TYPE -->|cursor| MORE{"more in this direction<br/>and the cursor advanced?"}
+  MORE -->|no| STOP
+  MORE -->|yes| NEXTC["cursor = endCursor<br/>(startCursor if backward)"]
+  TYPE -->|"page / offset"| HN{"hasNextPage?"}
+  HN -->|no| STOP
+  HN -->|yes| NEXTO["offset += items.length"]
+  NEXTC --> FETCH
+  NEXTO --> FETCH
+```
+
 ---
 
 ## Frontend
@@ -1682,6 +1746,15 @@ function Feed() {
 `pageInfo.endCursor`/`startCursor`, and the `direction` TanStack passes maps
 onto backward fetches — so a both-ways feed (scroll down for older, scroll
 up for newer) is the default behavior, not extra work.
+
+```mermaid
+flowchart LR
+  Q["useInfiniteQuery"] -->|"pageParam (null first)<br/>+ direction"| FN["queryFn"]
+  FN -->|"{ type: cursor, limit: pageSize,<br/>cursor, direction }"| P["paginator.paginate"]
+  P --> PG["Paginated page"]
+  PG -->|"getNextPageParam:<br/>endCursor if hasNextPage"| Q
+  PG -->|"getPreviousPageParam:<br/>startCursor if hasPreviousPage"| Q
+```
 
 > Often the simpler client-side shape is: let the **server** own the
 > paginator and just forward `meta.endCursor` as the next request's
