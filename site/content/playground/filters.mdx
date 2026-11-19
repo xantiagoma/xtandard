@@ -1,0 +1,52 @@
+---
+title: Filters playground
+description: Edit a filter request and watch the portable compiler and the Knex, Mongo and Prisma adapters render it, live in your browser.
+tableOfContents: false
+---
+
+{/* scripts/sync.ts copies this file to src/content/docs/playground/, hence the import path. */}
+import FiltersPlayground from "../../../components/FiltersPlayground.tsx";
+
+This page runs the real `@xtandard/lib/filters` code in your browser. It uses an example
+`products` resource with one field of each kind. Edit the JSON and switch tabs to see:
+
+- **SQL (Knex)**: the parameterized `WHERE` from [`@xtandard/lib/filters/knex`](@BASE@/filters/adapters/#knex--xtandardlibfiltersknex-no-driver-dependency) for Postgres, MySQL or SQLite.
+- **Mongo / Prisma**: the plain filter objects the driver-free adapters build.
+- **Compiled AST**: the portable [`CompiledWhere`](@BASE@/filters/adapters/#the-portable-compiler) every adapter renders from.
+- **Compact URL**: the shorter wire form from [`compactFilters` / `compactFilterNode`](@BASE@/filters/ui/#compact-url-encoding).
+- **Chip labels**: [`describeColumnFilter`](@BASE@/filters/ui/#describing-filters-chip-labels) output for an active-filter bar.
+
+<FiltersPlayground client:visible />
+
+:::note[Things to try]
+
+- **Dropped fields**: a field missing from the spec, or one whose `kind` doesn't match it, is silently dropped. Untrusted input can't reach a column you didn't allow-list.
+- **Date preset**: change `unit` to `week` or `day`, or `timeZone` to `Europe/Madrid`. The window is DST-aware and always half-open (`>= start AND < end`). This page uses a small demo resolver; your app [injects its own](@BASE@/filters/#the-date-kind-is-injected).
+- **Prisma limits**: `like` with an internal `%` (e.g. `"a%b"`) has no Prisma equivalent, so that adapter throws a clear error.
+
+:::
+
+The spec behind this page, as you would write it for the Knex adapter:
+
+```ts
+import {
+  arrayField,
+  booleanField,
+  buildWhereSql,
+  dateField,
+  enumField,
+  numberField,
+  textField,
+} from "@xtandard/lib/filters/knex";
+
+const spec = {
+  name: textField({ column: "products.name" }),
+  status: enumField({ column: "products.status" }),
+  price: numberField({ column: "products.price" }),
+  inStock: booleanField({ column: "products.in_stock" }),
+  tags: arrayField({ column: "products.tags" }),
+  createdAt: dateField({ column: "products.created_at" }),
+};
+
+const fragment = buildWhereSql({ spec, filters, resolveDate, dialect: "postgres" }); // { sql, bindings } | null
+```

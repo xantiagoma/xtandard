@@ -41,7 +41,10 @@ export default defineConfig({
     ],
   },
   lint: {},
-  fmt: {},
+  fmt: {
+    // oxfmt formats .mdx as plain Markdown and mangles MDX syntax ({/* comments */} → {/_ … _/}).
+    ignorePatterns: ["site/**/*.mdx"],
+  },
   staged: {
     "*.{ts,tsx}": ["vp fmt", "vp lint"],
   },

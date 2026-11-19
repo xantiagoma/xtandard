@@ -1,0 +1,23 @@
+---
+title: Interval playground
+description: Type two intervals and see union, intersection, difference, span, gap and more, drawn on a number line, running the real @xtandard/lib/interval code.
+tableOfContents: false
+---
+
+{/* scripts/sync.ts copies this file to src/content/docs/playground/, hence the import path. */}
+import IntervalPlayground from "../../../components/IntervalPlayground.tsx";
+
+Type two intervals in their [string form](@BASE@/interval/#string-form): `[a,b]`, `(a,b)`, `[a,b)`,
+`(a,b]`, unbounded `(-Infinity,5]`, or empty `∅`. Every operation below runs the real
+`@xtandard/lib/interval` code in your browser. Filled dots are closed (included) ends; hollow dots
+are open ends.
+
+<IntervalPlayground client:visible />
+
+:::note[Things to try]
+
+- **Open vs closed edges**: `[3,10]` minus `(4,6)` gives `[3,4] ∪ [6,10]`. Change B to `[4,6]` and the pieces become `[3,4) ∪ (6,10]`.
+- **Discrete vs continuous**: with A `[1,5]` and B `[6,10]`, the union is `null` (there's a gap) for `NumberInterval`, but `[1,10]` for `IntegerInterval`, because no integer lies between 5 and 6. See [discrete vs continuous](@BASE@/interval/semantics/#discrete-vs-continuous-the-epsilon).
+- **Gap and span**: for disjoint intervals, `gap` is the hole between them and `span` is the smallest interval that covers both.
+
+:::
