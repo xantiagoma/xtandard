@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.60 does not support ubuntu-latest (26.04) yet
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
