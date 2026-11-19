@@ -155,8 +155,9 @@ export const BooleanFilterSchema = z.union([
  * Validates a `date` period preset (the model's `DatePreset`): `operator`
  * (`is`/`before`/`after`/`between`), `unit`, a real IANA `timeZone`, a
  * `Temporal.PlainDateTime` string `anchor` (and optional `end`), and an optional
- * `weekStartsOn` integer 0–6. A date-only `anchor` such as `"2026-02-01"` also
- * passes, since `Temporal.PlainDateTime.from` accepts it.
+ * `weekStartsOn` integer 0–6. The anchor is a wall-clock time read in
+ * `timeZone`, not an instant (a `Z`-suffixed string is rejected); a date-only
+ * `"2026-02-01"` is accepted as midnight.
  *
  * @example
  * ```ts

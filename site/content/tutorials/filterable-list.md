@@ -239,7 +239,8 @@ limit $9
 ```
 
 :::caution
-`parseSortParam` reads any direction other than `asc` as `desc`, and it does not check field names.
+`parseSortParam` accepts `asc`/`desc` in any case, reads a missing direction as `desc`, and drops an
+entry with any other direction. It does not check field names.
 The `Object.hasOwn` filter is what keeps the sort on allowed columns. Use `Object.hasOwn` rather than
 `in`, which would also accept inherited names such as `toString`.
 :::

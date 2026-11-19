@@ -42,8 +42,9 @@ export type DateFilterResolver = (input: { value: DatePreset }) => {
 };
 
 /**
- * SQL dialect for the SQL adapters (kysely/knex). Affects only the ops with no
- * portable spelling: the `array` ops and case-insensitive `ilike`. `postgres`
+ * SQL dialect for the SQL adapters (kysely/knex). Affects the ops with no
+ * portable spelling (the `array` ops and case-insensitive `ilike`), the `LIKE`
+ * `ESCAPE` clause, and knex's identifier quoting (backticks on MySQL). `postgres`
  * (default) uses native `@>`/`<@`/`&&` + `ILIKE`; `mysql` renders the array ops
  * as `JSON_CONTAINS`/`JSON_OVERLAPS` over JSON columns and lowers `ilike` →
  * `LIKE` (case-insensitive by collation); `sqlite` renders the array ops as
@@ -56,10 +57,10 @@ export type SqlDialect = "postgres" | "mysql" | "sqlite";
 /**
  * Escape the `LIKE`/`ILIKE` wildcards (`%`, `_`) and the escape character
  * itself (`\`) with a backslash, so a user's text matches literally — used by
- * the `contains`/`startsWith`/`endsWith` affordances. Backslash is the default
- * escape character in Postgres and MySQL. SQLite has no default escape
- * character and the SQL adapters add no `ESCAPE` clause, so on SQLite an
- * escaped `%`/`_` is matched as a literal backslash plus a wildcard.
+ * the `contains`/`startsWith`/`endsWith` affordances. Backslash is Postgres's
+ * default `LIKE` escape; the kysely/knex adapters add an `ESCAPE` clause on
+ * SQLite (no default escape) and MySQL (none under `NO_BACKSLASH_ESCAPES`). Using
+ * it yourself on SQLite, add `ESCAPE '\'` to your `LIKE`.
  *
  * @example
  * ```ts

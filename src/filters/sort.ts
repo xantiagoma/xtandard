@@ -1,4 +1,4 @@
-import type { Sort } from "./types.ts";
+import type { Sort, SortDirection } from "./types.ts";
 
 /**
  * Sort helpers (pure, no validation library). The `Sort` model lives in
@@ -7,10 +7,11 @@ import type { Sort } from "./types.ts";
  * a client can never sort by a column that isn't declared sortable.
  *
  * Parse a compact `sort` query param: `"createdAt:desc,name:asc"`. Empty/absent
- * input → `[]`. Parsing is lenient (the allow-list is the real guard): an entry
- * with an empty field is skipped, and any direction other than exactly `asc`
- * (missing, `ASC`, a typo) becomes `desc`. Unknown field names are kept here
- * and dropped later by the adapter's column allow-list.
+ * input → `[]`. The direction is `asc` or `desc` in any case (`ASC` works) and
+ * defaults to `desc` when missing (`"name"` or `"name:"`). A malformed entry is
+ * dropped: an unknown direction (`up`, a typo), a blank field, or extra `:`
+ * parts. Unknown field names are kept here and dropped later by the adapter's
+ * column allow-list.
  *
  * @example
  * ```ts
@@ -19,8 +20,8 @@ import type { Sort } from "./types.ts";
  * parseSortParam({ value: "createdAt:desc,name:asc" });
  * // → { sort: [{ field: "createdAt", dir: "desc" }, { field: "name", dir: "asc" }] }
  *
- * parseSortParam({ value: "name,price:ASC,:asc" });
- * // → { sort: [{ field: "name", dir: "desc" }, { field: "price", dir: "desc" }] }
+ * parseSortParam({ value: "name,price:ASC,:asc,id:up" });
+ * // → { sort: [{ field: "name", dir: "desc" }, { field: "price", dir: "asc" }] }
  *
  * parseSortParam({ value: null }); // → { sort: [] }
  * ```
@@ -31,13 +32,23 @@ export function parseSortParam(input: { value: string | null | undefined }): { s
   const sort: Sort = [];
 
   for (const part of input.value.split(",")) {
-    const [field, rawDir] = part.split(":");
-    if (!field) continue;
+    const [rawField, rawDir, ...rest] = part.split(":");
+    const field = rawField?.trim();
+    const dir = parseDirection(rawDir);
+    if (!field || !dir || rest.length > 0) continue;
 
-    sort.push({ field: field.trim(), dir: rawDir?.trim() === "asc" ? "asc" : "desc" });
+    sort.push({ field, dir });
   }
 
   return { sort };
+}
+
+/** `asc`/`desc` in any case; missing or empty → `desc`; anything else → `null`. */
+function parseDirection(raw: string | undefined): SortDirection | null {
+  const dir = raw?.trim().toLowerCase() ?? "";
+  if (dir === "") return "desc";
+
+  return dir === "asc" || dir === "desc" ? dir : null;
 }
 
 /**

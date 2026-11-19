@@ -196,11 +196,15 @@ Each subpath exports the **same names** — `FieldFilterSchema`,
 `DatePresetSchema`, and the per-kind variant schemas (`TextFilterSchema`, …).
 Every one validates `timeZone` as a real IANA id and `anchor`/`end` as
 `Temporal.PlainDateTime` strings, and a `*.test-d.ts` asserts each schema's
-inferred output **equals** the model type — so they can't drift.
+inferred output **equals** the model type — so they can't drift. A runtime test
+runs the same valid and invalid inputs through all four libraries.
 
-> **Known issue (ArkType):** with arktype 2.2.1, the ArkType `FilterNodeSchema`
-> throws a `TypeError` when called, for any input. The flat `FiltersRequestSchema`
-> works; validate and/or/not trees with the valibot, Zod or Effect subpath for now.
+`anchor`/`end` are wall-clock times, read in the preset's `timeZone`, not
+instants: `Z`-suffixed strings such as `"2026-02-01T00:00:00Z"` are rejected,
+while a numeric offset (`+02:00`) is accepted and ignored, as
+`Temporal.PlainDateTime.from` reads it. A date-only `"2026-02-01"` is a valid
+`PlainDateTime` (midnight) and passes every library; valibot also normalizes it
+to `"2026-02-01T00:00:00"`, while Zod, ArkType and Effect return it unchanged.
 
 ```ts
 // pick one — the parsed result is the same `ColumnFilter[]` either way
@@ -401,6 +405,13 @@ lower to `ilike`); `isNull`/`isNotNull` → `{ isNull: true }`/`{ isNotNull: tru
 array → `arrayContains`/`arrayContained`/`arrayOverlaps`; tree → `AND`/`OR`/`NOT`.
 `between`/`notBetween` are lowered upstream to `gte`+`lte` / `lt`+`gt`.
 
+> **The v2 object's text matches are Postgres-only.** A v2 column filter takes a
+> bare pattern (there is no `ESCAPE` option), and drizzle renders the `ilike` key
+> as `ilike`, which SQLite and MySQL don't have. The escaped `%`/`_`/`\` of
+> `contains`/`startsWith`/`endsWith` rely on Postgres's default backslash escape.
+> On SQLite/MySQL use the v1 callback below or `@xtandard/lib/filters/drizzle`,
+> which render `like … escape`.
+
 > **Why the native object beats `where: { RAW: sql }`.** Feeding a raw column
 > `SQL` into the RQB breaks because the RQB aliases the root table (`invalid
 reference to FROM-clause entry`). The native object references columns by their
@@ -416,7 +427,12 @@ reference to FROM-clause entry`). The native object references columns by their
 `buildRqbV1Where`/`buildRqbV1FilterNode` return `{ where }` where `where` is that
 callback. It builds via the **operators and fields the callback provides** (not
 raw imported columns), so column refs resolve against the aliased table — same
-alias-safety as the v2 object.
+alias-safety as the v2 object. Drizzle's v1 operators have no array helpers, so
+the `array` ops are built with the `sql` tag they do carry (Postgres
+`@>`/`<@`/`&&`, values bound through the column like drizzle's own
+`arrayContains`). On a SQLite or MySQL column (read from the column drizzle
+passes in), text matches render as `like … escape` instead of `ilike`, as in the
+`drizzle` adapter.
 
 ```ts
 import { buildRqbV1Where, textField } from "@xtandard/lib/filters/drizzle-rqb";
@@ -526,8 +542,9 @@ the pattern allows (`%x%`/`x%`/`%x`); patterns with internal `%`/`_` throw (use
 
 > **`drizzle-rqb`** (the RQBv2 `where` object) supports every operator above
 > natively — RQBv2 has `ilike` + the array ops built in — so it matches the
-> `drizzle` column. It's listed separately because it returns an object for
-> `db.query`, not a `SQL` for `db.select()`.
+> `drizzle` column on Postgres (its text matches are Postgres-only, see
+> above). It's listed separately because it returns an object for `db.query`,
+> not a `SQL` for `db.select()`.
 
 > **drizzle** emits the PG array operators only — its array helpers are
 > Postgres-specific. **kysely / knex** (`multi`) render the `array` ops for all
@@ -537,16 +554,17 @@ the pattern allows (`%x%`/`x%`/`%x`); patterns with internal `%`/`_` throw (use
 ### SQL dialects (array ops + `ilike`)
 
 The kysely and knex adapters take an optional `dialect: "postgres" | "mysql" |
-"sqlite"` (default `"postgres"`). It only changes the ops with no portable
-spelling — the **array** ops and case-insensitive **`ilike`**; everything else
-is identical across dialects.
+"sqlite"` (default `"postgres"`). It changes the ops with no portable
+spelling — the **array** ops and case-insensitive **`ilike`** — plus the `LIKE`
+escape clause and (knex only) identifier quoting; everything else is identical
+across dialects.
 
-| op                        | `postgres`    | `mysql` (JSON column)   | `sqlite` (JSON column, JSON1)                           |
-| ------------------------- | ------------- | ----------------------- | ------------------------------------------------------- |
-| `arrayContains` (A ⊇ B)   | `col @> ?`    | `JSON_CONTAINS(col, ?)` | `NOT EXISTS (… json_each(?) … NOT IN (json_each(col)))` |
-| `arrayContained` (A ⊆ B)  | `col <@ ?`    | `JSON_CONTAINS(?, col)` | `NOT EXISTS (… json_each(col) … NOT IN (json_each(?)))` |
-| `arrayOverlaps` (A ∩ B≠∅) | `col && ?`    | `JSON_OVERLAPS(col, ?)` | `EXISTS (… json_each(col) … IN (json_each(?)))`         |
-| `contains`/…/`ilike`      | `col ILIKE ?` | `col LIKE ?`            | `col LIKE ?`                                            |
+| op                        | `postgres`    | `mysql` (JSON column)        | `sqlite` (JSON column, JSON1)                           |
+| ------------------------- | ------------- | ---------------------------- | ------------------------------------------------------- |
+| `arrayContains` (A ⊇ B)   | `col @> ?`    | `JSON_CONTAINS(col, ?)`      | `NOT EXISTS (… json_each(?) … NOT IN (json_each(col)))` |
+| `arrayContained` (A ⊆ B)  | `col <@ ?`    | `JSON_CONTAINS(?, col)`      | `NOT EXISTS (… json_each(col) … NOT IN (json_each(?)))` |
+| `arrayOverlaps` (A ∩ B≠∅) | `col && ?`    | `JSON_OVERLAPS(col, ?)`      | `EXISTS (… json_each(col) … IN (json_each(?)))`         |
+| `contains`/…/`ilike`      | `col ILIKE ?` | `col LIKE ? ESCAPE CHAR(92)` | `col LIKE ? ESCAPE '\'`                                 |
 
 ```ts
 // MySQL: arrayContains on a JSON column → JSON_CONTAINS, candidate bound as JSON text
@@ -557,7 +575,7 @@ buildWhereSql({
   ],
   dialect: "mysql",
 });
-// → { sql: 'JSON_CONTAINS("tags", ?)', bindings: ['["a","b"]'] }
+// → { sql: "JSON_CONTAINS(`tags`, ?)", bindings: ['["a","b"]'] }
 ```
 
 Notes:
@@ -569,7 +587,21 @@ Notes:
 - **`ilike`** is Postgres-only syntax — on MySQL/SQLite it folds to `LIKE`
   (case-insensitive by collation / ASCII), the closest portable spelling. `like`
   (case-sensitive intent) is unchanged everywhere.
-- **drizzle** has no `dialect` option (PG-only array helpers).
+- **`LIKE` escaping:** `contains`/`startsWith`/`endsWith` escape the user's `%`,
+  `_` and `\` with a backslash (`escapeLike`), so they match literally. Backslash
+  is Postgres's default `LIKE` escape; SQLite has none and MySQL loses its default
+  under `NO_BACKSLASH_ESCAPES`, so those dialects add an `ESCAPE` clause (MySQL
+  spells it `CHAR(92)`, which means `\` in every `sql_mode`). Your own
+  `like`/`ilike`/`notIlike` patterns get the same clause, so `\` escapes a
+  wildcard on all three dialects.
+- **knex on MySQL** quotes identifiers with backticks (`` `tasks`.`status` ``);
+  double quotes would be string literals unless `ANSI_QUOTES` is on. Kysely
+  quotes through its own dialect.
+- **drizzle** has no `dialect` option: it reads the dialect from the spec's
+  columns. On a SQLite or MySQL column, text matches render as
+  `like ? escape '\'` / `like ? escape char(92)` (same reasoning as above); its
+  array helpers stay Postgres-only. `drizzle-rqb`'s v1 callback does the same;
+  its v2 object can't (see the RQB section).
 
 ## Sorting
 
@@ -579,7 +611,7 @@ allow-listed to columns (the SQL adapters expose `buildOrderBy`):
 ```ts
 import { parseSortParam, serializeSort } from "@xtandard/lib/filters";
 
-const { sort } = parseSortParam({ value: "createdAt:desc,name:asc" }); // any dir but "asc" → "desc"
+const { sort } = parseSortParam({ value: "createdAt:desc,name:asc" }); // asc/desc, any case; missing → desc; other → dropped
 serializeSort({ sort }); // "createdAt:desc,name:asc"
 
 // drizzle / kysely:
@@ -609,8 +641,9 @@ collapses connectives to a single key (`{ and: [...] }` / `{ or: [...] }` /
 short codes like `contains`→`ct`, `inArray`→`iA`). It is also **spec-aware**:
 `kind` is **not stored** — it's recovered on decode from the `field → kind`
 allow-list the client already has (a resource's `_metadata`). Decode is
-defensive: a field not in the allow-list, an unknown operator code, or a
-wrong-typed argument is dropped (the same posture as the compiler), and you still
+defensive: a leaf with a field not in the allow-list, an unknown operator code,
+or a wrong-typed argument (one bad element in a `values` list is enough) is
+dropped whole (the same posture as the compiler), and you still
 validate the reconstructed model as usual.
 
 ```mermaid
@@ -868,14 +901,14 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 
 ### Adapters
 
-| Entry          | Peer                       | Key exports                                                                                                                                                                                                                              |
-| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/drizzle`     | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf`                                                                           |
-| `/drizzle-rqb` | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
-| `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                        |
-| `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                           |
-| `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                       |
-| `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                       |
+| Entry          | Peer                       | Key exports                                                                                                                                                                                                                                          |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/drizzle`     | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf`                                                                                       |
+| `/drizzle-rqb` | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`, `RqbV1Sql`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
+| `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                                    |
+| `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                                       |
+| `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                                   |
+| `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                                   |
 
 ## Gotchas & FAQ
 

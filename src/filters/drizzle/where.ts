@@ -20,6 +20,7 @@ import {
   notIlike,
   notInArray,
   or,
+  sql,
 } from "drizzle-orm";
 
 import {
@@ -29,6 +30,7 @@ import {
   sqlTextOp,
 } from "../compile.ts";
 import type { ColumnFilter, CompiledCond, CompiledWhere, FilterNode } from "../types.ts";
+import { drizzleTextSql } from "./dialect.ts";
 import type { FilterSpec } from "./spec.ts";
 
 // Render the portable CompiledWhere AST to a Drizzle `SQL`. `buildWhere` /
@@ -55,6 +57,9 @@ function condToSql(cond: CompiledCond, column: AnyColumn): SQL | undefined {
     case "like":
     case "ilike":
     case "notIlike": {
+      const dialectSql = drizzleTextSql(sql, column, cond.op, cond.value);
+      if (dialectSql) return dialectSql;
+
       const { op, pattern } = sqlTextOp(cond.op, cond.value);
 
       return op === "like"

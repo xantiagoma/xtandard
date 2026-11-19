@@ -60,7 +60,8 @@ export const dateField = (input: { column: ColumnOf<Date> }): FieldSpec => ({
 /**
  * Allow-list a public field as a `text` filter over a Drizzle string column (`text`,
  * `varchar`, …). `contains`/`startsWith`/`endsWith` render as `ilike` with the input's
- * `%`/`_` escaped. Passing a non-string column is a compile error.
+ * `%`/`_`/`\` escaped; on a SQLite or MySQL column, as `like … escape` instead. Passing a
+ * non-string column is a compile error.
  *
  * @example
  * ```ts

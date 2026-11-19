@@ -1,24 +1,3 @@
-/**
- * MongoDB / Mongoose adapter — renders the portable filter AST to a plain Mongo
- * query filter object. No driver dependency (returns plain objects). Text
- * matching becomes `$regex`; `between` → `$gte`/`$lte`; `inArray` → `$in`.
- *
- * `like`/`ilike` translate the SQL `LIKE` pattern to a regex (`%`→`.*`, `_`→`.`).
- * The PG array ops map natively: `arrayContains` (`@>`) → `$all`, `arrayOverlaps`
- * (`&&`) → `$in`, and `arrayContained` (`<@`, field ⊆ values) → an `$expr` with
- * `$setIsSubset` (Mongo has no single-symbol "contained by" operator).
- *
- * @example
- * ```ts
- * import { buildFilter, textField, numberField } from "@xtandard/lib/filters/mongo";
- *
- * const spec = { name: textField({ path: "name" }), amount: numberField({ path: "amount" }) };
- * const { filter } = buildFilter({ spec, filters, resolveDate });
- * // filter → { $and: [{ name: { $regex: "ab", $options: "i" } }, … ] }
- * const docs = await collection.find(filter ?? {}).toArray();
- * ```
- */
-
 import { compileFilterNode, compileFilters, type DateFilterResolver } from "./compile.ts";
 import type { ColumnFilter, CompiledCond, CompiledWhere, FieldKind, FilterNode } from "./types.ts";
 
