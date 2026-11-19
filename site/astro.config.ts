@@ -38,18 +38,20 @@ const toSidebar = (items: Item[]): SidebarItem[] =>
 // `@xtandard/lib/filters/knex` → src/entry-filters-knex.ts (the package.json exports map).
 const exportsMap = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))
   .exports as Record<string, unknown>;
-const libAliases = Object.keys(exportsMap)
-  .map((key) => {
-    const sub = key.replace(/^\.\/?/, "");
-    const file = join(
-      repoRoot,
-      "src",
-      sub === "" ? "index.ts" : `entry-${sub.replaceAll("/", "-")}.ts`,
-    );
-    if (!existsSync(file))
-      throw new Error(`astro.config.ts: no source entry for "${key}" (${file})`);
-    return { find: sub === "" ? "@xtandard/lib" : `@xtandard/lib/${sub}`, replacement: file };
-  })
+// Every entry point, in package.json order: the import specifier and its source file.
+const entries = Object.keys(exportsMap).map((key) => {
+  const sub = key.replace(/^\.\/?/, "");
+  const file = join(
+    repoRoot,
+    "src",
+    sub === "" ? "index.ts" : `entry-${sub.replaceAll("/", "-")}.ts`,
+  );
+  if (!existsSync(file)) throw new Error(`astro.config.ts: no source entry for "${key}" (${file})`);
+  return { find: sub === "" ? "@xtandard/lib" : `@xtandard/lib/${sub}`, replacement: file };
+});
+/** Entry points other entry points re-export from; the API reference documents those symbols here. */
+const apiOwners = ["src/index.ts", "src/entry-pagination.ts", "src/entry-tanstack-server.ts"];
+const libAliases = [...entries]
   // Longest first, so `@xtandard/lib` does not shadow `@xtandard/lib/filters`.
   .sort((a, b) => b.find.length - a.find.length)
   .map(({ find, replacement }) => ({
@@ -91,7 +93,18 @@ export default defineConfig({
       ],
       plugins: [
         apiReference({
-          entryPoints: ["../src/index.ts", "../src/entry-*.ts"],
+          // A fixed order: a symbol exported by several entry points is documented under the first
+          // one TypeDoc meets, and a glob's order differs between file systems (macOS vs the Linux
+          // CI). The modules that others re-export from come first, so /filters does not claim
+          // createPaginator and /tanstack does not claim the /tanstack/server parsers; then the rest
+          // alphabetically.
+          entryPoints: [
+            ...apiOwners.map((f) => join(repoRoot, f)),
+            ...entries
+              .map((e) => e.replacement)
+              .filter((f) => !apiOwners.some((o) => f.endsWith(o)))
+              .sort(),
+          ],
           tsconfig: "../tsconfig.json",
           output: "api",
           sidebar: { label: "API reference", collapsed: true },
