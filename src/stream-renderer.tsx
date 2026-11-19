@@ -14,17 +14,33 @@ import {
   type UseQueryResult,
   useQuery,
 } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** A generator or `AsyncChannel` whose return value is typed as `TReturn`. */
+export type StreamSourceWithReturn<TYield, TReturn> =
+  | AsyncGenerator<TYield, TReturn, unknown>
+  | Generator<TYield, TReturn, unknown>
+  | AsyncChannel<TYield, TReturn>;
+
+/**
+ * Any {@link StreamSource}, spelled so that a generator's (or channel's) return
+ * type is inferred as `TReturn`: `useStream({ source: gen })` types `returnValue`
+ * without explicit type arguments.
+ */
+export type UseStreamSource<TYield, TReturn> =
+  | StreamSource<TYield>
+  | StreamSourceWithReturn<TYield, TReturn>
+  | (() => StreamSourceWithReturn<TYield, TReturn>);
+
 /** Render prop: can be ReactNode or function returning ReactNode */
-type RenderProp<TData> = ReactNode | ((data: TData) => ReactNode);
+export type RenderProp<TData> = ReactNode | ((data: TData) => ReactNode);
 
 /** Render prop without data (for loading) */
-type RenderPropNoData = ReactNode | (() => ReactNode);
+export type RenderPropNoData = ReactNode | (() => ReactNode);
 
 /** Stream state with accumulated items */
 export type StreamState<TYield, TReturn = void> = {
@@ -122,9 +138,14 @@ export type ChildrenData<TYield, TReturn = void> =
 /** Base props for StreamRenderer */
 export type StreamRendererBaseProps<TYield, TReturn = void> = {
   /** The stream source - can be instance or factory */
-  source: StreamSource<TYield> | null | undefined;
+  source: UseStreamSource<TYield, TReturn> | null | undefined;
 
-  /** Unique key for the query cache */
+  /**
+   * Key for the query cache. Include everything the stream depends on: a new key
+   * starts a new stream, and hooks with the same key share one stream. When
+   * omitted, the stream is private to this hook instance (stable across renders,
+   * not shared with other components) and does not restart when `source` changes.
+   */
   queryKey?: unknown[];
   /** Delay configuration for visualizing sync streams */
   delay?: number | DelayConfig;
@@ -199,10 +220,15 @@ export type StreamMode = "accumulate" | "latest";
 export type StreamReducer<TYield, TState> = (state: TState, item: TYield, count: number) => TState;
 
 /** Base options shared by all useStream configurations */
-type UseStreamBaseOptions<TYield, TReturn = void> = {
+export type UseStreamBaseOptions<TYield, TReturn = void> = {
   /** The stream source - can be instance or factory */
-  source: StreamSource<TYield> | null | undefined;
-  /** Unique key for the query cache */
+  source: UseStreamSource<TYield, TReturn> | null | undefined;
+  /**
+   * Key for the query cache. Include everything the stream depends on: a new key
+   * starts a new stream, and hooks with the same key share one stream. When
+   * omitted, the stream is private to this hook instance (stable across renders,
+   * not shared with other components) and does not restart when `source` changes.
+   */
   queryKey?: unknown[];
   /** Delay configuration for visualizing sync streams */
   delay?: number | DelayConfig;
@@ -225,21 +251,30 @@ type UseStreamBaseOptions<TYield, TReturn = void> = {
 };
 
 /** Options with default accumulation (all items) */
-type UseStreamAccumulateOptions<TYield, TReturn = void> = UseStreamBaseOptions<TYield, TReturn> & {
+export type UseStreamAccumulateOptions<TYield, TReturn = void> = UseStreamBaseOptions<
+  TYield,
+  TReturn
+> & {
   mode?: "accumulate";
   maxItems?: never;
   reducer?: never;
 };
 
 /** Options with "latest" mode (only keep last item) */
-type UseStreamLatestOptions<TYield, TReturn = void> = UseStreamBaseOptions<TYield, TReturn> & {
+export type UseStreamLatestOptions<TYield, TReturn = void> = UseStreamBaseOptions<
+  TYield,
+  TReturn
+> & {
   mode: "latest";
   maxItems?: never;
   reducer?: never;
 };
 
 /** Options with maxItems (sliding window) */
-type UseStreamMaxItemsOptions<TYield, TReturn = void> = UseStreamBaseOptions<TYield, TReturn> & {
+export type UseStreamMaxItemsOptions<TYield, TReturn = void> = UseStreamBaseOptions<
+  TYield,
+  TReturn
+> & {
   mode?: never;
   /** Keep only the last N items (sliding window) */
   maxItems: number;
@@ -247,7 +282,7 @@ type UseStreamMaxItemsOptions<TYield, TReturn = void> = UseStreamBaseOptions<TYi
 };
 
 /** Options with custom reducer */
-type UseStreamReducerOptions<TYield, TState, TReturn = void> = UseStreamBaseOptions<
+export type UseStreamReducerOptions<TYield, TState, TReturn = void> = UseStreamBaseOptions<
   TYield,
   TReturn
 > & {
@@ -312,6 +347,9 @@ function resolveRenderPropNoData(
 // ─────────────────────────────────────────────────────────────────────────────
 // useStream Hook
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Counter behind the per-instance default key of unkeyed `useStream` calls. */
+let unkeyedStreamCount = 0;
 
 /** Result type for standard useStream (accumulate, latest, maxItems modes) */
 export type UseStreamResult<TYield, TReturn = void> = {
@@ -423,8 +461,11 @@ export function useStream<TYield, TReturn = void, TState = unknown>(
     latest: TYield | null;
   }>({ items: [], count: 0, latest: null });
 
-  // Create a stable query key
-  const stableQueryKey = useMemo(() => queryKey ?? ["stream", source], [queryKey, source]);
+  // Without a queryKey, key the stream to this hook instance. The source itself
+  // can't be the key: TanStack hashes keys as JSON, where every function is
+  // `null`, and an inline factory is a new function on every render.
+  const [instanceKey] = useState(() => ["@xtandard/lib/useStream", ++unkeyedStreamCount]);
+  const stableQueryKey = queryKey ?? instanceKey;
 
   const query = useQuery({
     queryKey: stableQueryKey,
@@ -793,10 +834,12 @@ export function StreamRenderer<TYield, TReturn = void>({
   children,
   mode,
   maxItems,
+  enabled,
+  retry,
 }: StreamRendererProps<TYield, TReturn>) {
   // Build useStream options based on mode/maxItems
   const streamOptions = useMemo(() => {
-    const base = { source, queryKey, delay, onItem, onSuccess, onError };
+    const base = { source, queryKey, delay, onItem, onSuccess, onError, enabled, retry };
     if (maxItems !== undefined) {
       return { ...base, maxItems };
     }
@@ -804,7 +847,7 @@ export function StreamRenderer<TYield, TReturn = void>({
       return { ...base, mode: "latest" as const };
     }
     return base;
-  }, [source, queryKey, delay, onItem, onSuccess, onError, mode, maxItems]);
+  }, [source, queryKey, delay, onItem, onSuccess, onError, enabled, retry, mode, maxItems]);
 
   const stream = useStream<TYield, TReturn>(streamOptions);
 

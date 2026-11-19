@@ -1,6 +1,7 @@
 /**
- * Browser HTTP interceptor for `fetch` and `XMLHttpRequest`.
- * Patches both APIs to capture requests/responses based on configurable rules.
+ * HTTP interceptor for `fetch` and `XMLHttpRequest`.
+ * Patches whichever of the two the runtime has (servers: `fetch` only) to
+ * capture requests/responses based on configurable rules.
  * Useful for debugging, analytics, monitoring, and testing.
  *
  * @example
@@ -195,7 +196,9 @@ function fire(rule: NormalizedRule, payload: Omit<InterceptEvent, "ruleId" | "ru
 
 /**
  * Create an HTTP interceptor that patches `fetch` and `XMLHttpRequest`
- * to capture requests/responses based on configurable rules.
+ * to capture requests/responses based on configurable rules. Each transport is
+ * patched only if the runtime has it: on a server (no `XMLHttpRequest`) only
+ * `fetch` is patched, and `restore()` puts back exactly what was replaced.
  *
  * @returns An {@link HttpInterceptor} with `addRule`, `clearAll`, and `restore` methods.
  *
@@ -229,9 +232,60 @@ function fire(rule: NormalizedRule, payload: Omit<InterceptEvent, "ruleId" | "ru
 export function createHttpInterceptor(): HttpInterceptor {
   const rules = new Map<number, NormalizedRule>();
   let nextId = 1;
+  // Undo functions for the globals actually patched: each transport is patched
+  // only if the runtime has it (servers have `fetch` but no `XMLHttpRequest`).
+  const unpatches: Array<() => void> = [];
 
-  // --- Patch fetch ---
-  const origFetch = globalThis.fetch.bind(globalThis);
+  if (typeof globalThis.fetch === "function") patchFetch(rules, unpatches);
+  if (typeof globalThis.XMLHttpRequest === "function") patchXhr(rules, unpatches);
+
+  // --- Public API ---
+  return {
+    addRule(rule: InterceptRule): InterceptHandle {
+      const id = nextId++;
+      const events = new EventTarget();
+
+      const normalized: NormalizedRule = {
+        id,
+        name: rule.name ?? "",
+        method: rule.method ?? "",
+        path: rule.path,
+        match: rule.match,
+        maxBodyChars: rule.maxBodyChars ?? 5000,
+        onIntercept: rule.onIntercept,
+        events,
+      };
+
+      rules.set(id, normalized);
+
+      return {
+        id,
+        events,
+        stop() {
+          rules.delete(id);
+        },
+      };
+    },
+
+    clearAll() {
+      rules.clear();
+    },
+
+    restore() {
+      rules.clear();
+      for (const unpatch of unpatches.splice(0)) unpatch();
+    },
+  };
+}
+
+type Rules = Map<number, NormalizedRule>;
+
+function patchFetch(rules: Rules, unpatches: Array<() => void>): void {
+  const original = globalThis.fetch;
+  const origFetch = original.bind(globalThis);
+  unpatches.push(() => {
+    globalThis.fetch = original;
+  });
 
   (globalThis as any).fetch = async function (
     input: RequestInfo | URL,
@@ -290,8 +344,9 @@ export function createHttpInterceptor(): HttpInterceptor {
 
     return res;
   };
+}
 
-  // --- Patch XHR ---
+function patchXhr(rules: Rules, unpatches: Array<() => void>): void {
   const XHR = globalThis.XMLHttpRequest;
   const origOpen = XHR.prototype.open;
   const origSend = XHR.prototype.send;
@@ -381,45 +436,9 @@ export function createHttpInterceptor(): HttpInterceptor {
 
     return origSend.call(this, body);
   };
-
-  // --- Public API ---
-  return {
-    addRule(rule: InterceptRule): InterceptHandle {
-      const id = nextId++;
-      const events = new EventTarget();
-
-      const normalized: NormalizedRule = {
-        id,
-        name: rule.name ?? "",
-        method: rule.method ?? "",
-        path: rule.path,
-        match: rule.match,
-        maxBodyChars: rule.maxBodyChars ?? 5000,
-        onIntercept: rule.onIntercept,
-        events,
-      };
-
-      rules.set(id, normalized);
-
-      return {
-        id,
-        events,
-        stop() {
-          rules.delete(id);
-        },
-      };
-    },
-
-    clearAll() {
-      rules.clear();
-    },
-
-    restore() {
-      rules.clear();
-      (globalThis as any).fetch = origFetch;
-      XHR.prototype.open = origOpen;
-      XHR.prototype.send = origSend;
-      XHR.prototype.setRequestHeader = origSetHeader;
-    },
-  };
+  unpatches.push(() => {
+    XHR.prototype.open = origOpen;
+    XHR.prototype.send = origSend;
+    XHR.prototype.setRequestHeader = origSetHeader;
+  });
 }

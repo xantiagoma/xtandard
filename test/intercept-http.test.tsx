@@ -122,4 +122,34 @@ describe("createHttpInterceptor", () => {
 
     expect(events.length).toBeGreaterThanOrEqual(1);
   });
+
+  test("restore() puts back the exact original fetch and XMLHttpRequest methods", () => {
+    const { fetch: originalFetch } = globalThis;
+    const { open, send, setRequestHeader } = XMLHttpRequest.prototype;
+
+    createHttpInterceptor().restore();
+
+    expect(globalThis.fetch).toBe(originalFetch);
+    expect(XMLHttpRequest.prototype.open).toBe(open);
+    expect(XMLHttpRequest.prototype.send).toBe(send);
+    expect(XMLHttpRequest.prototype.setRequestHeader).toBe(setRequestHeader);
+  });
+
+  test("without XMLHttpRequest, patches fetch only (no throw, nothing half-patched)", async () => {
+    const OriginalXHR = globalThis.XMLHttpRequest;
+    // @ts-expect-error simulate a runtime without XMLHttpRequest
+    delete globalThis.XMLHttpRequest;
+    try {
+      interceptor = createHttpInterceptor();
+      const events: InterceptEvent[] = [];
+      interceptor.addRule({ path: "/no-xhr", onIntercept: (e) => events.push(e) });
+
+      await fetch("/no-xhr").catch(() => {});
+
+      expect(events.map((e) => e.transport)).toEqual(["fetch"]);
+      expect(globalThis.XMLHttpRequest).toBeUndefined();
+    } finally {
+      globalThis.XMLHttpRequest = OriginalXHR;
+    }
+  });
 });

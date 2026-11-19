@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 
-type AnyProps = Record<string, unknown>;
+/** Loose props record accepted by a provider component (`Record<string, unknown>`). */
+export type AnyProps = Record<string, unknown>;
 
 /**
  * A provider entry for {@link Providers}.
@@ -23,6 +24,7 @@ type ProviderArgProps<TProps extends AnyProps> = keyof ProviderInputProps<TProps
   ? Record<string, never>
   : ProviderInputProps<TProps>;
 
+/** Rest-args tuple of `provider(Component, ...args)`: the props argument, required only when `TProps` has required keys besides `children`. */
 type ProviderPropsArg<TProps extends AnyProps> =
   RequiredKeys<ProviderInputProps<TProps>> extends never
     ? [props?: ProviderArgProps<TProps>]

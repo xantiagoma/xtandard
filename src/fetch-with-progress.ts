@@ -6,6 +6,7 @@ export type ProgressInfo = {
   total?: number;
 };
 
+/** `fetch` init for `fetchWithProgress`: `RequestInit` plus an `onProgress` callback. */
 export type FetchWithProgressInit = RequestInit & {
   onProgress?: (info: ProgressInfo) => void;
 };

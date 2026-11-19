@@ -43,7 +43,7 @@ async function* importRows() {
 
 function ImportProgress() {
   const { items, count, latest, returnValue, isLoading, isStreaming, isSuccess, isError, refetch } =
-    useStream<Step, string>({ source: importRows, queryKey: ["import"] });
+    useStream({ source: importRows, queryKey: ["import"] });
 
   if (isLoading) return <p>Starting…</p>;
   if (isStreaming)
@@ -72,11 +72,9 @@ The result holds `items`, `count` (all items received, even when not all are kep
 | `isSuccess`   | The stream finished.                                           |
 | `isError`     | The stream threw.                                              |
 
-The item type is inferred from `source`, but the generator's return type is not: pass both type arguments (`useStream<Step, string>`) when you use `returnValue`. Otherwise it is typed `void | undefined`.
+Both types are inferred from `source`: the item type, and the return type of a generator or `AsyncChannel` (here `string`), so `returnValue` is typed without type arguments. Sources without a return value (arrays, plain iterables) type it `void | undefined`.
 
-:::caution[Always pass a `queryKey`]
-`queryKey` is optional, and it defaults to `["stream", source]`. TanStack Query hashes keys as JSON, where a function becomes `null`, so **every factory-based stream without a `queryKey` shares the same cache entry** (`["stream",null]`). Two components with different sources would read each other's data. Give each stream its own key, and include whatever inputs the stream depends on.
-:::
+`queryKey` is the TanStack Query cache key: put whatever the stream depends on in it. A new key starts a new stream, and hooks with the same key share one. Without a `queryKey`, the stream belongs to that one hook instance: it is stable across renders, never shared with another component, and it does not restart when `source` changes (a new inline factory every render is fine). Pass a key when you want a stream to restart on new inputs, or to be shared.
 
 ### Keeping fewer items
 
@@ -117,7 +115,7 @@ The component form of `useStream`. Pass render props for each state: each is eit
 ```tsx
 import { StreamRenderer } from "@xtandard/lib/react";
 
-<StreamRenderer<Step, string>
+<StreamRenderer
   source={importRows}
   queryKey={["import"]}
   loading={<Spinner />}
@@ -144,11 +142,7 @@ import { StreamRenderer } from "@xtandard/lib/react";
 </StreamRenderer>;
 ```
 
-It accepts `mode`, `maxItems`, `delay`, `onItem`, `onSuccess` and `onError` like the hook. It has no `reducer` mode; use `useStream` for that.
-
-:::caution
-In the current release `StreamRenderer` does not forward `enabled` or `retry` to `useStream`, even though its props type lists them: the stream always starts immediately and never retries. If you need either, call `useStream` and render the states yourself.
-:::
+It accepts `mode`, `maxItems`, `delay`, `enabled`, `retry`, `onItem`, `onSuccess` and `onError` like the hook. It has no `reducer` mode; use `useStream` for that.
 
 ## `Providers` and `provider`
 

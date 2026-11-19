@@ -93,15 +93,13 @@ const getPlan = cache.wrap(async (id: string) => billing.plan(id), {
 await cache.storage.removeItem("user:42"); // `storage` is already scoped to "api:"
 ```
 
-`wrap(fn, overrides?)` takes `ttl` and `toKey` overrides.
+`wrap(fn, overrides?)` takes `ttl`, `toKey`, `storage` and `prefix` overrides; each replaces the cache's setting for that one function (a `prefix` override replaces the cache's prefix rather than nesting under it).
 
-:::danger[Give each wrapped function its own key]
-With the default `toKey`, the key is only a hash of the arguments, and all `wrap`ped functions share the cache's storage. Two functions called with the same arguments collide: in the example above without `toKey`, `getPlan("42")` would return the cached **user** `"42"`. Give each `wrap` a `toKey` that includes a name (as above), or use a separate `createCache` prefix per function. The decorator below doesn't have this problem for differently named methods.
-:::
+Without `toKey`, each wrapped function gets its own keys, `` `${fn.name}:${hash(fn source)}:${hash(args)}` `` (just the source hash for an anonymous function), so `getUser("42")` and `getPlan("42")` never read each other's entries. The source hash changes whenever the function's code does, including a new minified build, which leaves the old entries to expire. Pass a `toKey` (as above) when you want readable keys that survive deploys or that you can invalidate by hand.
 
 ### As a method decorator
 
-`cache.decorator` caches class methods. Use it bare, or call it to override the TTL:
+`cache.decorator` caches class methods. Use it bare, or call it to override `ttl`, `storage` or `prefix` for one method:
 
 ```ts
 const cache = createCache({ storage, prefix: "svc", ttl: 60 });

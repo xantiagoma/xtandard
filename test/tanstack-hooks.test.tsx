@@ -191,4 +191,58 @@ describe("useQueryStates", () => {
     await result.current[1]({ query: "next" });
     await vi.waitFor(() => expect(updates.at(-1)?.searchParams.get("q")).toBe("next"));
   });
+
+  it("honors a parser's .withOptions() for the commit", async () => {
+    const updates: UrlUpdateEvent[] = [];
+    const { result } = await renderHook(
+      () => useQueryStates({ q: parseAsString.withOptions({ history: "push", shallow: false }) }),
+      { wrapper: wrapper("", updates) },
+    );
+    await result.current[1]({ q: "x" });
+    await vi.waitFor(() => {
+      expect(updates.at(-1)?.options.history).toBe("push");
+      expect(updates.at(-1)?.options.shallow).toBe(false);
+    });
+  });
+
+  it("parser options beat hook options", async () => {
+    const updates: UrlUpdateEvent[] = [];
+    const { result } = await renderHook(
+      () =>
+        useQueryStates(
+          { q: parseAsString.withOptions({ history: "push" }) },
+          { history: "replace" },
+        ),
+      { wrapper: wrapper("", updates) },
+    );
+    await result.current[1]({ q: "x" });
+    await vi.waitFor(() => expect(updates.at(-1)?.options.history).toBe("push"));
+  });
+
+  it("a per-call clearOnDefault beats the parser's", async () => {
+    const updates: UrlUpdateEvent[] = [];
+    const { result } = await renderHook(
+      () =>
+        useQueryStates({
+          page: parseAsInteger.withDefault(1).withOptions({ clearOnDefault: true }),
+        }),
+      { wrapper: wrapper("?page=4", updates) },
+    );
+    await result.current[1]({ page: 1 }, { clearOnDefault: false });
+    await vi.waitFor(() => expect(updates.at(-1)?.queryString).toBe("page=1"));
+  });
+
+  it("a parser's clearOnInvalid: false keeps its invalid key", async () => {
+    const updates: UrlUpdateEvent[] = [];
+    const { result } = await renderHook(
+      () =>
+        useQueryStates({
+          a: parseAsInteger.withDefault(0).withOptions({ clearOnInvalid: false }),
+          b: parseAsInteger.withDefault(0),
+        }),
+      { wrapper: wrapper("?a=x&b=y", updates) },
+    );
+    await vi.waitFor(() => expect(updates.at(-1)?.queryString).toBe("a=x"));
+    expect(result.current[0]).toEqual({ a: 0, b: 0 });
+  });
 });

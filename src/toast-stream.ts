@@ -14,25 +14,27 @@ import {
 import { type ExternalToast, toast } from "sonner";
 
 // Types matching Sonner's patterns
-type StreamExternalToast = Omit<ExternalToast, "description">;
+/** Sonner's `ExternalToast` options minus `description` (the streamed message replaces it). */
+export type StreamExternalToast = Omit<ExternalToast, "description">;
 
-interface StreamExtendedResult extends ExternalToast {
+/** A toast message plus full Sonner toast options. */
+export interface StreamExtendedResult extends ExternalToast {
   message: ReactNode;
 }
 
 /** Result can be string, ReactNode, or callback returning either (sync or async) */
-type StreamResultT<TData = unknown> =
+export type StreamResultT<TData = unknown> =
   | string
   | ReactNode
   | ((data: TData) => ReactNode | string | Promise<ReactNode | string>);
 
 /** Extended result includes full toast options */
-type StreamExtendedResultT<TData = unknown> =
+export type StreamExtendedResultT<TData = unknown> =
   | StreamExtendedResult
   | ((data: TData) => StreamExtendedResult | Promise<StreamExtendedResult>);
 
 /** Error result - callback receives error first, then partial data */
-type StreamErrorResultT<TYield> =
+export type StreamErrorResultT<TYield> =
   | string
   | ReactNode
   | ((
@@ -41,7 +43,7 @@ type StreamErrorResultT<TYield> =
     ) => ReactNode | string | Promise<ReactNode | string>);
 
 /** Extended error result with toast options */
-type StreamExtendedErrorResultT<TYield> =
+export type StreamExtendedErrorResultT<TYield> =
   | StreamExtendedResult
   | ((
       error: unknown,
@@ -49,7 +51,7 @@ type StreamExtendedErrorResultT<TYield> =
     ) => StreamExtendedResult | Promise<StreamExtendedResult>);
 
 /** Streaming progress data passed to callbacks */
-type StreamingData<T> = {
+export type StreamingData<T> = {
   count: number;
   latest: T;
   /** All items received so far (including latest) */
@@ -57,7 +59,7 @@ type StreamingData<T> = {
 };
 
 /** Success data passed to callbacks - includes return value if generator has one */
-type SuccessData<TYield, TReturn = void> = {
+export type SuccessData<TYield, TReturn = void> = {
   count: number;
   items: TYield[];
   /** The return value from the generator (if any) */
@@ -65,7 +67,7 @@ type SuccessData<TYield, TReturn = void> = {
 };
 
 /** Partial data available when an error occurs */
-type ErrorPartialData<TYield> = {
+export type ErrorPartialData<TYield> = {
   /** Number of items received before error */
   count: number;
   /** Items received before error */
@@ -73,7 +75,7 @@ type ErrorPartialData<TYield> = {
 };
 
 /** Result of consuming a stream */
-type StreamResult<TYield, TReturn> = {
+export type StreamResult<TYield, TReturn> = {
   items: TYield[];
   returnValue: TReturn;
 };
@@ -84,7 +86,7 @@ type ConsumeResult<TYield, TReturn> =
   | { ok: false; items: TYield[]; error: unknown };
 
 /** Granular delay configuration */
-type DelayConfig = {
+export type DelayConfig = {
   /** Delay between items in ms */
   items?: number;
   /** Delay after loading, before first item */
@@ -94,19 +96,23 @@ type DelayConfig = {
 };
 
 /** Loading result - no data, just static or callback */
-type LoadingResultT = string | ReactNode | (() => ReactNode | string | Promise<ReactNode | string>);
+export type LoadingResultT =
+  | string
+  | ReactNode
+  | (() => ReactNode | string | Promise<ReactNode | string>);
 
 /** Extended loading result with toast options */
-interface LoadingExtendedResult extends ExternalToast {
+export interface LoadingExtendedResult extends ExternalToast {
   message: ReactNode;
 }
 
-type LoadingExtendedResultT =
+/** Extended loading result, or a (sync or async) callback returning one */
+export type LoadingExtendedResultT =
   | LoadingExtendedResult
   | (() => LoadingExtendedResult | Promise<LoadingExtendedResult>);
 
 /** Options matching Sonner's PromiseData pattern */
-type ToastStreamData<TYield = unknown, TReturn = void> = StreamExternalToast & {
+export type ToastStreamData<TYield = unknown, TReturn = void> = StreamExternalToast & {
   /**
    * Message shown while waiting for first item.
    * Supports string, ReactNode, callback, or extended result with toast options.
@@ -495,14 +501,22 @@ export async function toastStream<TYield, TReturn = void>(
 // toastStreamAsync overloads
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Return type matching toast.promise's unwrap pattern */
-type ToastStreamReturn<TYield, TReturn> = (string | number) & {
+/** What {@link toastStreamAsync} returns: the toast id plus `unwrap()` for the result. */
+export type ToastStreamReturn<TYield, TReturn> = {
+  /** Sonner's toast id: pass it to `toast.dismiss(id)` or `toast(..., { id })`. */
+  id: string | number;
+  /**
+   * Resolves to `{ items, returnValue }` once the stream completes; rejects with the
+   * stream's error (after the error toast is shown).
+   */
   unwrap: () => Promise<StreamResult<TYield, TReturn>>;
 };
 
 /**
- * Non-blocking version that returns immediately like `toast.promise`.
- * Returns the toast ID with an `unwrap()` method to await the result later.
+ * Non-blocking version that returns immediately, in the spirit of
+ * `toast.promise(...).unwrap()`. Returns `{ id, unwrap }`: the toast id, and an
+ * `unwrap()` method to await the result later. If you never call `unwrap()`, a
+ * failed stream only shows the error toast (no unhandled rejection).
  * Accepts either an instance or a factory function.
  *
  * Use this when the UI should continue immediately while the toast tracks the
@@ -512,26 +526,27 @@ type ToastStreamReturn<TYield, TReturn> = (string | number) & {
  * ```ts
  * import { toastStreamAsync } from "@xtandard/lib/sonner";
  *
- * const toastId = toastStreamAsync(importUsers, {
+ * const imported = toastStreamAsync(importUsers, {
  *   loading: "Importing users...",
  *   streaming: ({ count }) => `Imported ${count}`,
  *   success: ({ count }) => `Imported ${count} users`,
  * });
  *
  * // The caller continues immediately; await only if/when the result matters.
- * const { items, returnValue } = await toastId.unwrap();
+ * const { items, returnValue } = await imported.unwrap();
+ * // imported.id is Sonner's toast id, e.g. for toast.dismiss(imported.id)
  * ```
  *
  * @example Fire-and-track with error handling
  * ```ts
- * const toastId = toastStreamAsync(uploadFiles(files), {
+ * const upload = toastStreamAsync(uploadFiles(files), {
  *   loading: "Uploading...",
  *   streaming: ({ count }) => `${count} files uploaded`,
  *   error: (error, partial) =>
  *     `Upload failed after ${partial.count} files: ${String(error)}`,
  * });
  *
- * toastId.unwrap().catch((error) => {
+ * upload.unwrap().catch((error) => {
  *   reportError(error);
  * });
  * ```
@@ -660,8 +675,8 @@ export function toastStreamAsync<TYield, TReturn = void>(
     return { items: result.items, returnValue: result.returnValue };
   })();
 
-  // Match toast.promise's return signature
-  const res = toastId as ToastStreamReturn<TYield, TReturn>;
-  res.unwrap = () => promise;
-  return res;
+  // Like toast.promise: a stream nobody unwraps must not surface as an unhandled
+  // rejection (the error toast already reported it); unwrap() still rejects.
+  promise.catch(() => {});
+  return { id: toastId, unwrap: () => promise };
 }
