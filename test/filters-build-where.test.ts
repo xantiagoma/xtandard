@@ -1,5 +1,10 @@
+import { DatabaseSync } from "node:sqlite";
+
 import { describe, expect, test } from "vitest";
+import { MySqlDialect, mysqlTable, varchar } from "drizzle-orm/mysql-core";
 import { boolean, integer, PgDialect, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { SQLiteSyncDialect, sqliteTable, text as sqliteText } from "drizzle-orm/sqlite-core";
+import { drizzle as drizzleSqliteProxy } from "drizzle-orm/sqlite-proxy";
 
 import type { ColumnFilter, DatePreset, FilterNode } from "../src/filters/types.ts";
 
@@ -200,5 +205,99 @@ describe("buildFilterNode (and/or/not)", () => {
     expect(sql).toContain(" or ");
     expect(sql).toContain("not ");
     expect(q?.params).toEqual(["running", "a", 5]);
+  });
+});
+
+// ── text ops per dialect: the dialect comes from the column ─────────────────
+
+describe("text ops on SQLite (drizzle sqlite-proxy over a real node:sqlite)", () => {
+  // Regression: the text ops rendered drizzle's `ilike` (a syntax error on SQLite) and the
+  // backslash-escaped pattern had no ESCAPE clause (SQLite has no default escape character).
+  const client = new DatabaseSync(":memory:");
+  client.exec("create table t (name text)");
+  const insert = client.prepare("insert into t (name) values (?)");
+  for (const name of ["50% off", "500 off", "a_b", "axb", "back\\slash", "backxslash", "Ada"]) {
+    insert.run(name);
+  }
+  const db = drizzleSqliteProxy(async (sqlText, params, method) => {
+    const rows = client
+      .prepare(sqlText)
+      .all(...(params as string[]))
+      .map((row) => Object.values(row));
+
+    // sqlite-proxy wants one row's values for "get", every row's values otherwise
+    return { rows: (method === "get" ? rows[0] : rows) as unknown[] };
+  });
+  const t = sqliteTable("t", { name: sqliteText("name") });
+
+  const cases: [
+    operator: "contains" | "startsWith" | "endsWith" | "like" | "ilike" | "notIlike",
+    value: string,
+    want: string[],
+  ][] = [
+    ["contains", "50%", ["50% off"]],
+    ["contains", "a_b", ["a_b"]],
+    ["contains", "back\\slash", ["back\\slash"]],
+    ["startsWith", "50%", ["50% off"]],
+    ["endsWith", "_b", ["a_b"]],
+    ["like", "a%", ["Ada", "a_b", "axb"]],
+    ["like", "a\\_b", ["a_b"]],
+    ["ilike", "ADA", ["Ada"]],
+    ["notIlike", "%off", ["Ada", "a_b", "axb", "back\\slash", "backxslash"]],
+  ];
+
+  test.each(cases)("%s %j", async (operator, value, want) => {
+    const { where } = buildWhere({
+      spec: { name: textField({ column: t.name }) },
+      filters: [{ field: "name", filter: { kind: "text", operator, value } }],
+    });
+    const rows = await db.select({ name: t.name }).from(t).where(where);
+
+    expect(rows.map((r) => r.name).sort()).toEqual(want);
+  });
+
+  test("renders like … escape '\\' (never ilike)", () => {
+    const { where } = buildWhere({
+      spec: { name: textField({ column: t.name }) },
+      filters: [{ field: "name", filter: { kind: "text", operator: "contains", value: "50%" } }],
+    });
+
+    expect(new SQLiteSyncDialect().sqlToQuery(where!)).toMatchObject({
+      sql: `"t"."name" like ? escape '\\'`,
+      params: ["%50\\%%"],
+    });
+  });
+});
+
+describe("text ops on MySQL (generated SQL)", () => {
+  const m = mysqlTable("t", { name: varchar("name", { length: 50 }) });
+  const sqlOf = (operator: "contains" | "notIlike", value: string) => {
+    const { where } = buildWhere({
+      spec: { name: textField({ column: m.name }) },
+      filters: [{ field: "name", filter: { kind: "text", operator, value } }],
+    });
+    const { sql, params } = new MySqlDialect().sqlToQuery(where!);
+
+    return { sql, params };
+  };
+
+  test("like … escape char(92): `\\` escapes in every sql_mode (incl. NO_BACKSLASH_ESCAPES)", () => {
+    expect(sqlOf("contains", "50%")).toEqual({
+      sql: "`t`.`name` like ? escape char(92)",
+      params: ["%50\\%%"],
+    });
+    expect(sqlOf("notIlike", "a%")).toEqual({
+      sql: "`t`.`name` not like ? escape char(92)",
+      params: ["a%"],
+    });
+  });
+
+  test("Postgres keeps ilike with no ESCAPE clause (backslash is its default escape)", () => {
+    const { where } = buildWhere({
+      spec: { name: textField({ column: tbl.name }) },
+      filters: [{ field: "name", filter: { kind: "text", operator: "contains", value: "50%" } }],
+    });
+
+    expect(dialect.sqlToQuery(where!).sql).toBe('"tbl"."name" ilike $1');
   });
 });

@@ -1,52 +1,10 @@
-/**
- * Drizzle **relational query builder** adapters — render the portable filter AST
- * to what `db.query.<table>.findMany` accepts, NOT a `SQL` for
- * `db.select().where()` (that's the sibling `@xtandard/lib/filters/drizzle`).
- * Two flavors:
- *
- * - **RQB v2** (drizzle v1, `db.query`): `where` is a plain OBJECT —
- *   `buildWhere`/`buildFilterNode`/`toDrizzleRqbWhere`.
- * - **RQB v1** (legacy, `db._query` / drizzle 0.x `db.query`): `where` is a
- *   CALLBACK `(fields, operators) => SQL` — `buildRqbV1Where`/
- *   `buildRqbV1FilterNode`/`toDrizzleRqbV1Callback`. It builds via the
- *   callback-provided `operators` and `fields`, so column refs resolve against
- *   the RQB's aliased table (no raw-SQL alias footgun).
- *
- * Both are **driver-free** (no `drizzle-orm` import, no peer): v2 emits a plain
- * object; v1 emits a callback that consumes the operators drizzle passes in.
- *
- * **No driver dependency** — it emits a plain object that drizzle interprets, so
- * nothing is imported from `drizzle-orm` (and there's no peer). Unlike a raw-SQL
- * `where: { RAW }`, the native object references columns by their schema property
- * key, so drizzle resolves them against the (aliased) root table itself — i.e. it
- * sidesteps the "invalid reference to FROM-clause entry" footgun of feeding raw
- * column SQL into RQB.
- *
- * Operator mapping (1:1 with RQBv2): `eq`/`ne`/`gt`/`gte`/`lt`/`lte`; set →
- * `in`/`notIn`; text-match → `like`/`ilike`/`notIlike` (the ergonomic
- * `contains`/`startsWith`/`endsWith` lower to `ilike` with an escaped `%`
- * pattern); `between`/`notBetween` are already lowered upstream to `gte`+`lte` /
- * `lt`+`gt`; `isNull`/`isNotNull` → `{ isNull: true }`/`{ isNotNull: true }`;
- * scalar-array → `arrayContains`/`arrayContained`/`arrayOverlaps`; tree →
- * `AND`/`OR`/`NOT`.
- *
- * @example
- * ```ts
- * import { buildWhere, textField, dateField } from "@xtandard/lib/filters/drizzle-rqb";
- *
- * // `column` is the RQBv2 schema PROPERTY key (e.g. "createdAt"), not the SQL column name.
- * const spec = { name: textField({ column: "name" }), createdAt: dateField({ column: "createdAt" }) };
- * const { where } = buildWhere({ spec, filters, resolveDate });
- * const rows = await db.query.tasks.findMany({ where, limit: 20 });
- * ```
- */
-
 import {
   compileFilterNode,
   compileFilters,
   type DateFilterResolver,
   sqlTextOp,
 } from "./compile.ts";
+import { drizzleTextSql } from "./drizzle/dialect.ts";
 import type { ColumnFilter, CompiledCond, CompiledWhere, FieldKind, FilterNode } from "./types.ts";
 
 /** One allow-listed field: its filter kind plus the schema property key (`"createdAt"`, not
@@ -96,7 +54,8 @@ export const dateField = make("date");
 /**
  * Allow-list a public field as a `text` filter over a string column, named by its Drizzle
  * schema property key (`"name"`). `contains`/`startsWith`/`endsWith` become `ilike` with the
- * input's `%`/`_` escaped.
+ * input's `%`/`_`/`\` escaped. That is Postgres-only in the RQB v2 object (no `ESCAPE`, and
+ * SQLite/MySQL have no `ilike`); the v1 callback renders `like … escape` on those columns.
  *
  * @example
  * ```ts
@@ -338,15 +297,24 @@ export function buildFilterNode(input: {
 // ── RQB v1 (legacy callback `where: (fields, operators) => SQL`) ──────────────
 
 /**
+ * The `sql` tag the RQB **v1** operators carry: a tagged template that builds the SQL type `R`,
+ * plus `sql.param(value, encoder)` to bind a value through a column's driver encoding.
+ */
+export interface RqbV1Sql<R> {
+  (strings: TemplateStringsArray, ...params: unknown[]): R;
+  param(value: unknown, encoder?: { mapToDriverValue(value: unknown): unknown }): unknown;
+}
+
+/**
  * The drizzle operators the RQB **v1** `where` callback receives as its second
- * argument (`(fields, operators) => …`). Structural + generic over the SQL type
- * `R` so this adapter imports no `drizzle-orm`. `and`/`or` may return `undefined`
+ * argument (`(fields, operators) => …`, drizzle's `getOperators()`). Structural + generic over
+ * the SQL type `R` so this adapter imports no `drizzle-orm`. `and`/`or` may return `undefined`
  * (no conditions), matching drizzle.
  *
- * Note: the operators object drizzle-orm 0.45 passes (`getOperators()`) has no
- * `arrayContains`/`arrayContained`/`arrayOverlaps`, so it does not satisfy this interface:
- * TypeScript rejects `findMany({ where })` with a v1 callback, and an `array` filter throws
- * at call time. Spreading in drizzle's exported array operators gives a complete set.
+ * Drizzle's set has no array operators, so the `array` ops (Postgres `@>`/`<@`/`&&`) are built
+ * with its `sql` tag, binding the values through the column's encoder like drizzle's own
+ * `arrayContains`/`arrayContained`/`arrayOverlaps` do. An operators object that does carry
+ * those three uses them instead.
  */
 export interface RqbV1Operators<R> {
   eq(column: unknown, value: unknown): R;
@@ -362,12 +330,39 @@ export interface RqbV1Operators<R> {
   notInArray(column: unknown, values: unknown[]): R;
   isNull(column: unknown): R;
   isNotNull(column: unknown): R;
-  arrayContains(column: unknown, values: unknown[]): R;
-  arrayContained(column: unknown, values: unknown[]): R;
-  arrayOverlaps(column: unknown, values: unknown[]): R;
   and(...conditions: (R | undefined)[]): R | undefined;
   or(...conditions: (R | undefined)[]): R | undefined;
   not(condition: R): R;
+  sql: RqbV1Sql<R>;
+  arrayContains?(column: unknown, values: unknown[]): R;
+  arrayContained?(column: unknown, values: unknown[]): R;
+  arrayOverlaps?(column: unknown, values: unknown[]): R;
+}
+
+// Postgres array ops for the v1 callback: the caller's own operator when it has one, else
+// `column <op> $param` built with drizzle's `sql` tag. The values bind through the column's
+// `mapToDriverValue` (what drizzle's `arrayContains` does), so a `text[]` column gets a PG
+// array literal.
+function arrayOpV1<R>(
+  op: "arrayContains" | "arrayContained" | "arrayOverlaps",
+  column: unknown,
+  values: unknown[],
+  ops: RqbV1Operators<R>,
+): R {
+  const own = ops[op];
+  if (own) return own.call(ops, column, values);
+
+  const encoder =
+    typeof (column as { mapToDriverValue?: unknown } | null)?.mapToDriverValue === "function"
+      ? (column as { mapToDriverValue(value: unknown): unknown })
+      : undefined;
+  const param = ops.sql.param(values, encoder);
+
+  return op === "arrayContains"
+    ? ops.sql`${column} @> ${param}`
+    : op === "arrayContained"
+      ? ops.sql`${column} <@ ${param}`
+      : ops.sql`${column} && ${param}`;
 }
 
 /** An RQB v1 `where` callback: `(fields, operators) => SQL | undefined`. `fields`
@@ -397,6 +392,11 @@ function condV1<R>(cond: CompiledCond, column: unknown, ops: RqbV1Operators<R>):
     case "like":
     case "ilike":
     case "notIlike": {
+      // SQLite/MySQL column: `like … escape` via drizzle's `sql` (they have no `ilike`, and
+      // need the ESCAPE clause for the backslash-escaped pattern).
+      const dialectSql = drizzleTextSql(ops.sql, column, cond.op, cond.value);
+      if (dialectSql !== undefined) return dialectSql;
+
       const { op, pattern } = sqlTextOp(cond.op, cond.value);
 
       return op === "like"
@@ -410,11 +410,9 @@ function condV1<R>(cond: CompiledCond, column: unknown, ops: RqbV1Operators<R>):
     case "notInArray":
       return ops.notInArray(column, cond.values);
     case "arrayContains":
-      return ops.arrayContains(column, cond.values);
     case "arrayContained":
-      return ops.arrayContained(column, cond.values);
     case "arrayOverlaps":
-      return ops.arrayOverlaps(column, cond.values);
+      return arrayOpV1(cond.op, column, cond.values, ops);
     case "isNull":
       return ops.isNull(column);
     case "isNotNull":
@@ -431,7 +429,7 @@ function condV1<R>(cond: CompiledCond, column: unknown, ops: RqbV1Operators<R>):
  *
  * @example
  * ```ts
- * import { arrayContained, arrayContains, arrayOverlaps, getOperators } from "drizzle-orm";
+ * import { getOperators } from "drizzle-orm";
  * import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
  * import { toDrizzleRqbV1Callback } from "@xtandard/lib/filters/drizzle-rqb";
  *
@@ -443,9 +441,8 @@ function condV1<R>(cond: CompiledCond, column: unknown, ops: RqbV1Operators<R>):
  *   ] },
  *   columns: { amount: "amount", name: "name" },
  * });
- * // drizzle calls where(fields, operators) itself; calling it by hand shows the SQL.
- * const operators = { ...getOperators(), arrayContains, arrayContained, arrayOverlaps };
- * new PgDialect().sqlToQuery(where({ ...tasks }, operators)!).sql;
+ * // drizzle calls where(fields, getOperators()) itself; calling it by hand shows the SQL.
+ * new PgDialect().sqlToQuery(where({ ...tasks }, getOperators())!).sql;
  * // → '("tasks"."amount" > $1 and "tasks"."name" is not null)'
  * ```
  */
@@ -488,29 +485,30 @@ export function toDrizzleRqbV1Callback(input: {
  * the legacy relational API (`db._query` in drizzle v1, `db.query` in drizzle 0.x). The
  * callback builds the SQL from the `fields` and `operators` drizzle passes in, so columns
  * resolve against the query's aliased table. Same allow-list rules as `buildWhere`; when no
- * filter survives, the callback returns `undefined`.
- *
- * On drizzle-orm 0.45 the operators drizzle passes lack the array ops (see
- * {@link RqbV1Operators}): `findMany({ where })` does not typecheck there, and an `array`
- * filter throws when drizzle calls the callback.
+ * filter survives, the callback returns `undefined`. `array` filters render as Postgres
+ * `@>`/`<@`/`&&` (see {@link RqbV1Operators}).
  *
  * @example
  * ```ts
- * import { arrayContained, arrayContains, arrayOverlaps, getOperators } from "drizzle-orm";
+ * import { getOperators } from "drizzle-orm";
  * import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
- * import { buildRqbV1Where, numberField, textField } from "@xtandard/lib/filters/drizzle-rqb";
+ * import { arrayField, buildRqbV1Where, numberField, textField } from "@xtandard/lib/filters/drizzle-rqb";
  *
- * const tasks = pgTable("tasks", { name: text("name"), amount: integer("amount") });
- * const spec = { name: textField({ column: "name" }), amount: numberField({ column: "amount" }) };
+ * const tasks = pgTable("tasks", { name: text("name"), amount: integer("amount"), tags: text("tags").array() });
+ * const spec = {
+ *   name: textField({ column: "name" }),
+ *   amount: numberField({ column: "amount" }),
+ *   tags: arrayField({ column: "tags" }),
+ * };
  * const { where } = buildRqbV1Where({ spec, filters: [
  *   { field: "name", filter: { kind: "text", operator: "startsWith", value: "Re" } },
  *   { field: "amount", filter: { kind: "number", operator: "gte", value: 100 } },
+ *   { field: "tags", filter: { kind: "array", operator: "arrayOverlaps", values: ["ts"] } },
  * ] });
  * // in an app: await db._query.tasks.findMany({ where });
- * // drizzle calls where(fields, operators) itself; calling it by hand shows the SQL.
- * const operators = { ...getOperators(), arrayContains, arrayContained, arrayOverlaps };
- * new PgDialect().sqlToQuery(where({ ...tasks }, operators)!).sql;
- * // → '("tasks"."name" ilike $1 and "tasks"."amount" >= $2)'
+ * // drizzle calls where(fields, getOperators()) itself; calling it by hand shows the SQL.
+ * new PgDialect().sqlToQuery(where({ ...tasks }, getOperators())!).sql;
+ * // → '("tasks"."name" ilike $1 and "tasks"."amount" >= $2 and "tasks"."tags" && $3)'
  * ```
  */
 export function buildRqbV1Where(input: {
@@ -533,7 +531,7 @@ export function buildRqbV1Where(input: {
  *
  * @example
  * ```ts
- * import { arrayContained, arrayContains, arrayOverlaps, getOperators } from "drizzle-orm";
+ * import { getOperators } from "drizzle-orm";
  * import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
  * import { buildRqbV1FilterNode, numberField, textField } from "@xtandard/lib/filters/drizzle-rqb";
  *
@@ -544,9 +542,8 @@ export function buildRqbV1Where(input: {
  *   { type: "not", node: { type: "column", field: "amount", filter: { kind: "number", operator: "lt", value: 0 } } },
  * ] } });
  * // in an app: await db._query.tasks.findMany({ where });
- * // drizzle calls where(fields, operators) itself; calling it by hand shows the SQL.
- * const operators = { ...getOperators(), arrayContains, arrayContained, arrayOverlaps };
- * new PgDialect().sqlToQuery(where({ ...tasks }, operators)!).sql;
+ * // drizzle calls where(fields, getOperators()) itself; calling it by hand shows the SQL.
+ * new PgDialect().sqlToQuery(where({ ...tasks }, getOperators())!).sql;
  * // → '("tasks"."name" = $1 or not "tasks"."amount" < $2)'
  * ```
  */

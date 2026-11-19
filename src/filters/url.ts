@@ -59,7 +59,8 @@ import type {
   UnaryOperator,
 } from "./operators.ts";
 
-type AnyOperator =
+/** Any filter operator, across every field kind (text, number, enum, boolean, date, array). */
+export type AnyOperator =
   | TextOperator
   | NumberOperator
   | EnumOperator
@@ -308,6 +309,10 @@ const isString = (x: unknown): x is string => typeof x === "string";
 const isNumber = (x: unknown): x is number => typeof x === "number";
 const isStringOrNumber = (x: unknown): x is string | number =>
   typeof x === "string" || typeof x === "number";
+/** An array whose every element passes `guard` (a single bad element fails it,
+ * so the caller drops the whole leaf instead of decoding a partial list). */
+const isArrayOf = <T>(x: unknown, guard: (item: unknown) => item is T): x is T[] =>
+  Array.isArray(x) && x.every(guard);
 
 function asUnary(o: string): UnaryOperator | null {
   switch (o) {
@@ -399,9 +404,7 @@ function textFilter(o: string, x: Record<string, unknown>): TextFilter | null {
   if (unary) return { kind: "text", operator: unary };
 
   const set = asSet(o);
-  if (set && Array.isArray(x.vs)) {
-    return { kind: "text", operator: set, values: x.vs.filter(isString) };
-  }
+  if (set && isArrayOf(x.vs, isString)) return { kind: "text", operator: set, values: x.vs };
 
   const scalar = asTextScalar(o);
   if (scalar && isString(x.v)) return { kind: "text", operator: scalar, value: x.v };
@@ -418,9 +421,7 @@ function numberFilter(o: string, x: Record<string, unknown>): NumberFilter | nul
   }
 
   const set = asSet(o);
-  if (set && Array.isArray(x.vs)) {
-    return { kind: "number", operator: set, values: x.vs.filter(isNumber) };
-  }
+  if (set && isArrayOf(x.vs, isNumber)) return { kind: "number", operator: set, values: x.vs };
 
   const scalar = asNumberScalar(o);
   if (scalar && isNumber(x.v)) return { kind: "number", operator: scalar, value: x.v };
@@ -433,9 +434,7 @@ function enumFilter(o: string, x: Record<string, unknown>): EnumFilter | null {
   if (unary) return { kind: "enum", operator: unary };
 
   const set = asSet(o);
-  if (set && Array.isArray(x.vs)) {
-    return { kind: "enum", operator: set, values: x.vs.filter(isString) };
-  }
+  if (set && isArrayOf(x.vs, isString)) return { kind: "enum", operator: set, values: x.vs };
 
   const eq = asEquality(o);
   if (eq && isString(x.v)) return { kind: "enum", operator: eq, value: x.v };
@@ -458,8 +457,8 @@ function arrayFilter(o: string, x: Record<string, unknown>): ArrayFilter | null 
   if (unary) return { kind: "array", operator: unary };
 
   const arr = asArrayCol(o);
-  if (arr && Array.isArray(x.vs)) {
-    return { kind: "array", operator: arr, values: x.vs.filter(isStringOrNumber) };
+  if (arr && isArrayOf(x.vs, isStringOrNumber)) {
+    return { kind: "array", operator: arr, values: x.vs };
   }
 
   return null;
@@ -474,10 +473,13 @@ function dateFilter(o: string, x: Record<string, unknown>): DateFilter | null {
 
   const unit = isString(x.u) ? unitFromCode(x.u) : null;
   if (!unit || !isString(x.tz) || !isString(x.a)) return null;
+  // optional args: absent is fine, present-but-wrong-typed drops the leaf
+  if (x.e !== undefined && !isString(x.e)) return null;
+  if (x.ws !== undefined && !isNumber(x.ws)) return null;
 
   const base: DatePreset = { kind: "date", operator: preset, unit, timeZone: x.tz, anchor: x.a };
-  if (isString(x.e)) base.end = x.e;
-  if (isNumber(x.ws)) base.weekStartsOn = x.ws;
+  if (x.e !== undefined) base.end = x.e;
+  if (x.ws !== undefined) base.weekStartsOn = x.ws;
 
   return base;
 }
@@ -575,11 +577,9 @@ export function compactFilterNode(input: { node: FilterNode }): { compact: Compa
  * → empty box pattern) survives the encode→URL→decode round-trip instead of
  * vanishing before you can fill it. Invalid LEAVES (non-allow-listed field,
  * unknown operator, bad value) are still dropped in both modes, and `not` is
- * resolved the same way — only the empty-container collapse changes.
- *
- * Note: a wrong-typed element inside a `vs` list is filtered out rather than
- * dropping the leaf (`{ o: "iA", vs: ["1", 2] }` on a `number` field decodes
- * to `values: [2]`).
+ * resolved the same way — only the empty-container collapse changes. A
+ * `vs` list with even one wrong-typed element counts as a bad value, so
+ * `{ o: "iA", vs: ["1", 2] }` on a `number` field drops the whole leaf.
  *
  * @example
  * ```ts

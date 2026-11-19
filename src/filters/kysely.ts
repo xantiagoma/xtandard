@@ -1,24 +1,3 @@
-/**
- * Kysely adapter — renders the portable filter AST to a Kysely raw boolean
- * expression. **Dialect-aware** (`dialect`, default `"postgres"`): the `array`
- * ops and `ilike` are spelled per dialect — PG native `@>`/`<@`/`&&` + `ILIKE`,
- * MySQL `JSON_CONTAINS`/`JSON_OVERLAPS` + `LIKE`, SQLite `json_each(…)`
- * subqueries + `LIKE` (see {@link SqlDialect}). Peer `kysely`. String columns
- * are passed to `sql.ref` (server-owned identifiers); computed values use the
- * `sql` tag. Validation-library-free.
- *
- * @example
- * ```ts
- * import { buildWhere, buildOrderBy, textField, dateField } from "@xtandard/lib/filters/kysely";
- *
- * const spec = { name: textField({ column: "posts.name" }), createdAt: dateField({ column: "posts.created_at" }) };
- * const { where } = buildWhere({ spec, filters, resolveDate });
- * let q = db.selectFrom("posts").selectAll();
- * if (where) q = q.where(where);
- * for (const o of buildOrderBy({ sort, columns: { name: "posts.name" } }).orderBy) q = q.orderBy(o);
- * ```
- */
-
 import { sql, type RawBuilder, type SqlBool } from "kysely";
 
 import {
@@ -75,7 +54,9 @@ export const dateField = field("date");
 /**
  * Allow-list a public field as a `text` filter over a string column, given as a Kysely
  * reference string (`"users.name"`) or a raw expression such as `` sql`lower(users.name)` ``.
- * `contains`/`startsWith`/`endsWith` render as `ilike` on Postgres and `like` on MySQL/SQLite.
+ * `contains`/`startsWith`/`endsWith` render as `ilike` on Postgres and `like` on MySQL/SQLite,
+ * with the input's `%`/`_`/`\` escaped (plus an `escape` clause on MySQL/SQLite, so they match
+ * literally).
  *
  * @example
  * ```ts
@@ -168,6 +149,16 @@ export const arrayField = field("array");
 const ref = (col: KyselyTarget): RawBuilder<unknown> =>
   typeof col === "string" ? sql.ref(col) : col;
 
+// `escapeLike` escapes with a backslash. That is Postgres's default LIKE escape (no clause
+// needed); SQLite has no default escape and MySQL drops its default under
+// NO_BACKSLASH_ESCAPES, so both name it. char(92) is `\` in every MySQL sql_mode, where a
+// '\\' literal changes meaning with NO_BACKSLASH_ESCAPES.
+const LIKE_ESCAPE: Record<SqlDialect, RawBuilder<unknown>> = {
+  postgres: sql``,
+  mysql: sql` escape char(92)`,
+  sqlite: sql` escape '\\'`,
+};
+
 // The `array` ops have no portable spelling — render per dialect. PG uses the
 // native set operators; MySQL the JSON functions (JSON-typed column, 8.0.17+ for
 // JSON_OVERLAPS); SQLite a json_each(…) subquery (JSON1, bundled since 3.38).
@@ -230,18 +221,20 @@ function condSql(
     case "ilike":
     case "notIlike": {
       const { op, pattern } = sqlTextOp(cond.op, cond.value);
-      if (op === "like") return sql<SqlBool>`${col} like ${pattern}`;
       // ILIKE is PG-only; on MySQL/SQLite fold to LIKE (case-insensitive by
       // collation / ASCII), the closest portable spelling of the intent.
-      if (op === "ilike") {
-        return dialect === "postgres"
-          ? sql<SqlBool>`${col} ilike ${pattern}`
-          : sql<SqlBool>`${col} like ${pattern}`;
-      }
+      const keyword =
+        op === "like"
+          ? sql`like`
+          : dialect === "postgres"
+            ? op === "ilike"
+              ? sql`ilike`
+              : sql`not ilike`
+            : op === "ilike"
+              ? sql`like`
+              : sql`not like`;
 
-      return dialect === "postgres"
-        ? sql<SqlBool>`${col} not ilike ${pattern}`
-        : sql<SqlBool>`${col} not like ${pattern}`;
+      return sql<SqlBool>`${col} ${keyword} ${pattern}${LIKE_ESCAPE[dialect]}`;
     }
     case "inArray":
       return sql<SqlBool>`${col} in (${sql.join(cond.values)})`;
@@ -323,7 +316,7 @@ const kindsOf = (spec: KyselyFilterSpec): Record<string, FieldKind> =>
  * `.where(where)`. Only fields in `spec` whose kind matches the filter's `kind` are kept; the
  * rest are silently dropped. `where` is `undefined` when nothing survives (skip the `.where`
  * call then). A `date` preset filter needs `resolveDate` (it throws without one). `dialect`
- * (default `"postgres"`) only changes the `array` ops and `ilike`.
+ * (default `"postgres"`) changes the `array` ops, `ilike` and the `LIKE` escape clause.
  *
  * @example
  * ```ts

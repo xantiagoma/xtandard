@@ -154,14 +154,65 @@ describe("compact URL codec — decode is defensive (spec-aware)", () => {
     );
   });
 
-  test("set values are type-filtered to the kind", () => {
-    // enum inArray keeps only strings
+  test("a set/array leaf with any wrong-typed value is dropped whole", () => {
+    const decode = (leaf: Record<string, unknown>) =>
+      expandFilters({ compact: [leaf], kinds }).filters;
+
+    expect(decode({ f: "status", o: "iA", vs: ["todo", 3, "done"] })).toEqual([]);
+    expect(decode({ f: "title", o: "niA", vs: ["a", null] })).toEqual([]);
+    expect(decode({ f: "priority", o: "iA", vs: ["1", 2] })).toEqual([]);
+    expect(decode({ f: "priority", o: "iA", vs: ["1", "2"] })).toEqual([]); // never `values: []`
+    expect(decode({ f: "tags", o: "aO", vs: ["a", true] })).toEqual([]);
+    // nested in a tree, only the bad leaf goes
     expect(
-      expandFilters({ compact: [{ f: "status", o: "iA", vs: ["todo", 3, "done"] }], kinds })
-        .filters,
+      expandFilterNode({
+        compact: {
+          and: [
+            { f: "status", o: "iA", vs: ["todo", 3] },
+            { f: "title", o: "ct", v: "a" },
+          ],
+        },
+        kinds,
+      }).node,
+    ).toEqual({
+      type: "and",
+      nodes: [
+        {
+          type: "column",
+          field: "title",
+          filter: { kind: "text", operator: "contains", value: "a" },
+        },
+      ],
+    });
+  });
+
+  test("well-typed set/array values (including an empty list) still decode", () => {
+    expect(
+      expandFilters({
+        compact: [
+          { f: "status", o: "iA", vs: ["todo", "done"] },
+          { f: "priority", o: "niA", vs: [1, 2] },
+          { f: "tags", o: "aO", vs: ["a", 1] },
+          { f: "title", o: "iA", vs: [] },
+        ],
+        kinds,
+      }).filters,
     ).toEqual([
       { field: "status", filter: { kind: "enum", operator: "inArray", values: ["todo", "done"] } },
+      { field: "priority", filter: { kind: "number", operator: "notInArray", values: [1, 2] } },
+      { field: "tags", filter: { kind: "array", operator: "arrayOverlaps", values: ["a", 1] } },
+      { field: "title", filter: { kind: "text", operator: "inArray", values: [] } },
     ]);
+  });
+
+  test("a date preset with a wrong-typed optional end/weekStartsOn is dropped whole", () => {
+    const base = { f: "createdAt", o: "is", u: "mo", tz: "UTC", a: "2026-02-01T00:00:00" };
+    const decode = (leaf: Record<string, unknown>) =>
+      expandFilters({ compact: [leaf], kinds }).filters;
+
+    expect(decode({ ...base, e: 5 })).toEqual([]);
+    expect(decode({ ...base, ws: "1" })).toEqual([]);
+    expect(decode({ ...base, ws: 1 })).toHaveLength(1);
   });
 
   test("a connective whose children all drop becomes null", () => {

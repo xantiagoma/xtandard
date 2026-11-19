@@ -1,23 +1,3 @@
-/**
- * Knex adapter — renders the portable filter AST to raw parameterized SQL and
- * applies it via `whereRaw`. **Dialect-aware** (`dialect`, default `"postgres"`):
- * the `array` ops and `ILIKE` are spelled per dialect — PG native `@>`/`<@`/`&&`
- * + `ILIKE`, MySQL `JSON_CONTAINS`/`JSON_OVERLAPS` + `LIKE`, SQLite
- * `json_each(…)` subqueries + `LIKE` (see {@link SqlDialect}). No `knex` import:
- * any object with `whereRaw(sql, bindings)` works, keeping Knex your app's
- * dependency. Column identifiers are server-owned and validated; values are
- * bound (`?`).
- *
- * @example
- * ```ts
- * import { applyFiltersToKnex, textField, numberField } from "@xtandard/lib/filters/knex";
- *
- * const spec = { name: textField({ column: "name" }), amount: numberField({ column: "amount" }) };
- * const rows = await applyFiltersToKnex(knex("tasks"), { spec, filters, resolveDate });
- * // or: const { sql, bindings } = buildWhereSql({ spec, filters }) ?? {}; query.whereRaw(sql, bindings);
- * ```
- */
-
 import {
   compileFilterNode,
   compileFilters,
@@ -62,7 +42,8 @@ export const dateField = make("date");
 /**
  * Allow-list a public field as a `text` filter over a string column, named by a column string
  * (`"name"` or `"users.name"`, quoted per part; anything else throws). `contains`/`startsWith`/
- * `endsWith` render as `ILIKE` on Postgres and `LIKE` on MySQL/SQLite.
+ * `endsWith` render as `ILIKE` on Postgres and `LIKE` on MySQL/SQLite, with the input's
+ * `%`/`_`/`\` escaped (plus an `ESCAPE` clause on MySQL/SQLite, so they match literally).
  *
  * @example
  * ```ts
@@ -142,25 +123,38 @@ export const booleanField = make("boolean");
  * buildWhereSql({ spec, filters });
  * // → { sql: '"posts"."tags" && ?', bindings: [["ts", "js"]] }
  * buildWhereSql({ spec, filters, dialect: "mysql" });
- * // → { sql: 'JSON_OVERLAPS("posts"."tags", ?)', bindings: ['["ts","js"]'] }
+ * // → { sql: "JSON_OVERLAPS(`posts`.`tags`, ?)", bindings: ['["ts","js"]'] }
  * ```
  */
 export const arrayField = make("array");
 
 // Server-owned identifiers only: `col` or `table.col` (quoted per part). Never
-// pass request data here.
-function quoteIdentifier(identifier: string): string {
+// pass request data here. MySQL reads "x" as a string literal (unless ANSI_QUOTES),
+// so it gets backticks.
+function quoteIdentifier(identifier: string, dialect: SqlDialect): string {
   const parts = identifier.split(".");
   for (const part of parts) {
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(part)) {
       throw new Error(`filters/knex: invalid SQL identifier "${identifier}"`);
     }
   }
+  const quote = dialect === "mysql" ? "`" : '"';
 
-  return parts.map((p) => `"${p}"`).join(".");
+  return parts.map((p) => `${quote}${p}${quote}`).join(".");
 }
 
-type Fragment = { sql: string; bindings: unknown[] };
+// `escapeLike` escapes with a backslash. That is Postgres's default LIKE escape (no clause
+// needed); SQLite has no default escape and MySQL drops its default under
+// NO_BACKSLASH_ESCAPES, so both name it. CHAR(92) is `\` in every MySQL sql_mode, where a
+// '\\' literal changes meaning with NO_BACKSLASH_ESCAPES.
+const LIKE_ESCAPE: Record<SqlDialect, string> = {
+  postgres: "",
+  mysql: " ESCAPE CHAR(92)",
+  sqlite: " ESCAPE '\\'",
+};
+
+/** A rendered SQL fragment with its positional `?` bindings. */
+export type Fragment = { sql: string; bindings: unknown[] };
 
 // The `array` ops have no portable spelling — render per dialect. PG uses the
 // native set operators (the array binds directly); MySQL the JSON functions
@@ -210,7 +204,7 @@ function arrayOpSql(
 }
 
 function condSql(cond: CompiledCond, ident: string, dialect: SqlDialect): Fragment {
-  const col = quoteIdentifier(ident);
+  const col = quoteIdentifier(ident, dialect);
   switch (cond.op) {
     case "eq":
       return { sql: `${col} = ?`, bindings: [cond.value] };
@@ -244,7 +238,7 @@ function condSql(cond: CompiledCond, ident: string, dialect: SqlDialect): Fragme
               ? "NOT ILIKE"
               : "NOT LIKE";
 
-      return { sql: `${col} ${sqlOp} ?`, bindings: [pattern] };
+      return { sql: `${col} ${sqlOp} ?${LIKE_ESCAPE[dialect]}`, bindings: [pattern] };
     }
     case "inArray":
     case "notInArray": {
@@ -333,8 +327,8 @@ const kindsOf = (spec: KnexFilterSpec): Record<string, FieldKind> =>
  * `{ sql, bindings }` fragment for Knex's `whereRaw` (or any driver that takes `?`
  * placeholders). Only fields in `spec` whose kind matches the filter's `kind` are kept; the
  * rest are silently dropped. Returns `null` when nothing survives. A `date` preset filter needs
- * `resolveDate` (it throws without one). `dialect` (default `"postgres"`) only changes the
- * `array` ops and `ilike`.
+ * `resolveDate` (it throws without one). `dialect` (default `"postgres"`) changes the `array`
+ * ops, `ilike`, the `LIKE` escape clause and identifier quoting (backticks on MySQL).
  *
  * @example
  * ```ts
@@ -347,7 +341,8 @@ const kindsOf = (spec: KnexFilterSpec): Record<string, FieldKind> =>
  *   { field: "amount", filter: { kind: "number", operator: "gte", value: 100 } },
  * ];
  * buildWhereSql({ spec, filters }); // → { sql: '("name" ILIKE ? AND "amount" >= ?)', bindings: ["Re%", 100] }
- * buildWhereSql({ spec, filters, dialect: "sqlite" })?.sql; // → '("name" LIKE ? AND "amount" >= ?)'
+ * buildWhereSql({ spec, filters, dialect: "mysql" })?.sql;
+ * // → '(`name` LIKE ? ESCAPE CHAR(92) AND `amount` >= ?)'
  * buildWhereSql({ spec, filters: [] }); // → null
  * ```
  */

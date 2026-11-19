@@ -18,7 +18,9 @@
  * ```
  */
 
-import { scope, type } from "arktype";
+import { scope, type, type Type } from "arktype";
+
+import type { FilterNode } from "./types.ts";
 
 import { DATE_UNITS, isIanaTimeZone, isPlainDateTimeString } from "./refine.ts";
 import {
@@ -46,7 +48,7 @@ const timeZone = type.string.narrow((s) => isIanaTimeZone(s));
 const plainDateTime = type.string.narrow((s) => isPlainDateTimeString(s));
 const weekStartsOn = type("0 <= number.integer <= 6");
 
-const filters = scope({
+const filtersScope = scope({
   textScalarLeaf: { kind: "'text'", operator: textScalarOp, value: "string" },
   textSetLeaf: { kind: "'text'", operator: setOp, values: "string[]" },
   textUnaryLeaf: { kind: "'text'", operator: unaryOp },
@@ -88,14 +90,28 @@ const filters = scope({
   filtersRequest: "columnFilter[]",
 
   columnNode: { type: "'column'", field: "string", filter: "fieldFilter" },
-  andNode: { type: "'and'", nodes: "node[]" },
-  orNode: { type: "'or'", nodes: "node[]" },
+  // One `and | or` branch, not separate `andNode`/`orNode`: with two branches
+  // of the same shape, arktype 2.2.x skips validating the `or` children (and
+  // `.export()` of that alias throws on 2.2.1). See `FilterNodeSchema`.
+  groupNode: { type: "'and' | 'or'", nodes: "node[]" },
   notNode: { type: "'not'", node: "node" },
-  node: "columnNode | andNode | orNode | notNode",
+  node: "columnNode | groupNode | notNode",
 
   sortItem: { field: "string", dir: "'asc' | 'desc'" },
   sort: "sortItem[]",
-}).export();
+});
+
+const filters = filtersScope.export();
+
+// `scope.type("node")`, not `.export().node`: the exported alias skips the `or`
+// children on arktype 2.2.10. The scope's `groupNode` infers
+// `{ type: "and" | "or"; nodes }`, which holds the same values as the model's
+// separate and/or variants, so `FilterNodeSchema` is re-typed as
+// `Type<FilterNode>`; it collapses to `never` (failing the type tests) if the
+// scope and the model ever stop describing the same values.
+const filterNode = filtersScope.type("node");
+
+type SameValues<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
 /**
  * Validates a `text`-kind field filter (the model's `TextFilter`): a single
@@ -176,8 +192,9 @@ export const BooleanFilterSchema = filters.booleanFilter;
  * Validates a `date` period preset (the model's `DatePreset`): `operator`
  * (`is`/`before`/`after`/`between`), `unit`, a real IANA `timeZone`, a
  * `Temporal.PlainDateTime` string `anchor` (and optional `end`), and an optional
- * `weekStartsOn` integer 0–6. A date-only `anchor` such as `"2026-02-01"` also
- * passes, since `Temporal.PlainDateTime.from` accepts it.
+ * `weekStartsOn` integer 0–6. The anchor is a wall-clock time read in
+ * `timeZone`, not an instant (a `Z`-suffixed string is rejected); a date-only
+ * `"2026-02-01"` is accepted as midnight.
  *
  * @example
  * ```ts
@@ -335,14 +352,9 @@ export const SortSchema = filters.sort;
  * Recursive and/or/not tree (the model's `FilterNode`), defined in the shared
  * scope so `node` can reference itself.
  *
- * **Known issue:** with arktype 2.2.1, calling this schema throws
- * `TypeError: this.andNode1Apply is not a function` for every input (arktype
- * fails to compile the exported recursive alias). The flat `FiltersRequestSchema`
- * is unaffected. Until that is fixed, validate trees with the valibot, zod or
- * effect subpath.
- *
  * @example
  * ```ts
+ * import { type } from "arktype";
  * import { FilterNodeSchema } from "@xtandard/lib/filters/arktype";
  *
  * const input = {
@@ -355,7 +367,15 @@ export const SortSchema = filters.sort;
  *     },
  *   ],
  * };
- * FilterNodeSchema(input); // currently throws a TypeError (see the known issue above)
+ * FilterNodeSchema(input);
+ * // → `input` (an `ArkErrors` instead when invalid)
+ * FilterNodeSchema({ type: "and", nodes: [{ type: "xor", nodes: [] }] }) instanceof type.errors;
+ * // → true (`xor` isn't a connective)
  * ```
  */
-export const FilterNodeSchema = filters.node;
+export const FilterNodeSchema = filterNode as unknown as SameValues<
+  typeof filterNode.infer,
+  FilterNode
+> extends true
+  ? Type<FilterNode>
+  : never;

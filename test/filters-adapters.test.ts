@@ -1,3 +1,5 @@
+import { DatabaseSync } from "node:sqlite";
+
 import { describe, expect, test } from "vitest";
 import {
   DummyDriver,
@@ -5,6 +7,10 @@ import {
   PostgresAdapter,
   PostgresIntrospector,
   PostgresQueryCompiler,
+  sql,
+  SqliteAdapter,
+  SqliteIntrospector,
+  SqliteQueryCompiler,
 } from "kysely";
 
 import type { ColumnFilter, DatePreset, FilterNode } from "../src/filters/types.ts";
@@ -593,15 +599,15 @@ describe("knex dialect (array ops + ilike per dialect)", () => {
 
   test("mysql uses JSON_CONTAINS / JSON_OVERLAPS with a bound JSON candidate", () => {
     expect(arrayCond("arrayContains", "mysql")).toEqual({
-      sql: 'JSON_CONTAINS("tags", ?)',
+      sql: "JSON_CONTAINS(`tags`, ?)",
       bindings: ['["x"]'],
     });
     expect(arrayCond("arrayContained", "mysql")).toEqual({
-      sql: 'JSON_CONTAINS(?, "tags")',
+      sql: "JSON_CONTAINS(?, `tags`)",
       bindings: ['["x"]'],
     });
     expect(arrayCond("arrayOverlaps", "mysql")).toEqual({
-      sql: 'JSON_OVERLAPS("tags", ?)',
+      sql: "JSON_OVERLAPS(`tags`, ?)",
       bindings: ['["x"]'],
     });
   });
@@ -636,10 +642,16 @@ describe("knex dialect (array ops + ilike per dialect)", () => {
       });
 
     expect(contains("postgres")).toEqual({ sql: '"name" ILIKE ?', bindings: ["%a%"] });
-    expect(contains("mysql")).toEqual({ sql: '"name" LIKE ?', bindings: ["%a%"] });
-    expect(contains("sqlite")).toEqual({ sql: '"name" LIKE ?', bindings: ["%a%"] });
+    expect(contains("mysql")).toEqual({
+      sql: "`name` LIKE ? ESCAPE CHAR(92)",
+      bindings: ["%a%"],
+    });
+    expect(contains("sqlite")).toEqual({ sql: `"name" LIKE ? ESCAPE '\\'`, bindings: ["%a%"] });
     expect(notIlike("postgres")).toEqual({ sql: '"name" NOT ILIKE ?', bindings: ["a%"] });
-    expect(notIlike("mysql")).toEqual({ sql: '"name" NOT LIKE ?', bindings: ["a%"] });
+    expect(notIlike("mysql")).toEqual({
+      sql: "`name` NOT LIKE ? ESCAPE CHAR(92)",
+      bindings: ["a%"],
+    });
   });
 });
 
@@ -692,5 +704,111 @@ describe("kysely dialect (array ops + ilike per dialect)", () => {
     expect(contains("mysql")).toContain("like");
     expect(contains("mysql")).not.toContain("ilike");
     expect(contains("sqlite")).not.toContain("ilike");
+  });
+});
+
+// ── LIKE escaping, run on a real SQLite (node:sqlite) ───────────────────────
+
+const sqliteKdb = new Kysely<Record<string, never>>({
+  dialect: {
+    createAdapter: () => new SqliteAdapter(),
+    createDriver: () => new DummyDriver(),
+    createIntrospector: (db) => new SqliteIntrospector(db),
+    createQueryCompiler: () => new SqliteQueryCompiler(),
+  },
+});
+
+describe("LIKE escaping on a real SQLite (dialect: sqlite)", () => {
+  // Regression: escapeLike backslash-escapes %/_ but SQLite has no default LIKE escape
+  // character, so without an ESCAPE clause `contains "50%"` matched nothing.
+  const db = new DatabaseSync(":memory:");
+  db.exec("create table t (name text)");
+  const insert = db.prepare("insert into t (name) values (?)");
+  for (const name of ["50% off", "500 off", "a_b", "axb", "back\\slash", "backxslash", "Ada"]) {
+    insert.run(name);
+  }
+  const names = (sql: string, params: unknown[]) =>
+    db
+      .prepare(sql)
+      .all(...(params as string[]))
+      .map((row) => row.name)
+      .sort();
+
+  const cases: [
+    operator: "contains" | "startsWith" | "endsWith" | "like",
+    value: string,
+    want: string[],
+  ][] = [
+    ["contains", "50%", ["50% off"]],
+    ["contains", "a_b", ["a_b"]],
+    ["contains", "back\\slash", ["back\\slash"]],
+    ["startsWith", "50%", ["50% off"]],
+    ["endsWith", "_b", ["a_b"]],
+    // a verbatim pattern: wildcards stay live, and `\` escapes like on Postgres/MySQL
+    ["like", "a%", ["Ada", "a_b", "axb"]],
+    ["like", "a\\_b", ["a_b"]],
+  ];
+  const filtersOf = (operator: (typeof cases)[number][0], value: string): ColumnFilter[] => [
+    { field: "name", filter: { kind: "text", operator, value } },
+  ];
+
+  test.each(cases)("knex %s %j", (operator, value, want) => {
+    const fragment = knex.buildWhereSql({
+      spec: { name: knex.textField({ column: "name" }) },
+      filters: filtersOf(operator, value),
+      dialect: "sqlite",
+    });
+
+    expect(names(`select name from t where ${fragment!.sql}`, fragment!.bindings)).toEqual(want);
+  });
+
+  test.each(cases)("kysely %s %j", (operator, value, want) => {
+    const { where } = kysely.buildWhere({
+      spec: { name: kysely.textField({ column: "name" }) },
+      filters: filtersOf(operator, value),
+      dialect: "sqlite",
+    });
+    const query = sqliteKdb
+      .selectFrom("t" as never)
+      .select(sql`name`.as("name"))
+      .where(where!)
+      .compile();
+
+    expect(names(query.sql, [...query.parameters])).toEqual(want);
+  });
+});
+
+describe("mysql dialect: identifiers and LIKE escape", () => {
+  test("knex quotes identifiers with backticks (double quotes are string literals in MySQL)", () => {
+    expect(
+      knex.buildWhereSql({
+        spec: { status: knex.enumField({ column: "tasks.status" }) },
+        filters: [{ field: "status", filter: { kind: "enum", operator: "eq", value: "open" } }],
+        dialect: "mysql",
+      }),
+    ).toEqual({ sql: "`tasks`.`status` = ?", bindings: ["open"] });
+  });
+
+  test("LIKE gets ESCAPE CHAR(92), so `\\` escapes even under NO_BACKSLASH_ESCAPES", () => {
+    const filters: ColumnFilter[] = [
+      { field: "name", filter: { kind: "text", operator: "contains", value: "50%" } },
+    ];
+
+    expect(
+      knex.buildWhereSql({
+        spec: { name: knex.textField({ column: "name" }) },
+        filters,
+        dialect: "mysql",
+      }),
+    ).toEqual({ sql: "`name` LIKE ? ESCAPE CHAR(92)", bindings: ["%50\\%%"] });
+    expect(
+      kysely
+        .buildWhere({
+          spec: { name: kysely.textField({ column: "name" }) },
+          filters,
+          dialect: "mysql",
+        })
+        .where!.compile(kdb).sql,
+    ).toBe('"name" like $1 escape char(92)');
   });
 });

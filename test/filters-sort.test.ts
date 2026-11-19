@@ -20,10 +20,31 @@ describe("parseSortParam / serializeSort", () => {
     ]);
   });
 
-  test("defaults missing/invalid direction to desc and round-trips", () => {
+  test("defaults a missing direction to desc and round-trips", () => {
     const { sort } = parseSortParam({ value: "name" });
     expect(sort).toEqual([{ field: "name", dir: "desc" }]);
     expect(serializeSort({ sort })).toBe("name:desc");
+    expect(parseSortParam({ value: "name:" }).sort).toEqual([{ field: "name", dir: "desc" }]);
+  });
+
+  test("directions are case-insensitive and trimmed", () => {
+    expect(parseSortParam({ value: "price:ASC, name : Desc ,id:aSc" }).sort).toEqual([
+      { field: "price", dir: "asc" },
+      { field: "name", dir: "desc" },
+      { field: "id", dir: "asc" },
+    ]);
+  });
+
+  test("drops an entry whose direction is not asc/desc", () => {
+    expect(parseSortParam({ value: "a:up,b:ascending,c:dsc,d:asc:x,e:asc" }).sort).toEqual([
+      { field: "e", dir: "asc" },
+    ]);
+  });
+
+  test("drops entries with an empty or blank field", () => {
+    expect(parseSortParam({ value: ":asc, :desc,,  ,name:asc" }).sort).toEqual([
+      { field: "name", dir: "asc" },
+    ]);
   });
 
   test("empty input → []", () => {
