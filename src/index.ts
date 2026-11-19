@@ -1,3 +1,12 @@
+/**
+ * Isomorphic core utilities with zero dependencies: error handling, async
+ * primitives, iterables, type guards, disposables, strings.
+ *
+ * Import from `@xtandard/lib`.
+ *
+ * @module core
+ */
+
 // Types
 export type { MaybePromise } from "./types.ts";
 

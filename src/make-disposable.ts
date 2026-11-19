@@ -25,7 +25,7 @@ export type Disposable<T> = T & {
  *
  * @example
  * ```ts
- * import { makeDisposable, DisposedSymbol } from "@demi.casa/utils";
+ * import { makeDisposable, DisposedSymbol } from "@xtandard/lib";
  *
  * await using client = await makeDisposable(
  *   redis.createClient({ password: REDIS_PASSWORD }),
