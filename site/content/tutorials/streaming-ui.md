@@ -133,13 +133,13 @@ creates the source), not a source you already created, and give it a `queryKey`:
 
 ```tsx title="src/QuoteList.tsx"
 import { useStream } from "@xtandard/lib/react";
-import { type Quote, type QuoteSummary, quotesAsTheyArrive } from "./quotes";
+import { quotesAsTheyArrive } from "./quotes";
 
 const price = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 export function QuoteList({ sku }: { sku: string }) {
   const { items, count, isLoading, isStreaming, isSuccess, isError, returnValue, refetch, query } =
-    useStream<Quote, QuoteSummary>({
+    useStream({
       source: () => quotesAsTheyArrive(sku),
       queryKey: ["quotes", sku],
     });
@@ -181,13 +181,13 @@ The status flags follow the stream:
 `refetch()` restarts the stream. It calls the factory again, which is why you pass a factory: a
 generator or channel instance can only be iterated once, so a refetch would find it already finished.
 
-:::caution[Always pass a `queryKey`, and the type arguments]
-Without `queryKey`, the key defaults to `["stream", source]`. TanStack Query hashes keys as JSON, and a
-function becomes `null`, so every `useStream` without a key shares the cache entry `["stream",null]`.
-Put whatever the stream depends on (here `sku`) in the key; changing it starts a new stream.
+:::tip[Put the stream's inputs in `queryKey`]
+The key is what TanStack Query caches the stream under: changing it (here, a new `sku`) starts a new
+stream. Without a `queryKey` the stream is private to that hook instance and runs once per mount; it
+would keep showing the first `sku`'s quotes.
 
-The hook cannot infer the return type from the source, so `returnValue` is typed `void` unless you write
-`useStream<Quote, QuoteSummary>(…)`.
+Both types are inferred from the source: `items` are `Quote`s and `returnValue` is a `QuoteSummary`,
+because the channel is typed `AsyncChannel<Quote, QuoteSummary>`.
 :::
 
 ## 5. Keep only what you need
@@ -232,11 +232,11 @@ or a function of that state's data. Here it consumes the in-order generator from
 
 ```tsx title="src/QuoteProgress.tsx"
 import { StreamRenderer } from "@xtandard/lib/react";
-import { type Quote, type QuoteSummary, quotesInOrder } from "./quotes";
+import { quotesInOrder } from "./quotes";
 
 export function QuoteProgress({ sku }: { sku: string }) {
   return (
-    <StreamRenderer<Quote, QuoteSummary>
+    <StreamRenderer
       source={() => quotesInOrder(sku)}
       queryKey={["quotes-in-order", sku]}
       loading={<p>Asking suppliers…</p>}
@@ -301,25 +301,25 @@ export function RefreshButton({
 }
 ```
 
-Unlike `useStream`, `toastStream` infers `returnValue`'s type from the generator or channel, so no type
+Like `useStream`, `toastStream` infers `returnValue`'s type from the generator or channel, so no type
 arguments are needed. On failure it shows the `error` toast and then **rethrows**, which is why the
 call is wrapped in [`tryCatch`](@BASE@/core/error-handling/). The `error` callback also receives the
 items that arrived before the failure.
 
 When the caller should not wait, use
-[`toastStreamAsync`](@BASE@/api/sonner/functions/toaststreamasync/). It returns the toast id at once,
-with an `unwrap()` method for the result:
+[`toastStreamAsync`](@BASE@/api/sonner/functions/toaststreamasync/). It returns `{ id, unwrap }` at
+once: the toast id, and an `unwrap()` method for the result:
 
 ```ts
 import { toastStreamAsync } from "@xtandard/lib/sonner";
 
-const toastId = toastStreamAsync(() => quotesAsTheyArrive(sku), {
+const refresh = toastStreamAsync(() => quotesAsTheyArrive(sku), {
   loading: "Refreshing prices…",
   success: ({ count }) => `${count} prices updated`,
 });
 
 // later, only if the result matters:
-const { items, returnValue } = await toastId.unwrap();
+const { items, returnValue } = await refresh.unwrap();
 ```
 
 ## 8. Fake the producer while you build the UI

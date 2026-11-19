@@ -21,7 +21,7 @@ import {
 :::note[Peer dependency and where things run]
 `up-fetch` is an optional peer dependency, but the entry imports it at module load (it backs `fetchWithProgress`), so install it whenever you import from `@xtandard/lib/web`.
 
-`formDataToObject`, `keepSubDelims` and `fetchWithProgress` work anywhere the standard `FormData`, `URLSearchParams` and `fetch` globals exist (browsers, Node 18+, Bun, Deno). `createHttpInterceptor` is **browser-only**: it patches `XMLHttpRequest`, which servers don't have.
+`formDataToObject`, `keepSubDelims` and `fetchWithProgress` work anywhere the standard `FormData`, `URLSearchParams` and `fetch` globals exist (browsers, Node 18+, Bun, Deno). So does `createHttpInterceptor`: it patches `fetch` and, where it exists (browsers), `XMLHttpRequest`.
 :::
 
 ## `formDataToObject`
@@ -106,7 +106,7 @@ Progress comes from `up-fetch`'s request and response streaming hooks. A respons
 
 ## `createHttpInterceptor`
 
-Patches `globalThis.fetch` and `XMLHttpRequest` so you can observe matching requests and their responses, without changing them. Use it for debugging panels, analytics, or test assertions in the browser. Each call returns an interceptor; you add rules to it.
+Patches `globalThis.fetch` and `XMLHttpRequest` so you can observe matching requests and their responses, without changing them. Use it for debugging panels, analytics, or test assertions. Each call returns an interceptor; you add rules to it.
 
 ```ts
 import { createHttpInterceptor, type InterceptEvent } from "@xtandard/lib/web";
@@ -158,7 +158,7 @@ Things to know:
 - Events fire after the response arrives. Errors in `onIntercept` are caught and logged with `console.warn`; they never break the request.
 - Request bodies are only captured as text when they are strings. Other bodies (`FormData`, `Blob`, streams) appear as a placeholder like `"[object]"`.
 - Every `createHttpInterceptor()` call wraps whatever `fetch` is current. Create one per page and call `restore()` when done (in tests, in `afterEach`).
-- Do not call it on the server. Without `XMLHttpRequest` it throws, and by then `fetch` has already been patched.
+- It patches only the transports the runtime has. On a server (Node, Bun, Deno) that is `fetch` alone, since there is no `XMLHttpRequest`. `restore()` puts back exactly the originals it replaced.
 
 ## See also
 

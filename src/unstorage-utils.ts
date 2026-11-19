@@ -112,19 +112,28 @@ export function withCache<TArgs extends unknown[], TResult extends StorageValue>
 
 // ─── createCache (decorator + wrapper factory) ─────────────
 
-type MethodDecorator = <This, Args extends unknown[], Return extends StorageValue>(
+/** TC39 (stage 3) method decorator returned by `Cache.decorator`: caches an async method's results. */
+export type MethodDecorator = <This, Args extends unknown[], Return extends StorageValue>(
   target: (this: This, ...args: Args) => Promise<Return>,
   context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Promise<Return>>,
 ) => (this: This, ...args: Args) => Promise<Return>;
 
 export interface Cache {
-  /** Wrap a standalone async function (any number of args). */
+  /**
+   * Wrap a standalone async function (any number of args). `overrides` replace
+   * the cache's `storage`, `prefix`, `ttl` or key for this function. Without
+   * `toKey`, the key is `<fn name>:<hash(fn source)>:<hash(args)>`, so different
+   * functions never share entries.
+   */
   wrap: <TArgs extends unknown[], TResult extends StorageValue>(
     fn: (...args: TArgs) => Promise<TResult>,
     overrides?: Partial<WithCacheOptions<TArgs>>,
   ) => (...args: TArgs) => Promise<TResult>;
 
-  /** Use as decorator: `@cache.decorator` or `@cache.decorator({ ttl: 30 })` */
+  /**
+   * Use as decorator: `@cache.decorator`, or `@cache.decorator({ ttl: 30 })` to
+   * override `ttl`, `storage` or `prefix` for one method.
+   */
   decorator: MethodDecorator & ((overrides: Partial<CacheOptions>) => MethodDecorator);
 
   /** The scoped unstorage instance (for manual inspection/invalidation). */
@@ -150,7 +159,9 @@ export interface Cache {
  * @example As wrapper
  * ```ts
  * const cache = createCache({ storage, prefix: "api", ttl: 60 });
+ * // Each wrapped function gets its own keys: the two never share entries.
  * const loadUser = cache.wrap(async (id: string, role: string) => fetchUser(id, role));
+ * const loadPlan = cache.wrap(async (id: string) => billing.plan(id), { ttl: 600 });
  * ```
  */
 export function createCache(options: CacheOptions): Cache {
@@ -159,6 +170,10 @@ export function createCache(options: CacheOptions): Cache {
 
   function makeDecorator(overrides?: Partial<CacheOptions>): MethodDecorator {
     const effectiveTtl = overrides?.ttl ?? ttl;
+    const store =
+      overrides?.storage || overrides?.prefix
+        ? makeScopedStorage(overrides.storage ?? storage, overrides.prefix ?? prefix)
+        : scoped;
 
     return <This, Args extends unknown[], Return extends StorageValue>(
       target: (this: This, ...args: Args) => Promise<Return>,
@@ -168,11 +183,11 @@ export function createCache(options: CacheOptions): Cache {
 
       return async function (this: This, ...args: Args): Promise<Return> {
         const key = `${methodName}:${hash(args)}`;
-        const cached = await cacheGet<Return>(scoped, key);
+        const cached = await cacheGet<Return>(store, key);
         if (cached !== null) return cached;
 
         const result = await target.call(this, ...args);
-        await cacheSet(scoped, key, result, effectiveTtl);
+        await cacheSet(store, key, result, effectiveTtl);
         return result;
       };
     };
@@ -195,18 +210,16 @@ export function createCache(options: CacheOptions): Cache {
       fn: (...args: TArgs) => Promise<TResult>,
       overrides?: Partial<WithCacheOptions<TArgs>>,
     ) => {
-      const effectiveTtl = overrides?.ttl ?? ttl;
-      const toKey = overrides?.toKey ?? ((...args: TArgs) => hash(args));
-
-      return async (...args: TArgs): Promise<TResult> => {
-        const key = toKey(...args);
-        const cached = await cacheGet<TResult>(scoped, key);
-        if (cached !== null) return cached;
-
-        const result = await fn(...args);
-        await cacheSet(scoped, key, result, effectiveTtl);
-        return result;
-      };
+      // Functions share the cache's storage, so the default key is namespaced per
+      // function: its name (readable) plus a hash of its source (tells apart
+      // anonymous and same-named functions).
+      const namespace = fn.name ? `${fn.name}:${hash(String(fn))}` : hash(String(fn));
+      return withCache(fn, {
+        storage: overrides?.storage ?? storage,
+        prefix: overrides?.prefix ?? prefix,
+        ttl: overrides?.ttl ?? ttl,
+        toKey: overrides?.toKey ?? ((...args: TArgs) => `${namespace}:${hash(args)}`),
+      });
     },
 
     decorator,

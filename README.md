@@ -135,9 +135,9 @@ Sub-entry dependencies are **optional peer deps** — only install what you use.
 
 ### Strings
 
-| Export                                                        | Description      | Source                 | Tests                          |
-| ------------------------------------------------------------- | ---------------- | ---------------------- | ------------------------------ |
-| `ensureString` / `naturalSortCompare` / `jaroWinklerDistance` | String utilities | [src](./src/string.ts) | [tests](./test/string.test.ts) |
+| Export                                                          | Description      | Source                 | Tests                          |
+| --------------------------------------------------------------- | ---------------- | ---------------------- | ------------------------------ |
+| `ensureString` / `naturalSortCompare` / `jaroWinklerSimilarity` | String utilities | [src](./src/string.ts) | [tests](./test/string.test.ts) |
 
 ### Misc
 
@@ -337,10 +337,10 @@ Cursor tokens are produced by a two-stage codec (`serializer` + `encoder`, both 
 
 Toast helpers for streaming iterables/generators through [Sonner](https://sonner.emilkowal.ski/).
 
-| Export             | Description                                                             | Source                       | Tests                                |
-| ------------------ | ----------------------------------------------------------------------- | ---------------------------- | ------------------------------------ |
-| `toastStream`      | Blocking/awaitable stream toast; resolves to `{ items, returnValue }`   | [src](./src/toast-stream.ts) | [tests](./test/toast-stream.test.ts) |
-| `toastStreamAsync` | Non-blocking stream toast; returns toast id immediately with `unwrap()` | [src](./src/toast-stream.ts) | [tests](./test/toast-stream.test.ts) |
+| Export             | Description                                                           | Source                       | Tests                                |
+| ------------------ | --------------------------------------------------------------------- | ---------------------------- | ------------------------------------ |
+| `toastStream`      | Blocking/awaitable stream toast; resolves to `{ items, returnValue }` | [src](./src/toast-stream.ts) | [tests](./test/toast-stream.test.ts) |
+| `toastStreamAsync` | Non-blocking stream toast; returns `{ id, unwrap }` immediately       | [src](./src/toast-stream.ts) | [tests](./test/toast-stream.test.ts) |
 
 Use `toastStream` when the caller should wait for completion:
 
@@ -354,14 +354,15 @@ const { items, returnValue } = await toastStream(source, {
 });
 ```
 
-Use `toastStreamAsync` when the caller should continue immediately, matching
-Sonner's `toast.promise(...).unwrap()` style:
+Use `toastStreamAsync` when the caller should continue immediately, in the
+spirit of Sonner's `toast.promise(...).unwrap()`. It returns `{ id, unwrap }`:
 
 ```ts
 import { toastStreamAsync } from "@xtandard/lib/sonner";
 
-const toastId = toastStreamAsync(source, { loading: "Loading..." });
-const { items, returnValue } = await toastId.unwrap();
+const { id, unwrap } = toastStreamAsync(source, { loading: "Loading..." });
+// `id` is Sonner's toast id, e.g. for toast.dismiss(id)
+const { items, returnValue } = await unwrap();
 ```
 
 ## React Utilities (`@xtandard/lib/react`)

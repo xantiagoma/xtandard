@@ -7,3 +7,21 @@
  */
 
 export { toastStream, toastStreamAsync } from "./toast-stream.ts";
+export type {
+  DelayConfig,
+  ErrorPartialData,
+  LoadingExtendedResult,
+  LoadingExtendedResultT,
+  LoadingResultT,
+  StreamErrorResultT,
+  StreamExtendedErrorResultT,
+  StreamExtendedResult,
+  StreamExtendedResultT,
+  StreamExternalToast,
+  StreamingData,
+  StreamResult,
+  StreamResultT,
+  SuccessData,
+  ToastStreamData,
+  ToastStreamReturn,
+} from "./toast-stream.ts";

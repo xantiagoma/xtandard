@@ -67,26 +67,17 @@ const [result, error] = await tryCatch(
 
 ## `toastStreamAsync`: don't wait
 
-`toastStreamAsync` is the non-blocking variant, shaped like Sonner's `toast.promise(...).unwrap()`. It returns the toast id immediately with an `unwrap()` method that resolves to the same `{ items, returnValue }`.
+`toastStreamAsync` is the non-blocking variant, in the spirit of Sonner's `toast.promise(...).unwrap()`. It returns `{ id, unwrap }` immediately: `id` is Sonner's toast id (for `toast.dismiss(id)`), and `unwrap()` resolves to the same `{ items, returnValue }`.
 
 ```ts
 import { toastStreamAsync } from "@xtandard/lib/sonner";
 
-const toastId = toastStreamAsync(importUsers(rows), { loading: "Importing users..." });
+const imported = toastStreamAsync(importUsers(rows), { loading: "Importing users..." });
 // ...carry on; await only if the result matters
-const { items } = await toastId.unwrap();
+const { items } = await imported.unwrap();
 ```
 
-:::caution[Broken in 0.5.3]
-`toastStreamAsync` currently throws `TypeError: Cannot create property 'unwrap' on number` on every call: it tries to attach `unwrap` to Sonner's toast id, which is a primitive. Until that is fixed, get the same non-blocking behaviour by calling `toastStream` without awaiting it, and handle its rejection:
-
-```ts
-const done = toastStream(importUsers(rows), { loading: "Importing users..." });
-done.catch(reportError); // the error toast is already shown
-// later, if needed: const { items } = await done;
-```
-
-:::
+`unwrap()` rejects with the stream's error after the error toast is shown. If you never call it, a failure only shows the toast: there is no unhandled rejection.
 
 ## Options
 
