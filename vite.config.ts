@@ -30,7 +30,15 @@ export default defineConfig({
         test: {
           name: "browser",
           include: ["test/**/*.test.tsx"],
-          exclude: ["test/fetch-with-progress.test.ts"],
+          // `extends: true` inherits the root include, so the plain .test.ts suites run here too;
+          // these need Node built-ins (node:sqlite, node:http) and run only in the node project.
+          exclude: [
+            "test/fetch-with-progress.test.ts",
+            "test/filters-adapters.test.ts",
+            "test/filters-build-where.test.ts",
+            "test/filters-drizzle-rqb.test.ts",
+            "test/intercept-http.test.ts",
+          ],
           browser: {
             enabled: true,
             provider: playwright(),
