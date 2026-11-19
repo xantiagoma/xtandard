@@ -47,6 +47,29 @@ describe("isIsoDateString", () => {
     expect(isIsoDateString(20240131)).toBe(false);
     expect(isIsoDateString(null)).toBe(false);
   });
+
+  test("rejects impossible calendar dates instead of rolling them over", () => {
+    expect(isIsoDateString("2024-02-30")).toBe(false);
+    expect(isIsoDateString("2024-02-30T10:30:00Z")).toBe(false);
+    expect(isIsoDateString("2023-02-29")).toBe(false);
+    expect(isIsoDateString("2024-04-31")).toBe(false);
+    expect(isIsoDateString("2024-01-00")).toBe(false);
+    expect(isIsoDateString("2024-00-10")).toBe(false);
+  });
+
+  test("accepts leap days and month ends", () => {
+    expect(isIsoDateString("2024-02-29")).toBe(true);
+    expect(isIsoDateString("2000-02-29")).toBe(true);
+    expect(isIsoDateString("1900-02-28")).toBe(true);
+    expect(isIsoDateString("1900-02-29")).toBe(false);
+    expect(isIsoDateString("2024-12-31T23:59:59.999Z")).toBe(true);
+  });
+
+  test("a cursor holding an impossible date stays a string on decode", () => {
+    const codec = createCursorCodec();
+    const decoded = codec.decode(codec.encode({ day: "2024-02-30" }));
+    expect(decoded.day).toBe("2024-02-30");
+  });
 });
 
 describe("createCursorCodec", () => {

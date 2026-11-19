@@ -31,29 +31,32 @@ export function naturalSortCompare(a: string, b: string): number {
 }
 
 /**
- * Calculate Jaro-Winkler distance between two strings.
- * Returns a similarity score from 0.0 (no similarity) to 1.0 (identical).
+ * Calculate the Jaro-Winkler similarity of two strings: a score from `0`
+ * (nothing in common) to `1` (identical). Two empty strings are identical (`1`);
+ * one empty string scores `0`. Case-insensitive unless `caseSensitive: true`.
  *
  * @example
  * ```ts
- * jaroWinklerDistance("martha", "marhta"); // ~0.961
- * jaroWinklerDistance("hello", "HELLO"); // 1.0 (case insensitive)
- * jaroWinklerDistance("hello", "HELLO", { caseSensitive: true }); // 0.0
+ * import { jaroWinklerSimilarity } from "@xtandard/lib";
+ *
+ * jaroWinklerSimilarity("martha", "marhta"); // ~0.961
+ * jaroWinklerSimilarity("hello", "HELLO"); // 1 (case insensitive)
+ * jaroWinklerSimilarity("hello", "HELLO", { caseSensitive: true }); // 0
+ * jaroWinklerSimilarity("", ""); // 1
  * ```
  */
-export function jaroWinklerDistance(
+export function jaroWinklerSimilarity(
   a: string,
   b: string,
   options?: { caseSensitive?: boolean },
 ): number {
   const caseSensitive = options?.caseSensitive ?? false;
 
-  if (a.length === 0 || b.length === 0) return 0;
-
   const s1 = caseSensitive ? a : a.toUpperCase();
   const s2 = caseSensitive ? b : b.toUpperCase();
 
   if (s1 === s2) return 1;
+  if (s1.length === 0 || s2.length === 0) return 0;
 
   const range = Math.floor(Math.max(s1.length, s2.length) / 2) - 1;
   const s1Matches = Array.from<boolean>({ length: s1.length }).fill(false);
@@ -101,4 +104,25 @@ export function jaroWinklerDistance(
   }
 
   return weight;
+}
+
+/**
+ * The Jaro-Winkler **similarity** of two strings (`1` = identical), under its
+ * old, misleading name. Returns exactly what {@link jaroWinklerSimilarity}
+ * returns, including `1` for two empty strings.
+ *
+ * @deprecated Use {@link jaroWinklerSimilarity}: same arguments, same result.
+ *   For a true distance, use `1 - jaroWinklerSimilarity(a, b)`.
+ *
+ * @example
+ * ```ts
+ * jaroWinklerDistance("martha", "marhta"); // ~0.961 (a similarity, despite the name)
+ * ```
+ */
+export function jaroWinklerDistance(
+  a: string,
+  b: string,
+  options?: { caseSensitive?: boolean },
+): number {
+  return jaroWinklerSimilarity(a, b, options);
 }

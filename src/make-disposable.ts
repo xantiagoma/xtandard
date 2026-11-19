@@ -3,6 +3,7 @@ import type { MaybePromise } from "./types";
 import { isAsyncDisposable } from "./is-disposable";
 import { DisposedSymbol } from "./symbols";
 
+/** Options for `makeDisposable`: init/dispose hooks and whether to overwrite an existing disposer. */
 export interface MakeDisposableOptions<T> {
   onInit?: (resource: T) => MaybePromise<void>;
   onDispose?: (resource: T) => MaybePromise<void>;
@@ -10,6 +11,7 @@ export interface MakeDisposableOptions<T> {
   overwrite?: boolean;
 }
 
+/** The resource returned by `makeDisposable`: `T` plus `Symbol.asyncDispose` and a `DisposedSymbol` flag. */
 export type Disposable<T> = T & {
   [Symbol.asyncDispose]: () => Promise<void>;
   readonly [DisposedSymbol]: boolean;

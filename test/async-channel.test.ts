@@ -266,6 +266,27 @@ describe("AsyncChannel", () => {
   });
 
   describe("broadcast mode", () => {
+    test("does not accumulate pushed values in the shared buffer", async () => {
+      const channel = AsyncChannel.broadcast<number>();
+
+      channel.push(0); // no subscriber yet: dropped
+      expect(channel.pending).toBe(0);
+
+      const values: number[] = [];
+      const consumer = (async () => {
+        for await (const v of channel) values.push(v);
+      })();
+      await wait(0);
+
+      for (let i = 1; i <= 1000; i++) channel.push(i);
+      expect(channel.pending).toBe(0);
+      channel.close();
+      await consumer;
+
+      expect(values).toHaveLength(1000);
+      expect(channel.pending).toBe(0);
+    });
+
     test("multiple simultaneous consumers receive same values", async () => {
       const channel = AsyncChannel.broadcast<number>();
 

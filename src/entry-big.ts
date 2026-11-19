@@ -8,3 +8,4 @@
  */
 
 export { BigInterval, bigDomain } from "./interval-big.ts";
+export type { BigValue } from "./interval-big.ts";

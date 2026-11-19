@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { ensureString, jaroWinklerDistance, naturalSortCompare } from "../src/string";
+import {
+  ensureString,
+  jaroWinklerDistance,
+  jaroWinklerSimilarity,
+  naturalSortCompare,
+} from "../src/string";
 
 describe("ensureString", () => {
   test("string passthrough", () => expect(ensureString("hello")).toBe("hello"));
@@ -57,8 +62,8 @@ describe("jaroWinklerDistance", () => {
       expect(jaroWinklerDistance("hello", "")).toBe(0);
     });
 
-    test("both empty returns 0", () => {
-      expect(jaroWinklerDistance("", "")).toBe(0);
+    test("both empty returns 1 (identical)", () => {
+      expect(jaroWinklerDistance("", "")).toBe(1);
     });
 
     test("completely different strings return 0", () => {
@@ -118,5 +123,40 @@ describe("jaroWinklerDistance", () => {
       const noPrefix = jaroWinklerDistance("abc_prefix", "xyz_prefix");
       expect(withPrefix).toBeGreaterThan(noPrefix);
     });
+  });
+});
+
+describe("jaroWinklerSimilarity", () => {
+  test("is 1 for identical strings, including two empty ones", () => {
+    expect(jaroWinklerSimilarity("hello", "hello")).toBe(1);
+    expect(jaroWinklerSimilarity("", "")).toBe(1);
+  });
+
+  test("is 0 when exactly one string is empty or nothing matches", () => {
+    expect(jaroWinklerSimilarity("", "hello")).toBe(0);
+    expect(jaroWinklerSimilarity("hello", "")).toBe(0);
+    expect(jaroWinklerSimilarity("abc", "xyz")).toBe(0);
+  });
+
+  test("matches known reference values", () => {
+    expect(jaroWinklerSimilarity("martha", "marhta")).toBeCloseTo(0.961, 3);
+    expect(jaroWinklerSimilarity("dixon", "dicksonx")).toBeCloseTo(0.813, 3);
+  });
+
+  test("is case-insensitive by default", () => {
+    expect(jaroWinklerSimilarity("hello", "HELLO")).toBe(1);
+    expect(jaroWinklerSimilarity("hello", "HELLO", { caseSensitive: true })).toBe(0);
+  });
+
+  test("jaroWinklerDistance returns the same values (deprecated alias)", () => {
+    for (const [a, b] of [
+      ["martha", "marhta"],
+      ["dixon", "dicksonx"],
+      ["", ""],
+      ["", "x"],
+      ["hello", "HELLO"],
+    ] as const) {
+      expect(jaroWinklerDistance(a, b)).toBe(jaroWinklerSimilarity(a, b));
+    }
   });
 });

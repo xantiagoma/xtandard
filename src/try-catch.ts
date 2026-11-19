@@ -1,7 +1,8 @@
 import type { MaybePromise } from "./types.ts";
 import { isPromise } from "./is-promise.ts";
 
-type Result<T, E = Error> = [T, null] | [null, E];
+/** `tryCatch` result tuple: `[value, null]` on success, `[null, error]` on failure. */
+export type Result<T, E = Error> = [T, null] | [null, E];
 
 /** `true` only for `any` (the `1 & T` intersection trick). */
 type IsAny<T> = 0 extends 1 & T ? true : false;

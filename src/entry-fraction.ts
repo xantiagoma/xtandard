@@ -8,3 +8,4 @@
  */
 
 export { FractionInterval, fractionDomain } from "./interval-fraction.ts";
+export type { FractionValue } from "./interval-fraction.ts";

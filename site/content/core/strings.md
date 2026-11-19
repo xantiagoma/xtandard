@@ -1,6 +1,6 @@
 ---
 title: "Strings"
-description: "ensureString for query params and headers, naturalSortCompare for human-friendly sorting, and jaroWinklerDistance for fuzzy matching."
+description: "ensureString for query params and headers, naturalSortCompare for human-friendly sorting, and jaroWinklerSimilarity for fuzzy matching."
 ---
 
 Three small string helpers for jobs that come up often: reducing a value that may be a string or an array
@@ -8,7 +8,7 @@ of strings to one string, sorting strings that contain numbers the way people ex
 two strings are.
 
 ```ts
-import { ensureString, naturalSortCompare, jaroWinklerDistance } from "@xtandard/lib";
+import { ensureString, naturalSortCompare, jaroWinklerSimilarity } from "@xtandard/lib";
 ```
 
 ## `ensureString`
@@ -56,25 +56,27 @@ It is `a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })`. A
 If you need a fixed locale, or a tie-break on case, call `localeCompare` (or an `Intl.Collator`) with your
 own options.
 
-## `jaroWinklerDistance`
+## `jaroWinklerSimilarity`
 
-`jaroWinklerDistance(a, b, options?)` returns the Jaro-Winkler **similarity** of two strings: a number from
-`0` (nothing in common) to `1` (identical). Despite the name, a higher number means _more_ similar. The
-Winkler adjustment raises the score of strings that share a prefix (up to 4 characters), which suits short
-strings such as names and identifiers.
+`jaroWinklerSimilarity(a, b, options?)` returns the Jaro-Winkler similarity of two strings: a number from
+`0` (nothing in common) to `1` (identical). A higher number means _more_ similar. The Winkler adjustment
+raises the score of strings that share a prefix (up to 4 characters), which suits short strings such as
+names and identifiers.
 
 ```ts
-jaroWinklerDistance("martha", "marhta"); // ≈ 0.961
-jaroWinklerDistance("dixon", "dicksonx"); // ≈ 0.813
-jaroWinklerDistance("abc", "xyz"); // 0
+jaroWinklerSimilarity("martha", "marhta"); // ≈ 0.961
+jaroWinklerSimilarity("dixon", "dicksonx"); // ≈ 0.813
+jaroWinklerSimilarity("abc", "xyz"); // 0
 ```
 
 It is **case-insensitive by default**. Pass `{ caseSensitive: true }` to compare exact characters:
 
 ```ts
-jaroWinklerDistance("hello", "HELLO"); // 1
-jaroWinklerDistance("hello", "HELLO", { caseSensitive: true }); // 0
+jaroWinklerSimilarity("hello", "HELLO"); // 1
+jaroWinklerSimilarity("hello", "HELLO", { caseSensitive: true }); // 0
 ```
+
+Two empty strings are identical (`1`); an empty string against a non-empty one scores `0`.
 
 A typical use is "did you mean…?" suggestions:
 
@@ -83,7 +85,7 @@ const commands = ["install", "uninstall", "update", "init"];
 
 function suggest(input: string) {
   return commands
-    .map((cmd) => ({ cmd, score: jaroWinklerDistance(input, cmd) }))
+    .map((cmd) => ({ cmd, score: jaroWinklerSimilarity(input, cmd) }))
     .filter((s) => s.score > 0.85)
     .sort((x, y) => y.score - x.score)[0]?.cmd;
 }
@@ -91,7 +93,7 @@ function suggest(input: string) {
 suggest("instal"); // "install"
 ```
 
-:::note
-If either string is empty, the result is `0`, even when both are empty. Check for empty input first if
-`""` vs `""` should count as a match.
+:::note[`jaroWinklerDistance` is deprecated]
+`jaroWinklerDistance` is the old name of this function. Despite the name, it returns the same similarity
+(`1` = identical), so switching is a rename. For a true distance, use `1 - jaroWinklerSimilarity(a, b)`.
 :::

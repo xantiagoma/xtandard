@@ -48,7 +48,7 @@ For FP readers: `chainMaybePromise` is monadic `flatMap` where the monad is
 ## Building Blocks (all in core)
 
 ```ts
-import type { MaybePromise } from "@xtandard/lib"; // T | Promise<T>
+import type { MaybePromise } from "@xtandard/lib"; // T | PromiseLike<T>
 import { isPromise, chainMaybePromise, resolveMaybePromise } from "@xtandard/lib";
 ```
 
@@ -207,17 +207,15 @@ runs synchronously.
 ```ts
 const a = encode(x);
 const b = encode(y);
-return isPromise(a) || isPromise(b)
-  ? Promise.all([a, b]).then(([a, b]) => use(a, b))
-  : use(a as string, b as string);
+return isPromise(a) || isPromise(b) ? Promise.all([a, b]).then(([a, b]) => use(a, b)) : use(a, b); // both narrowed to string
 ```
 
 ## Gotchas
 
-- **Generic narrowing needs a cast.** `isPromise(value)` can't narrow
-  `MaybePromise<T>` to `T` in the else-branch when `T` is a type parameter
-  (TS can't subtract from a generic union). Write `fn(value as T)` — see
-  `chainMaybePromise` itself.
+- **`isPromise` narrows to `PromiseLike<T>`, not `Promise<T>`.** Its
+  else-branch narrows a `MaybePromise<T>` to `T`, even for a type parameter,
+  so no `as T` cast is needed. In the true branch, chain with `.then` (or
+  `await`); `.catch`/`.finally` aren't on `PromiseLike`.
 - **Overload order matters.** Sync overload first, loosest last. The
   implementation signature is not callable; make it the loosest shape.
 - **Don't mark the implementation `async`.** One `async` keyword silently

@@ -114,10 +114,12 @@ export class Completer<T = unknown, E = unknown> {
 
   /**
    * Replace the promise with a new pending one, so the completer can be settled
-   * again. The old promise is **not** settled: anything still awaiting it waits
-   * forever, so settle it before you reset.
+   * again. If the old promise is still pending, it is rejected with
+   * `Error("Completer was reset")`, so nothing awaiting it hangs. (That
+   * rejection is not reported as unhandled when nobody awaits the old promise.)
+   * An already-settled promise keeps its result.
    *
-   * @example
+   * @example Reuse after settling
    * ```ts
    * const tick = new Completer<number>();
    *
@@ -128,8 +130,21 @@ export class Completer<T = unknown, E = unknown> {
    * tick.resolve(2);
    * await tick.promise(); // 2
    * ```
+   *
+   * @example Reset while someone waits
+   * ```ts
+   * const reply = new Completer<string>();
+   * const waiting = reply.promise();
+   *
+   * reply.reset();
+   * await waiting; // throws Error("Completer was reset")
+   * ```
    */
   reset(): void {
+    // Rejecting a settled promise is a no-op; the noop catch keeps an unawaited
+    // pending promise from surfacing as an unhandled rejection.
+    this._promise.catch(() => {});
+    this._reject(new Error("Completer was reset") as E);
     this._promise = new Promise<T>((resolve, reject) => {
       this._resolve = resolve;
       this._reject = reject;

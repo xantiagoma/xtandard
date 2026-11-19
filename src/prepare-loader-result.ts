@@ -2,7 +2,8 @@ import type { MaybePromise } from "./types";
 
 // ─── One-to-one ────────────────────────────────────────────
 
-interface PrepareLoaderResultOneOptions<TKey, TDBResult, TFinalResult, TDefault> {
+/** `prepareLoaderResult` options for one-to-one mode: one value (or `defaultValue`) per key. */
+export interface PrepareLoaderResultOneOptions<TKey, TDBResult, TFinalResult, TDefault> {
   keys: readonly TKey[];
   results: TDBResult[];
   mode?: "one";
@@ -14,7 +15,8 @@ interface PrepareLoaderResultOneOptions<TKey, TDBResult, TFinalResult, TDefault>
 
 // ─── One-to-many ───────────────────────────────────────────
 
-interface PrepareLoaderResultManyOptions<TKey, TDBResult, TFinalResult> {
+/** `prepareLoaderResult` options for one-to-many mode (`mode: "many"`): an array of values per key. */
+export interface PrepareLoaderResultManyOptions<TKey, TDBResult, TFinalResult> {
   keys: readonly TKey[];
   results: TDBResult[];
   mode: "many";

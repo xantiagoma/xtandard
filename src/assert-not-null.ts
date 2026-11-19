@@ -8,8 +8,8 @@ import { AssertError } from "./errors";
  * `NaN`) are returned unchanged.
  *
  * @param value - The value to check.
- * @param message - The `AssertError` message. Defaults to
- *   `"unexpected null or undefined"`.
+ * @param message - The `AssertError` message. Defaults to `AssertError`'s
+ *   default, `"unexpected null or undefined"`.
  * @returns `value`, narrowed to `T`.
  * @throws {AssertError} When `value` is `null` or `undefined`.
  *
@@ -34,10 +34,7 @@ import { AssertError } from "./errors";
  * assertNotNull(null); // throws AssertError("unexpected null or undefined")
  * ```
  */
-export function assertNotNull<T>(
-  value?: T | null | undefined,
-  message = "unexpected null or undefined",
-): T {
+export function assertNotNull<T>(value?: T | null | undefined, message?: string): T {
   if (value === null || value === undefined) {
     throw new AssertError(message);
   }

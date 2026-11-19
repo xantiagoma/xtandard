@@ -114,9 +114,8 @@ const ISO_DATE_TIME_REGEX =
  * (`YYYY-MM-DD`, optionally with time and `Z`/offset) that the host engine
  * can actually parse. {@link createCursorCodec} uses it to revive dates on decode.
  *
- * Note: the check is a pattern plus `Date.parse`, not a calendar check. Engines
- * roll over day overflow, so `"2024-02-30"` passes (and revives as March 1),
- * while an out-of-range month like `"2024-13-01"` fails.
+ * The date part must exist on the calendar: `"2024-02-30"` and `"2023-02-29"`
+ * fail (instead of reviving as a rolled-over March date), `"2024-02-29"` passes.
  *
  * @example
  * ```ts
@@ -125,14 +124,29 @@ const ISO_DATE_TIME_REGEX =
  * isIsoDateString("2024-01-15"); // true
  * isIsoDateString("2024-01-15T10:30:00.123+02:00"); // true
  * isIsoDateString("2024-13-01"); // false
+ * isIsoDateString("2024-02-30"); // false (no such day)
  * isIsoDateString("yesterday"); // false
  * isIsoDateString(1705312200000); // false (not a string)
  * ```
  */
 export function isIsoDateString(value: unknown): value is string {
   return (
-    typeof value === "string" && ISO_DATE_TIME_REGEX.test(value) && !Number.isNaN(Date.parse(value))
+    typeof value === "string" &&
+    ISO_DATE_TIME_REGEX.test(value) &&
+    isCalendarDate(value) &&
+    !Number.isNaN(Date.parse(value))
   );
+}
+
+/** Whether the leading `YYYY-MM-DD` of an ISO string names a real calendar day. */
+function isCalendarDate(value: string): boolean {
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  if (month < 1 || month > 12 || day < 1) return false;
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const daysInMonth = month === 2 ? (leap ? 29 : 28) : [4, 6, 9, 11].includes(month) ? 30 : 31;
+  return day <= daysInMonth;
 }
 
 /**

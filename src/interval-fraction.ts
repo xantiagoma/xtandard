@@ -14,7 +14,8 @@ import Fraction from "fraction.js";
 
 import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from "./interval.ts";
 
-type FractionValue = InstanceType<typeof Fraction>;
+/** A fraction.js `Fraction` instance: the endpoint type of `FractionInterval`. */
+export type FractionValue = InstanceType<typeof Fraction>;
 
 /**
  * Exact-rational {@link IntervalDomain} backed by fraction.js. Continuous; the
