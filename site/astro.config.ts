@@ -116,6 +116,10 @@ export default defineConfig({
             excludeInternal: true,
             excludeExternals: true,
             disableGit: true,
+            // tsc (`bun run check`, CI) type-checks the project, tests included. TypeDoc only reads
+            // src/, and its own check of the whole program fails on test-only imports such as
+            // node:sqlite.
+            skipErrorChecking: true,
             // {path} is relative to src/ (the entry points' common directory).
             sourceLinkTemplate: `${repoUrl}/blob/main/src/{path}#L{line}`,
             useCodeBlocks: true,
