@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { inferParserMapType, ParserMap } from "../core/parser.ts";
 
-import { type QueryStateOptions, resolveOptions } from "../core/options.ts";
-import { hasInvalidKey, keyToken, readKey, writeKey } from "../core/urlsearchparams.ts";
+import type { QueryStateOptions } from "../core/options.ts";
+
+import { planInvalidStrip, planKeyedUpdate } from "../core/query-states.ts";
+import { keyToken, readKey } from "../core/urlsearchparams.ts";
 import { useAdapterValue } from "./context.ts";
 
 export type UseQueryStatesOptions<M extends ParserMap> = QueryStateOptions & {
@@ -29,9 +31,11 @@ export type SetValues<M extends ParserMap> = (
  * values. `options.urlKeys` maps state keys to shorter URL keys; the other
  * options apply to every key.
  *
- * Note: from a parser's `.withOptions()`, this hook only honors
- * `clearOnDefault` (and it beats a per-call `clearOnDefault`); the other
- * parser-level options are ignored here. Set them on the hook or per call.
+ * Options resolve per key: per-call > that key's parser `.withOptions()` >
+ * hook options > adapter defaults. Each written key uses its own
+ * `clearOnDefault`; the single URL commit merges the keys' options the way
+ * same-tick updates merge (`push` beats `replace`, a full navigation beats
+ * shallow, the strongest rate limit wins).
  *
  * @example
  * ```tsx
@@ -97,42 +101,19 @@ export function useQueryStates<M extends ParserMap>(
 
   const setValues: SetValues<M> = useCallback(
     (next, callOptions) => {
-      const resolved = resolveOptions({
+      // The store runs the updater synchronously on its current snapshot, so
+      // resolving the patch here sees the same params the updater would.
+      const patch =
+        typeof next === "function" ? next(readAll(store.getSnapshot().searchParams)) : next;
+      const plan = planKeyedUpdate({
+        parsers,
+        urlKeyFor,
+        patch,
         callOptions,
         hookOptions: options,
         adapterDefaults: defaultOptions,
       });
-      return store.update({
-        options: resolved,
-        updater: (current) => {
-          const draft = new URLSearchParams(current);
-          const clearAll = (): void => {
-            for (const key of Object.keys(parsers)) draft.delete(urlKeyFor(key));
-          };
-          if (next === null) {
-            clearAll();
-            return draft;
-          }
-          const patch = typeof next === "function" ? next(readAll(current)) : next;
-          if (patch === null) {
-            clearAll();
-            return draft;
-          }
-          for (const [key, parser] of Object.entries(parsers)) {
-            if (!(key in patch)) continue;
-            const value: unknown = Reflect.get(patch, key);
-            const clearOnDefault = parser.options?.clearOnDefault ?? resolved.clearOnDefault;
-            writeKey(
-              draft,
-              urlKeyFor(key),
-              parser,
-              value === undefined ? null : value,
-              clearOnDefault,
-            );
-          }
-          return draft;
-        },
-      });
+      return store.update({ options: plan.options, updater: plan.apply });
     },
     [store, parsers, options, defaultOptions, urlKeyFor, readAll],
   );
@@ -140,21 +121,20 @@ export function useQueryStates<M extends ParserMap>(
   // Auto-strip present-but-invalid raw values from the URL (clearOnInvalid), in
   // one atomic commit covering every managed key that fails to parse.
   useEffect(() => {
-    const resolved = resolveOptions({ hookOptions: options, adapterDefaults: defaultOptions });
-    if (!resolved.clearOnInvalid) return;
-
-    const current = store.getSnapshot().searchParams;
-    const invalid = Object.entries(parsers)
-      .filter(([key, parser]) => hasInvalidKey(current, urlKeyFor(key), parser))
-      .map(([key]) => urlKeyFor(key));
-
-    if (invalid.length === 0) return;
+    const plan = planInvalidStrip({
+      parsers,
+      urlKeyFor,
+      params: store.getSnapshot().searchParams,
+      hookOptions: options,
+      adapterDefaults: defaultOptions,
+    });
+    if (plan === null) return;
 
     void store.update({
-      options: resolved,
+      options: plan.options,
       updater: (params) => {
         const draft = new URLSearchParams(params);
-        for (const key of invalid) draft.delete(key);
+        for (const key of plan.urlKeys) draft.delete(key);
 
         return draft;
       },

@@ -20,9 +20,11 @@ AdapterContext.displayName = "QueryStateAdapterContext";
  * the hooks throw.
  *
  * Most apps never touch it. Read it to check whether an adapter is mounted,
- * e.g. in a component that may also render outside the router. The store
- * type and its factory are internal, so writing a new adapter on top of this
- * context means implementing the store contract yourself.
+ * e.g. in a component that may also render outside the router. To write a
+ * new adapter, build the store with `createQueryStateStore` (pass a `commit`
+ * that writes to your router) and provide `{ store, defaultOptions }` here;
+ * the store types (`QueryStateStore`, `CommitFn`, `CommitInput`, `Snapshot`,
+ * `StoreUpdate`) are exported from `@xtandard/lib/tanstack` too.
  *
  * @example
  * ```tsx

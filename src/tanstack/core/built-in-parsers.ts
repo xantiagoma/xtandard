@@ -4,6 +4,7 @@ import {
   createParser,
   type MultiParserWithDefault,
   type Parser,
+  type ParserWithDefault,
 } from "./parser.ts";
 import { type StandardSchemaV1, validateWithStandardSchema } from "./standard-schema.ts";
 
@@ -28,7 +29,8 @@ export const parseAsString: Parser<string> = createParser({
 
 /**
  * Base-10 integer (`Number.parseInt`). A value with no leading digits parses
- * to `null`; trailing junk is ignored (`"42abc"` → `42`). Serializes rounded.
+ * to `null`; trailing junk is ignored (`"42abc"` → `42`), the same lenient
+ * read as nuqs. Serializes rounded.
  *
  * @example
  * ```ts
@@ -90,17 +92,20 @@ export const parseAsHex: Parser<number> = createParser({
 });
 
 /**
- * `"true"` ⇄ `true`, `"false"` ⇄ `false`.
+ * `"true"` ⇄ `true`, `"false"` ⇄ `false`. Case-insensitive on read
+ * (`"TRUE"` → `true`), like nuqs.
  *
- * Note: it never returns `null` for a present key. Any value other than
- * `"true"` (`?on=yes`, `?on=1`) parses to `false`, so `clearOnInvalid`
- * never strips it.
+ * Like nuqs, it never returns `null` for a present key: any value other than
+ * `"true"` (`?on=yes`, `?on=1`) reads as `false`, so `clearOnInvalid` never
+ * strips it. Use `parseAsStringLiteral(["true", "false"])` or a custom
+ * parser if junk should be rejected.
  *
  * @example
  * ```ts
  * import { parseAsBoolean } from "@xtandard/lib/tanstack";
  *
  * parseAsBoolean.parse("true"); // → true
+ * parseAsBoolean.parse("TRUE"); // → true
  * parseAsBoolean.parse("yes"); // → false
  * parseAsBoolean.serialize(true); // → "true"
  *
@@ -108,7 +113,7 @@ export const parseAsHex: Parser<number> = createParser({
  * ```
  */
 export const parseAsBoolean: Parser<boolean> = createParser({
-  parse: (value) => value === "true",
+  parse: (value) => value.toLowerCase() === "true",
   serialize: (value) => (value ? "true" : "false"),
 });
 
@@ -224,7 +229,9 @@ export function parseAsStringLiteral<T extends string>(values: readonly T[]): Pa
 }
 
 /**
- * One of a fixed list of numbers, typed as their union. Anything else parses to `null`.
+ * One of a fixed list of numbers, typed as their union. Anything else parses
+ * to `null`. Read with `Number.parseFloat`, like nuqs, so trailing junk is
+ * ignored (`"25px"` → `25` when `25` is in the list).
  *
  * @example
  * ```ts
@@ -280,8 +287,9 @@ export function parseAsStringEnum<E extends Record<string, string>>(
 /**
  * Array packed into a single key, comma-separated by default (`?ids=1,2,3`).
  * Each item goes through `itemParser`; items that fail to parse are dropped
- * (`"1,x,3"` → `[1, 3]`), and an empty value is `[]`. A separator inside an
- * item is percent-encoded so it round-trips.
+ * (`"1,x,3"` → `[1, 3]`, `"x"` → `[]`), and an empty value is `[]`. It never
+ * returns `null`, so `clearOnInvalid` never strips the key (same as nuqs).
+ * A separator inside an item is percent-encoded so it round-trips.
  *
  * @example
  * ```ts
@@ -322,18 +330,27 @@ export function parseAsArrayOf<T>(itemParser: AnySingleParser<T>, separator = ",
 /**
  * Native URL arrays via repeated keys: `?tag=a&tag=b`. A multi-value parser
  * that already has `.withDefault([])` applied. Items that fail `itemParser`
- * are dropped.
+ * are dropped; when none parse, the key is invalid (`null`, so it reads as
+ * the default and `clearOnInvalid` strips it), except a single empty value
+ * (`?tag=`), which is an explicit `[]`. Same rules as nuqs.
  *
  * Under `shallow: false` TanStack Router re-serializes search globally, so
  * prefer {@link parseAsArrayOf} for loader/SSR-bound arrays.
  *
  * @example
  * ```ts
- * import { createSerializer, parseAsNativeArrayOf, parseAsString } from "@xtandard/lib/tanstack";
+ * import {
+ *   createSerializer,
+ *   parseAsInteger,
+ *   parseAsNativeArrayOf,
+ *   parseAsString,
+ * } from "@xtandard/lib/tanstack";
  *
  * const tags = parseAsNativeArrayOf(parseAsString);
  * tags.parse(["a", "b"]); // → ["a", "b"]
  * tags.defaultValue; // → []
+ * parseAsNativeArrayOf(parseAsInteger).parse(["1", "x"]); // → [1]
+ * parseAsNativeArrayOf(parseAsInteger).parse(["x"]); // → null
  *
  * createSerializer({ tag: tags })({ tag: ["a", "b"] }); // → "?tag=a&tag=b"
  * ```
@@ -348,7 +365,9 @@ export function parseAsNativeArrayOf<T>(
         const item = itemParser.parse(value);
         if (item !== null) parsed.push(item);
       }
-      return parsed;
+      if (parsed.length > 0) return parsed;
+      // A single empty value (`?tag=`) is an explicit empty array.
+      return values.length === 1 && values[0] === "" ? [] : null;
     },
     serialize: (values) => values.map((value) => itemParser.serialize(value)),
     eq: (a, b) =>
@@ -360,7 +379,8 @@ export function parseAsNativeArrayOf<T>(
   }).withDefault([]);
 }
 
-type JsonValidator<T> = StandardSchemaV1<unknown, T> | ((value: unknown) => T);
+/** Runtime validator for `parseAsJson`: a Standard Schema or a function that returns the value or throws. */
+export type JsonValidator<T> = StandardSchemaV1<unknown, T> | ((value: unknown) => T);
 
 /**
  * JSON-encoded value. A runtime validator is required (Standard Schema or a
@@ -510,17 +530,20 @@ export function parseAsCodec<T>(
   });
 }
 
+/** String encoder/decoder pair for `withTransport` (e.g. base64url or signing). */
+export type Transport = { encode: (raw: string) => string; decode: (token: string) => string };
+
 /**
  * Wrap a parser with a string transport layer — the encoder/decoder stage.
  * `encode` runs after the parser's `serialize`, `decode` before its `parse`.
- * Useful for base64url / signing on top of any existing parser. Apply
- * `.withDefault()` after wrapping (the wrapper drops the inner parser's
- * default and options). A `decode` that throws yields `null`.
+ * Useful for base64url / signing on top of any existing parser. The inner
+ * parser's `eq`, default and `.withOptions()` carry over, so wrapping a
+ * `.withDefault()` parser keeps it non-nullable. A `decode` that throws yields `null`.
  *
  * @example
  * ```ts
  * import { decodeBase64Url, encodeBase64Url } from "@xtandard/lib/pagination";
- * import { parseAsJson, withTransport } from "@xtandard/lib/tanstack";
+ * import { parseAsInteger, parseAsJson, withTransport } from "@xtandard/lib/tanstack";
  * import * as v from "valibot";
  *
  * const filters = withTransport(parseAsJson(v.object({ status: v.string() })), {
@@ -529,13 +552,25 @@ export function parseAsCodec<T>(
  * });
  * filters.serialize({ status: "open" }); // → "eyJzdGF0dXMiOiJvcGVuIn0"
  * filters.parse("eyJzdGF0dXMiOiJvcGVuIn0"); // → { status: "open" }
+ *
+ * const page = withTransport(parseAsInteger.withDefault(1), { encode: btoa, decode: atob });
+ * page.defaultValue; // → 1
  * ```
  */
 export function withTransport<T>(
+  parser: ParserWithDefault<T>,
+  transport: Transport,
+): ParserWithDefault<T>;
+export function withTransport<T>(parser: Parser<T>, transport: Transport): Parser<T>;
+export function withTransport<T>(
   parser: AnySingleParser<T>,
-  transport: { encode: (raw: string) => string; decode: (token: string) => string },
-): Parser<T> {
-  return createParser({
+  transport: Transport,
+): Parser<T> | ParserWithDefault<T>;
+export function withTransport<T>(
+  parser: AnySingleParser<T>,
+  transport: Transport,
+): Parser<T> | ParserWithDefault<T> {
+  let wrapped = createParser({
     serialize: (value: T) => transport.encode(parser.serialize(value)),
     parse: (token) => {
       let raw: string;
@@ -548,4 +583,6 @@ export function withTransport<T>(
     },
     eq: parser.eq,
   });
+  if (parser.options !== undefined) wrapped = wrapped.withOptions(parser.options);
+  return parser.hasDefault ? wrapped.withDefault(parser.defaultValue) : wrapped;
 }

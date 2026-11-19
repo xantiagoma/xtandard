@@ -23,6 +23,7 @@ import {
   type ValueCodec,
   withTransport,
 } from "../src/tanstack/core/built-in-parsers.ts";
+import { hasInvalidKey, readKey } from "../src/tanstack/core/urlsearchparams.ts";
 
 describe("scalar parsers", () => {
   test("string round-trips", () => {
@@ -53,6 +54,17 @@ describe("scalar parsers", () => {
     expect(parseAsBoolean.parse("false")).toBe(false);
     expect(parseAsBoolean.parse("anything")).toBe(false);
     expect(parseAsBoolean.serialize(true)).toBe("true");
+  });
+
+  test("boolean is case-insensitive on read (nuqs parity)", () => {
+    expect(parseAsBoolean.parse("TRUE")).toBe(true);
+    expect(parseAsBoolean.parse("True")).toBe(true);
+    expect(parseAsBoolean.parse("FALSE")).toBe(false);
+  });
+
+  test("integer/number literal read leniently, like nuqs (parseInt/parseFloat)", () => {
+    expect(parseAsInteger.parse("42abc")).toBe(42);
+    expect(parseAsNumberLiteral([25] as const).parse("25px")).toBe(25);
   });
 
   test("index is 1-indexed in URL, 0-indexed in state", () => {
@@ -132,6 +144,23 @@ describe("array parsers", () => {
     expect(p.defaultValue).toEqual([]);
     expect(p.parse(["a", "b"])).toEqual(["a", "b"]);
     expect(p.serialize(["x", "y"])).toEqual(["x", "y"]);
+  });
+
+  test("comma array drops bad items and never returns null (nuqs parity)", () => {
+    const p = parseAsArrayOf(parseAsInteger);
+    expect(p.parse("1,x,3")).toEqual([1, 3]);
+    expect(p.parse("x")).toEqual([]);
+  });
+
+  test("native array: no valid item → null (invalid), single empty value → []", () => {
+    const p = parseAsNativeArrayOf(parseAsInteger);
+    expect(p.parse(["1", "x"])).toEqual([1]);
+    expect(p.parse(["x"])).toBeNull();
+    expect(p.parse(["x", "y"])).toBeNull();
+    expect(p.parse([""])).toEqual([]);
+    expect(hasInvalidKey(new URLSearchParams("n=x"), "n", p)).toBe(true);
+    expect(hasInvalidKey(new URLSearchParams("n="), "n", p)).toBe(false);
+    expect(readKey(new URLSearchParams("n=x"), "n", p)).toEqual([]);
   });
 });
 
@@ -248,6 +277,24 @@ describe("withTransport (encoder/decoder layer over any parser)", () => {
     const p = withTransport(parseAsInteger, transport).withDefault(0);
     expect(p.hasDefault).toBe(true);
     expect(p.defaultValue).toBe(0);
+  });
+
+  test("keeps the inner parser's default and options", () => {
+    const p = withTransport(
+      parseAsInteger.withDefault(7).withOptions({ history: "push", clearOnDefault: false }),
+      transport,
+    );
+    expect(p.hasDefault).toBe(true);
+    expect(p.defaultValue).toBe(7);
+    expect(p.options).toEqual({ history: "push", clearOnDefault: false });
+    expect(p.parse("x3")).toBe(3);
+    expect(readKey(new URLSearchParams("n=nope"), "n", p)).toBe(7);
+  });
+
+  test("a parser without default/options stays plain", () => {
+    const p = withTransport(parseAsInteger, transport);
+    expect(p.hasDefault).toBe(false);
+    expect(p.options).toBeUndefined();
   });
 });
 

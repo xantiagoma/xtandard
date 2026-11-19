@@ -13,7 +13,8 @@ export type CreateSerializerOptions<M extends ParserMap> = {
   processUrlSearchParams?: (params: URLSearchParams) => URLSearchParams | void;
 };
 
-type Base = string | URL | URLSearchParams;
+/** Base URL or query a serializer merges into: a string, `URL` or `URLSearchParams`. */
+export type Base = string | URL | URLSearchParams;
 
 function baseParams(base: Base | undefined): URLSearchParams {
   if (base === undefined) return new URLSearchParams();

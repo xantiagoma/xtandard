@@ -12,7 +12,7 @@ export type Setter<Read> = (
 
 /** Read value for a given parser argument; defaults to `string | null`. */
 // oxlint-disable-next-line typescript/no-explicit-any -- variance constraint (see ParserMap)
-type ReadValue<P> = P extends AnyParser<any> ? inferParserType<P> : string | null;
+export type ReadValue<P> = P extends AnyParser<any> ? inferParserType<P> : string | null;
 
 /**
  * Default parser when none is passed: identity in, `String()` out. Typed

@@ -22,6 +22,7 @@ import {
   parseAsInteger,
   parseAsNativeArrayOf,
   parseAsString,
+  withTransport,
 } from "../src/tanstack/server.ts";
 
 // --- inferParserType: variant → return type ---------------------------------
@@ -72,4 +73,14 @@ export type _LoaderReturn = Expect<
 // createSerializer(map) → callable producing a string
 export type _SerializerReturn = Expect<
   Equal<ReturnType<ReturnType<typeof createSerializer<typeof map>>>, string>
+>;
+
+// withTransport keeps the inner parser's variant (a default stays non-nullable)
+const transport = { encode: (raw: string) => raw, decode: (token: string) => token };
+const transportedDefault = withTransport(parseAsInteger.withDefault(1), transport);
+const transportedPlain = withTransport(parseAsInteger, transport);
+
+export type _TransportDefault = Expect<Equal<inferParserType<typeof transportedDefault>, number>>;
+export type _TransportPlain = Expect<
+  Equal<inferParserType<typeof transportedPlain>, number | null>
 >;

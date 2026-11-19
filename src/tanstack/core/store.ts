@@ -1,22 +1,27 @@
 import { combineResolvedOptions, type ResolvedOptions } from "./options.ts";
 
+/** Current URL search state held by a `QueryStateStore`. */
 export type Snapshot = {
   readonly searchParams: URLSearchParams;
   readonly queryString: string;
 };
 
+/** What the store hands an adapter's `commit`: the merged params and the resolved options to write them with. */
 export type CommitInput = {
   readonly search: URLSearchParams;
   readonly options: ResolvedOptions;
 };
 
+/** Adapter callback that writes a rate-limited, merged update to the real URL (e.g. via the router). */
 export type CommitFn = (input: CommitInput) => void;
 
+/** One pending store update: a function over the current params plus the options to commit it with. */
 export type StoreUpdate = {
   updater: (current: URLSearchParams) => URLSearchParams;
   options: ResolvedOptions;
 };
 
+/** Per-adapter URL state store: optimistic updates, subscriptions and rate-limited commits. */
 export type QueryStateStore = {
   getSnapshot: () => Snapshot;
   subscribe: (listener: () => void) => () => void;

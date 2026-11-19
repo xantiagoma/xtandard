@@ -82,7 +82,8 @@ export type CreateStandardSchemaOptions<M extends ParserMap> = {
   urlKeys?: Partial<Record<keyof M, string>>;
 };
 
-type SchemaInput<M extends ParserMap, Partial_ extends boolean> = Partial_ extends true
+/** Input type of the schema `createStandardSchemaV1` builds: the parser map's values, all optional when `partial` is set. */
+export type SchemaInput<M extends ParserMap, Partial_ extends boolean> = Partial_ extends true
   ? Partial<inferParserMapType<M>>
   : inferParserMapType<M>;
 

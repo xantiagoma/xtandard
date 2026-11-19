@@ -130,10 +130,11 @@ const b = resolveOptions({ callOptions: { history: "push", limitUrlUpdates: debo
 combineResolvedOptions(a, b); // history "push", shallow true, debounce(300)
 ```
 
-Note: `useQueryStates` resolves options from the call, the hook and the adapter
-only. From a parser's `.withOptions()` it reads `clearOnDefault` alone (and that
-wins over a per-call `clearOnDefault`). `useQueryState` applies the full
-precedence.
+Both hooks apply the full precedence. `useQueryStates` resolves it per key, as
+nuqs does: each written key uses its own `clearOnDefault` (call > that key's
+parser > hook), and the single commit merges the written keys' options with the
+same rule as `combineResolvedOptions`. Its `clearOnInvalid` is per key too, so a
+parser's `.withOptions({ clearOnInvalid: false })` keeps that key's raw value.
 
 ## Parsers
 
@@ -143,6 +144,20 @@ precedence.
 `parseAsStringLiteral`, `parseAsNumberLiteral`, `parseAsStringEnum`,
 `parseAsArrayOf` (comma-separated), `parseAsNativeArrayOf` (repeated keys,
 `?tag=a&tag=b`), `parseAsJson(validator)`.
+
+They read the URL the way nuqs does, which is lenient in places:
+
+- `parseAsInteger` / `parseAsNumberLiteral` use `parseInt` / `parseFloat`, so
+  trailing junk is ignored (`"42abc"` → `42`).
+- `parseAsBoolean` is case-insensitive and never invalid: anything but `true`
+  reads as `false` (`?on=yes` → `false`), so `clearOnInvalid` never strips it.
+- `parseAsArrayOf` drops items that fail to parse (`"1,x,3"` → `[1, 3]`) and
+  never returns `null`.
+- `parseAsNativeArrayOf` drops bad items too, but when none parse the key is
+  invalid (reads as `[]`, stripped by `clearOnInvalid`); a lone `?tag=` is `[]`.
+
+For strict input, use `parseAsStringLiteral`, `parseAsStandardSchema` or a
+custom `createParser`.
 
 Each key goes through its parser in both directions (here
 `parseAsInteger.withDefault(1)`):
@@ -194,6 +209,10 @@ const opaque = withTransport(parseAsJson(schema), {
   decode: decodeBase64Url,
 }).withDefault({});
 ```
+
+`withTransport` keeps the wrapped parser's `eq`, default and `.withOptions()`,
+so wrapping `parseAsJson(schema).withDefault({})` works the same as defaulting
+after wrapping.
 
 Async codecs (`createCursorCodec` with WebCrypto stages) are **not** usable
 here — parsing must be sync — but work fine in loaders/server functions.
@@ -261,6 +280,10 @@ const [tz] = useQueryState("tz", parseAsTimeZone); // America/Los_Angeles (valid
 ids via the `@xtandard/lib/valibot` TimeZone schema. (Available:
 `parseAsInstant`, `parseAsPlainDate`, `parseAsPlainTime`, `parseAsPlainDateTime`,
 `parseAsZonedDateTime`, `parseAsDuration`, `parseAsTimeZone`.)
+
+`parseAsDuration` compares by length, so `clearOnDefault` treats `PT90M` and
+`PT1H30M` as equal (and `P1D` as `PT24H`). Years, months and weeks have no fixed
+length without a reference date, so they must match exactly (`P1M` ≠ `P30D`).
 
 ## Parity with nuqs
 
