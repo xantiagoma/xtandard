@@ -39,19 +39,130 @@ import type {
 
 export type { SqlDialect } from "./compile.ts";
 
+/** What a field reads: a column reference string (`"name"`, `"posts.name"`, passed to
+ * `sql.ref`) or any Kysely raw expression (e.g. `` sql`lower(name)` ``). */
 export type KyselyTarget = string | RawBuilder<unknown>;
+/** One allow-listed field: its filter kind plus the {@link KyselyTarget} it reads. */
 export type KyselyFieldSpec = { kind: FieldKind; column: KyselyTarget };
+/** A resource's filter allow-list: public field name → {@link KyselyFieldSpec}. */
 export type KyselyFilterSpec = Record<string, KyselyFieldSpec>;
 
 const field =
   (kind: FieldKind) =>
   (input: { column: KyselyTarget }): KyselyFieldSpec => ({ kind, column: input.column });
 
+/**
+ * Allow-list a public field as a `date` filter over a timestamp column, given as a Kysely
+ * reference string (`"posts.created_at"`) or a raw expression. A `date` preset needs the
+ * `resolveDate` you pass to `buildWhere`, and becomes a half-open `[start, end)` window.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, dateField } from "@xtandard/lib/filters/kysely";
+ *
+ * // Your resolver turns the preset into instant bounds (this one is hard-coded).
+ * const resolveDate = () => ({ start: new Date("2026-01-01T00:00:00Z"), end: new Date("2026-02-01T00:00:00Z") });
+ * const { where } = buildWhere({
+ *   spec: { createdAt: dateField({ column: "posts.created_at" }) },
+ *   filters: [{ field: "createdAt", filter: { kind: "date", operator: "is", unit: "month", timeZone: "UTC", anchor: "2026-01-15T00:00:00" } }],
+ *   resolveDate,
+ * });
+ * where!.compile(db).sql; // db: your Kysely instance
+ * // → '("posts"."created_at" >= $1 and "posts"."created_at" < $2)'
+ * ```
+ */
 export const dateField = field("date");
+/**
+ * Allow-list a public field as a `text` filter over a string column, given as a Kysely
+ * reference string (`"users.name"`) or a raw expression such as `` sql`lower(users.name)` ``.
+ * `contains`/`startsWith`/`endsWith` render as `ilike` on Postgres and `like` on MySQL/SQLite.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, textField } from "@xtandard/lib/filters/kysely";
+ *
+ * const { where } = buildWhere({
+ *   spec: { name: textField({ column: "users.name" }) },
+ *   filters: [{ field: "name", filter: { kind: "text", operator: "contains", value: "ann" } }],
+ * });
+ * const { sql, parameters } = where!.compile(db); // db: your Kysely instance
+ * // sql → '"users"."name" ilike $1', parameters → ["%ann%"]
+ * ```
+ */
 export const textField = field("text");
+/**
+ * Allow-list a public field as a `number` filter over a numeric column, given as a Kysely
+ * reference string (`"orders.total"`) or a raw expression. `between` renders as
+ * `>= from and <= to`.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, numberField } from "@xtandard/lib/filters/kysely";
+ *
+ * const { where } = buildWhere({
+ *   spec: { total: numberField({ column: "orders.total" }) },
+ *   filters: [{ field: "total", filter: { kind: "number", operator: "between", from: 10, to: 20 } }],
+ * });
+ * const { sql, parameters } = where!.compile(db); // db: your Kysely instance
+ * // sql → '("orders"."total" >= $1 and "orders"."total" <= $2)', parameters → [10, 20]
+ * ```
+ */
 export const numberField = field("number");
+/**
+ * Allow-list a public field as an `enum` filter (`eq`/`ne`/`inArray`/`notInArray`/null checks)
+ * over a column given as a Kysely reference string (`"tasks.status"`) or a raw expression.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, enumField } from "@xtandard/lib/filters/kysely";
+ *
+ * const { where } = buildWhere({
+ *   spec: { status: enumField({ column: "tasks.status" }) },
+ *   filters: [{ field: "status", filter: { kind: "enum", operator: "inArray", values: ["open", "done"] } }],
+ * });
+ * const { sql, parameters } = where!.compile(db); // db: your Kysely instance
+ * // sql → '"tasks"."status" in ($1, $2)', parameters → ["open", "done"]
+ * ```
+ */
 export const enumField = field("enum");
+/**
+ * Allow-list a public field as a `boolean` filter (`eq`/`ne`/null checks) over a column given
+ * as a Kysely reference string (`"tasks.done"`) or a raw expression.
+ *
+ * @example
+ * ```ts
+ * import { booleanField, buildWhere } from "@xtandard/lib/filters/kysely";
+ *
+ * const { where } = buildWhere({
+ *   spec: { done: booleanField({ column: "tasks.done" }) },
+ *   filters: [{ field: "done", filter: { kind: "boolean", operator: "eq", value: false } }],
+ * });
+ * const { sql, parameters } = where!.compile(db); // db: your Kysely instance
+ * // sql → '"tasks"."done" = $1', parameters → [false]
+ * ```
+ */
 export const booleanField = field("boolean");
+/**
+ * Allow-list a public field as an `array` filter over a column given as a Kysely reference
+ * string (`"posts.tags"`) or a raw expression. The SQL depends on `dialect`: a native array
+ * with `@>`/`<@`/`&&` on Postgres, a JSON column with `json_contains`/`json_overlaps` on MySQL,
+ * and `json_each(…)` subqueries on SQLite.
+ *
+ * @example
+ * ```ts
+ * import type { ColumnFilter } from "@xtandard/lib/filters";
+ * import { arrayField, buildWhere } from "@xtandard/lib/filters/kysely";
+ *
+ * const spec = { tags: arrayField({ column: "posts.tags" }) };
+ * const filters: ColumnFilter[] = [
+ *   { field: "tags", filter: { kind: "array", operator: "arrayOverlaps", values: ["ts", "js"] } },
+ * ];
+ * buildWhere({ spec, filters }).where!.compile(db).sql; // → '"posts"."tags" && $1'
+ * buildWhere({ spec, filters, dialect: "mysql" }).where!.compile(db).sql;
+ * // → 'json_overlaps("posts"."tags", $1)' with a Postgres `db`;
+ * //   a MySQL Kysely instance prints 'json_overlaps(`posts`.`tags`, ?)'
+ * ```
+ */
 export const arrayField = field("array");
 
 const ref = (col: KyselyTarget): RawBuilder<unknown> =>
@@ -147,7 +258,28 @@ function condSql(
   }
 }
 
-/** Render a portable {@link CompiledWhere} to a Kysely boolean expression. */
+/**
+ * Render an already-compiled {@link CompiledWhere} AST (from `compileFilters` /
+ * `compileFilterNode` in `@xtandard/lib/filters`) to a Kysely boolean expression, looking each
+ * field up in `columns`. Conditions on fields missing from `columns` are dropped; `null` (or an
+ * AST that drops to nothing) gives `undefined`. Most code calls `buildWhere`, which compiles
+ * and renders in one step.
+ *
+ * @example
+ * ```ts
+ * import { toKyselyWhere } from "@xtandard/lib/filters/kysely";
+ *
+ * const where = toKyselyWhere({
+ *   where: { type: "and", nodes: [
+ *     { type: "cond", cond: { field: "amount", op: "gt", value: 5 } },
+ *     { type: "cond", cond: { field: "name", op: "isNotNull" } },
+ *   ] },
+ *   columns: { amount: "tasks.amount", name: "tasks.name" },
+ * });
+ * const { sql, parameters } = where!.compile(db); // db: your Kysely instance
+ * // sql → '("tasks"."amount" > $1 and "tasks"."name" is not null)', parameters → [5]
+ * ```
+ */
 export function toKyselyWhere(input: {
   where: CompiledWhere | null;
   columns: Record<string, KyselyTarget>;
@@ -186,7 +318,29 @@ const columnsOf = (spec: KyselyFilterSpec): Record<string, KyselyTarget> =>
 const kindsOf = (spec: KyselyFilterSpec): Record<string, FieldKind> =>
   Object.fromEntries(Object.entries(spec).map(([f, s]) => [f, s.kind]));
 
-/** Flat AND list → a Kysely boolean expression (or undefined). */
+/**
+ * Compile a flat, AND-combined list of column filters into a Kysely boolean expression for
+ * `.where(where)`. Only fields in `spec` whose kind matches the filter's `kind` are kept; the
+ * rest are silently dropped. `where` is `undefined` when nothing survives (skip the `.where`
+ * call then). A `date` preset filter needs `resolveDate` (it throws without one). `dialect`
+ * (default `"postgres"`) only changes the `array` ops and `ilike`.
+ *
+ * @example
+ * ```ts
+ * import { buildWhere, numberField, textField } from "@xtandard/lib/filters/kysely";
+ *
+ * const spec = { name: textField({ column: "tasks.name" }), amount: numberField({ column: "tasks.amount" }) };
+ * const { where } = buildWhere({ spec, filters: [
+ *   { field: "name", filter: { kind: "text", operator: "startsWith", value: "Re" } },
+ *   { field: "amount", filter: { kind: "number", operator: "gte", value: 100 } },
+ * ] });
+ * let query = db.selectFrom("tasks").selectAll(); // db: your Kysely instance
+ * if (where) query = query.where(where);
+ * const { sql, parameters } = query.compile();
+ * // sql → 'select * from "tasks" where ("tasks"."name" ilike $1 and "tasks"."amount" >= $2)'
+ * // parameters → ["Re%", 100]
+ * ```
+ */
 export function buildWhere(input: {
   spec: KyselyFilterSpec;
   filters: ColumnFilter[];
@@ -204,7 +358,23 @@ export function buildWhere(input: {
   };
 }
 
-/** Recursive and/or/not tree → a Kysely boolean expression (or undefined). */
+/**
+ * Compile a recursive `and`/`or`/`not` {@link FilterNode} tree into a Kysely boolean
+ * expression (or `undefined`). Same allow-list and `dialect` rules as `buildWhere`.
+ *
+ * @example
+ * ```ts
+ * import { buildFilterNode, numberField, textField } from "@xtandard/lib/filters/kysely";
+ *
+ * const spec = { name: textField({ column: "name" }), amount: numberField({ column: "amount" }) };
+ * const { where } = buildFilterNode({ spec, node: { type: "or", nodes: [
+ *   { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "Rent" } },
+ *   { type: "not", node: { type: "column", field: "amount", filter: { kind: "number", operator: "lt", value: 0 } } },
+ * ] } });
+ * const { sql, parameters } = where!.compile(db); // db: your Kysely instance
+ * // sql → '("name" = $1 or not ("amount" < $2))', parameters → ["Rent", 0]
+ * ```
+ */
 export function buildFilterNode(input: {
   spec: KyselyFilterSpec;
   node: FilterNode;
@@ -222,7 +392,25 @@ export function buildFilterNode(input: {
   };
 }
 
-/** Render a `Sort` to Kysely `orderBy` expressions, allow-listed to `columns`. */
+/**
+ * Render a `Sort` to Kysely `orderBy` expressions, allow-listed to `columns` (public field
+ * name → {@link KyselyTarget}). Unknown fields are dropped; when nothing is left, `defaultSort`
+ * is used instead. Apply each expression with `query.orderBy(expr)`.
+ *
+ * @example
+ * ```ts
+ * import { buildOrderBy } from "@xtandard/lib/filters/kysely";
+ *
+ * const { orderBy } = buildOrderBy({
+ *   sort: [{ field: "amount", dir: "desc" }, { field: "password", dir: "asc" }], // password: not sortable
+ *   columns: { name: "tasks.name", amount: "tasks.amount" },
+ *   defaultSort: [{ field: "name", dir: "asc" }],
+ * });
+ * let query = db.selectFrom("tasks").selectAll(); // db: your Kysely instance
+ * for (const expr of orderBy) query = query.orderBy(expr);
+ * query.compile().sql; // → 'select * from "tasks" order by "tasks"."amount" desc'
+ * ```
+ */
 export function buildOrderBy(input: {
   sort: Sort;
   columns: Record<string, KyselyTarget>;

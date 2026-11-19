@@ -39,6 +39,21 @@ export declare namespace StandardSchemaV1 {
 /**
  * Run a Standard Schema synchronously, returning its output or throwing.
  * Async validators are unsupported (matches nuqs `parseAsJson`).
+ *
+ * Failed validation throws an `Error` whose message joins the issue messages
+ * with `"; "`; an async schema throws a `TypeError`. `parseAsJson` and
+ * `parseAsStandardSchema` use it and turn the throw into `null`. Handy in
+ * custom parsers (wrap it in `try`/`catch` and return `null`).
+ *
+ * @example
+ * ```ts
+ * import { validateWithStandardSchema } from "@xtandard/lib/tanstack";
+ * import * as v from "valibot";
+ *
+ * const Email = v.pipe(v.string(), v.email("Invalid email"));
+ * validateWithStandardSchema(Email, "ada@example.com"); // → "ada@example.com"
+ * validateWithStandardSchema(Email, "nope"); // throws Error: Invalid email
+ * ```
  */
 export function validateWithStandardSchema<T>(
   schema: StandardSchemaV1<unknown, T>,
@@ -76,6 +91,28 @@ type SchemaInput<M extends ParserMap, Partial_ extends boolean> = Partial_ exten
  * `validateSearch`. The same parser definitions a component uses with
  * `useQueryStates` can validate/type the route — without the component
  * importing the route object.
+ *
+ * Validation never fails for a search object: values are stringified and run
+ * through each parser, and absent or invalid keys resolve to the parser
+ * default (or `null`). Only a non-object input yields an issue.
+ * `partialOutput: true` makes the input type partial, so `<Link search>` can
+ * pass a subset of keys.
+ *
+ * @example
+ * ```ts
+ * import { createFileRoute } from "@tanstack/react-router";
+ * import { createStandardSchemaV1, parseAsIndex, parseAsString } from "@xtandard/lib/tanstack/server";
+ *
+ * const tableSearch = {
+ *   pageIndex: parseAsIndex.withDefault(0),
+ *   sort: parseAsString.withDefault("createdAt"),
+ * };
+ * const schema = createStandardSchemaV1(tableSearch, { partialOutput: true });
+ * schema["~standard"].validate({ pageIndex: "3" });
+ * // → { value: { pageIndex: 2, sort: "createdAt" } }
+ *
+ * export const Route = createFileRoute("/users")({ validateSearch: schema });
+ * ```
  */
 export function createStandardSchemaV1<
   M extends ParserMap,

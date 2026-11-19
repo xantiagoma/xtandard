@@ -85,6 +85,27 @@ function singleWithDefault<T>(state: SingleState<T> & { defaultValue: T }): Pars
   };
 }
 
+/**
+ * Build a custom single-value parser from a `parse`/`serialize` pair.
+ * `parse` returns `null` for a value it rejects (the key then resolves to the
+ * default). `serialize` defaults to `String(value)` and `eq` (used by
+ * `clearOnDefault`) to `===`; pass `eq` for object values like `Date`. Chain
+ * `.withDefault()` / `.withOptions()` like any built-in parser.
+ *
+ * @example
+ * ```ts
+ * import { createParser } from "@xtandard/lib/tanstack";
+ *
+ * const parseAsDay = createParser({
+ *   parse: (v) => (Number.isNaN(Date.parse(v)) ? null : new Date(v)),
+ *   serialize: (d: Date) => d.toISOString().slice(0, 10),
+ *   eq: (a, b) => a.valueOf() === b.valueOf(),
+ * });
+ * parseAsDay.parse("2026-12-25"); // → Date 2026-12-25T00:00:00.000Z
+ * parseAsDay.parse("nope"); // → null
+ * parseAsDay.serialize(new Date("2026-12-25")); // → "2026-12-25"
+ * ```
+ */
 export function createParser<T>(builder: {
   parse: (value: string) => T | null;
   serialize?: (value: T) => string;
@@ -165,6 +186,28 @@ function multiWithDefault<T>(
   };
 }
 
+/**
+ * Build a custom multi-value parser for repeated keys (`?id=1&id=2`): `parse`
+ * receives every value of the key (`params.getAll`) and `serialize` returns
+ * one string per repeated key. Return `null` from `parse` to reject. `eq`
+ * defaults to `===`. Only called when the key is present; an absent key
+ * resolves to the default (or `null`).
+ *
+ * @example
+ * ```ts
+ * import { createLoader, createMultiParser } from "@xtandard/lib/tanstack";
+ *
+ * const parseAsIdSet = createMultiParser({
+ *   parse: (values) => {
+ *     const ids = values.map(Number).filter(Number.isInteger);
+ *     return ids.length > 0 ? new Set(ids) : null;
+ *   },
+ *   serialize: (ids: Set<number>) => [...ids].map(String),
+ * });
+ * parseAsIdSet.parse(["1", "2", "x"]); // → Set { 1, 2 }
+ * createLoader({ id: parseAsIdSet })("?id=1&id=2").id; // → Set { 1, 2 }
+ * ```
+ */
 export function createMultiParser<T>(builder: {
   parse: (values: string[]) => T | null;
   serialize: (value: T) => string[];

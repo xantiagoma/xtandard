@@ -104,6 +104,37 @@ sequenceDiagram
   A->>S: syncFromSearch (no-op when unchanged)
 ```
 
+### For adapter authors
+
+The pieces the hooks use to resolve and merge options are exported, for code
+that builds on the store or needs the same rules (e.g. a loader that mirrors
+`clearOnInvalid`):
+
+- `LIBRARY_DEFAULTS` — the bottom option layer listed above.
+- `resolveOptions({ callOptions, parserOptions, hookOptions, adapterDefaults })`
+  — applies the precedence above, option by option.
+- `combineResolvedOptions(a, b)` / `combineRateLimits(a, b)` — merge updates
+  batched in the same tick: `push` beats `replace`, a full navigation beats
+  shallow, and the longest delay wins (debounce over throttle).
+- `hasInvalidKey(params, key, parser)` — `true` when a key is present but fails
+  to parse (what `clearOnInvalid` strips).
+- `QueryStateAdapterContext` — the context `NuqsAdapter` and
+  `QueryStateTestingAdapter` provide. It is `null` outside an adapter, so
+  `useContext(QueryStateAdapterContext) !== null` tells you whether the hooks can run.
+
+```ts
+import { combineResolvedOptions, debounce, resolveOptions } from "@xtandard/lib/tanstack";
+
+const a = resolveOptions({ callOptions: { shallow: true } });
+const b = resolveOptions({ callOptions: { history: "push", limitUrlUpdates: debounce(300) } });
+combineResolvedOptions(a, b); // history "push", shallow true, debounce(300)
+```
+
+Note: `useQueryStates` resolves options from the call, the hook and the adapter
+only. From a parser's `.withOptions()` it reads `clearOnDefault` alone (and that
+wins over a per-call `clearOnDefault`). `useQueryState` applies the full
+precedence.
+
 ## Parsers
 
 `parseAsString`, `parseAsInteger`, `parseAsFloat`, `parseAsHex`,
@@ -155,7 +186,7 @@ const codec = createCursorCodec<{ id: number }>(); // JSON + base64url by defaul
 const [cursor, setCursor] = useQueryState("cursor", parseAsCodec(codec));
 
 // 2. Wrap any parser with a transport (encoder/decoder) layer.
-import { encodeBase64Url, decodeBase64Url } from "@xtandard/lib";
+import { encodeBase64Url, decodeBase64Url } from "@xtandard/lib/pagination";
 import { withTransport, parseAsJson } from "@xtandard/lib/tanstack";
 
 const opaque = withTransport(parseAsJson(schema), {
@@ -182,6 +213,10 @@ const qty = parseAsStandardSchema(v.pipe(v.string(), v.transform(Number), v.numb
 
 `createStandardSchemaV1(parsers, { partialOutput })` goes the other direction —
 turning a parser map into a Standard Schema for `validateSearch` / tRPC.
+
+Writing a custom parser on top of a schema? `validateWithStandardSchema(schema, value)`
+runs it synchronously and returns the output or throws (the issue messages joined
+by `"; "`); catch the throw and return `null` from `parse`.
 
 ### Rison codec (`@xtandard/lib/tanstack/rison`)
 
@@ -275,7 +310,7 @@ const parsed = loadSearch(request.url); // strict mode available
 
 // Build query strings / URLs.
 const serialize = createSerializer(tableSearch);
-serialize("/users", { pageIndex: 1 }); // "/users?page=2"
+serialize("/users", { pageIndex: 1 }); // "/users?pageIndex=2"
 
 // Compose the SAME parsers into a route's validateSearch — the contract lives
 // with the component, the route only imports it when loaders/SSR care.

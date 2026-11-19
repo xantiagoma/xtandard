@@ -53,8 +53,22 @@ export type DateFilterResolver = (input: { value: DatePreset }) => {
  */
 export type SqlDialect = "postgres" | "mysql" | "sqlite";
 
-// Postgres-style LIKE/ILIKE wildcards escaped for the ergonomic
-// contains/startsWith/endsWith affordances (default escape char is backslash).
+/**
+ * Escape the `LIKE`/`ILIKE` wildcards (`%`, `_`) and the escape character
+ * itself (`\`) with a backslash, so a user's text matches literally — used by
+ * the `contains`/`startsWith`/`endsWith` affordances. Backslash is the default
+ * escape character in Postgres and MySQL. SQLite has no default escape
+ * character and the SQL adapters add no `ESCAPE` clause, so on SQLite an
+ * escaped `%`/`_` is matched as a literal backslash plus a wildcard.
+ *
+ * @example
+ * ```ts
+ * import { escapeLike } from "@xtandard/lib/filters";
+ *
+ * escapeLike("50%_off"); // → "50\\%\\_off"  (prints as 50\%\_off)
+ * const pattern = `%${escapeLike("50%")}%`; // a literal "50%" anywhere
+ * ```
+ */
 export function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
@@ -64,6 +78,15 @@ export function escapeLike(value: string): string {
  * shared by the SQL adapters (drizzle/kysely/knex). `contains`/`startsWith`/
  * `endsWith` become `ilike` with an escaped `%` pattern; `like`/`ilike`/
  * `notIlike` pass the pattern through verbatim.
+ *
+ * @example
+ * ```ts
+ * import { sqlTextOp } from "@xtandard/lib/filters";
+ *
+ * sqlTextOp("startsWith", "ada"); // → { op: "ilike", pattern: "ada%" }
+ * sqlTextOp("contains", "50%"); // → { op: "ilike", pattern: "%50\\%%" }  (escaped)
+ * sqlTextOp("like", "A_%"); // → { op: "like", pattern: "A_%" }  (verbatim)
+ * ```
  */
 export function sqlTextOp(
   op: "contains" | "startsWith" | "endsWith" | "like" | "ilike" | "notIlike",
@@ -179,7 +202,43 @@ function kindOf(spec: FieldKindSpec, field: string): FieldKind | undefined {
  * Compile a flat AND-combined list of column filters into a {@link CompiledWhere}
  * (or `null` when nothing is allow-listed). `spec` is the per-field kind
  * allow-list — a field not in `spec`, or whose filter kind doesn't match, is
- * dropped.
+ * dropped. A `date` preset needs `resolveDate` (it throws without one).
+ *
+ * @example
+ * ```ts
+ * import { compileFilters } from "@xtandard/lib/filters";
+ *
+ * const { where } = compileFilters({
+ *   spec: { status: "enum", amount: "number" }, // field → kind allow-list
+ *   filters: [
+ *     { field: "status", filter: { kind: "enum", operator: "eq", value: "open" } },
+ *     { field: "amount", filter: { kind: "number", operator: "between", from: 10, to: 100 } },
+ *     { field: "secret", filter: { kind: "text", operator: "eq", value: "x" } }, // dropped
+ *   ],
+ * });
+ * // where → { type: "and", nodes: [
+ * //   { type: "cond", cond: { field: "status", op: "eq", value: "open" } },
+ * //   { type: "and", nodes: [
+ * //     { type: "cond", cond: { field: "amount", op: "gte", value: 10 } },
+ * //     { type: "cond", cond: { field: "amount", op: "lte", value: 100 } },
+ * //   ] },
+ * // ] }
+ * ```
+ *
+ * @example A date preset, resolved by an injected resolver
+ * ```ts
+ * const { where } = compileFilters({
+ *   spec: { createdAt: "date" },
+ *   filters: [{ field: "createdAt", filter: {
+ *     kind: "date", operator: "is", unit: "month", timeZone: "UTC", anchor: "2026-02-01T00:00:00",
+ *   } }],
+ *   resolveDate: () => ({ start: new Date("2026-02-01T00:00:00Z"), end: new Date("2026-03-01T00:00:00Z") }),
+ * });
+ * // where → { type: "and", nodes: [
+ * //   { type: "cond", cond: { field: "createdAt", op: "gte", value: 2026-02-01T00:00:00.000Z } },
+ * //   { type: "cond", cond: { field: "createdAt", op: "lt", value: 2026-03-01T00:00:00.000Z } },
+ * // ] }
+ * ```
  */
 export function compileFilters(input: {
   spec: FieldKindSpec;
@@ -231,7 +290,35 @@ function nodeToWhere(
   }
 }
 
-/** Compile a recursive and/or/not tree into a {@link CompiledWhere} (or `null`). */
+/**
+ * Compile a recursive and/or/not tree into a {@link CompiledWhere} (or `null`).
+ * Non-allow-listed leaves are dropped the same way as in
+ * {@link compileFilters}; a group left with no children is dropped too, and a
+ * `not` around nothing disappears.
+ *
+ * @example
+ * ```ts
+ * import { compileFilterNode } from "@xtandard/lib/filters";
+ *
+ * const { where } = compileFilterNode({
+ *   spec: { status: "enum", amount: "number" },
+ *   node: {
+ *     type: "or",
+ *     nodes: [
+ *       { type: "column", field: "status", filter: { kind: "enum", operator: "eq", value: "open" } },
+ *       { type: "column", field: "amount", filter: { kind: "number", operator: "notBetween", from: 0, to: 10 } },
+ *     ],
+ *   },
+ * });
+ * // where → { type: "or", nodes: [
+ * //   { type: "cond", cond: { field: "status", op: "eq", value: "open" } },
+ * //   { type: "or", nodes: [
+ * //     { type: "cond", cond: { field: "amount", op: "lt", value: 0 } },
+ * //     { type: "cond", cond: { field: "amount", op: "gt", value: 10 } },
+ * //   ] },
+ * // ] }
+ * ```
+ */
 export function compileFilterNode(input: {
   spec: FieldKindSpec;
   node: FilterNode;

@@ -23,6 +23,34 @@ export type SetValues<M extends ParserMap> = (
  * Like `useQueryState`, but for several keys that move together. All keys
  * update atomically in a single URL commit; unmanaged params are preserved;
  * passing `null` clears every managed key.
+ *
+ * The setter takes a partial object (only the keys present are written; a
+ * key set to `null` is removed), `null`, or an updater receiving all current
+ * values. `options.urlKeys` maps state keys to shorter URL keys; the other
+ * options apply to every key.
+ *
+ * Note: from a parser's `.withOptions()`, this hook only honors
+ * `clearOnDefault` (and it beats a per-call `clearOnDefault`); the other
+ * parser-level options are ignored here. Set them on the hook or per call.
+ *
+ * @example
+ * ```tsx
+ * import { parseAsIndex, parseAsString, useQueryStates } from "@xtandard/lib/tanstack";
+ *
+ * const tableSearch = {
+ *   pageIndex: parseAsIndex.withDefault(0),
+ *   sort: parseAsString.withDefault("createdAt"),
+ * };
+ *
+ * function Table() {
+ *   // ?page=2&sort=name → { pageIndex: 1, sort: "name" }
+ *   const [{ pageIndex, sort }, setSearch] = useQueryStates(tableSearch, {
+ *     urlKeys: { pageIndex: "page" },
+ *   });
+ *   // setSearch({ sort: "email", pageIndex: 0 }) → one commit: ?sort=email
+ *   // setSearch(null) → removes page and sort, keeps other params
+ * }
+ * ```
  */
 export function useQueryStates<M extends ParserMap>(
   parsers: M,

@@ -6,10 +6,27 @@ type Waiter<T, TReturn> = {
 };
 
 /**
+ * Extract the return type from an AsyncChannel instance or factory.
+ */
+export type AsyncChannelReturnType<T> =
+  T extends AsyncChannel<unknown, infer R>
+    ? R
+    : T extends () => AsyncChannel<unknown, infer R>
+      ? R
+      : never;
+
+/**
  * A push-based AsyncIterable that allows external control over yielded values.
  *
- * Similar to Completer but for iterables - you can push items that get yielded,
- * resolve to complete the iteration, or reject to throw an error.
+ * Similar to `Completer` but for iterables: producers call `push(value)` to
+ * yield an item, `close(returnValue?)` (or its alias `resolve`) to end the
+ * iteration, or `reject(error)` to make the consumer's `for await` throw.
+ * Consumers read it with `for await`. When a consumer is waiting, `push` hands
+ * the value straight to it; otherwise the value is buffered until one asks.
+ * `push` after `close`/`reject` throws, until `reset()`.
+ *
+ * `T` is the item type; `TReturn` (default `void`) is the iterator's return
+ * value, set by `close(returnValue)`.
  *
  * ## Modes
  *
@@ -18,8 +35,12 @@ type Waiter<T, TReturn> = {
  * - **broadcast** (via `broadcast()`) - Multiple simultaneous consumers, each gets values pushed after subscribing
  * - **broadcastReplay** (via `broadcastReplay()`) - Multiple simultaneous consumers, new subscribers get past values + future values
  *
+ * There is no public constructor; pick the mode with a static factory.
+ *
  * @example Basic usage (consume mode)
  * ```ts
+ * import { AsyncChannel } from "@xtandard/lib";
+ *
  * const channel = AsyncChannel.create<number>();
  *
  * channel.push(1);
@@ -61,6 +82,7 @@ type Waiter<T, TReturn> = {
  * channel.close();
  *
  * await Promise.all([consumer1, consumer2]);
+ * // 1: 1, 2: 1, 1: 2, 2: 2
  * ```
  *
  * @example ReplayBroadcast mode - late subscribers catch up
@@ -86,8 +108,8 @@ type Waiter<T, TReturn> = {
  * channel.close();
  *
  * await Promise.all([consumerA, consumerB]);
- * // A: 1, A: 2, A: 3, A: 4
- * // B: 1, B: 2, B: 3, B: 4
+ * // A: 1, B: 1, A: 2, B: 2, A: 3, B: 3, A: 4, B: 4
+ * // (each consumer sees 1, 2, 3, 4 in order)
  * ```
  *
  * @example Error handling
@@ -120,16 +142,6 @@ type Waiter<T, TReturn> = {
  * for await (const v of channel) console.log(v); // 2
  * ```
  */
-/**
- * Extract the return type from an AsyncChannel instance or factory.
- */
-export type AsyncChannelReturnType<T> =
-  T extends AsyncChannel<unknown, infer R>
-    ? R
-    : T extends () => AsyncChannel<unknown, infer R>
-      ? R
-      : never;
-
 export class AsyncChannel<T, TReturn = void> implements AsyncIterable<T> {
   private readonly _buffer: T[] = [];
   private readonly _waiters: Array<Waiter<T, TReturn>> = [];

@@ -16,7 +16,20 @@ import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from 
 
 type BigValue = InstanceType<typeof Big>;
 
-/** Exact-decimal {@link IntervalDomain} backed by big.js. Continuous. */
+/**
+ * Exact-decimal {@link IntervalDomain} backed by big.js. Continuous. Bound to a
+ * class as {@link BigInterval}; use it directly with `parseInterval`/`mergeIntervals`.
+ *
+ * @example
+ * ```ts
+ * import Big from "big.js";
+ * import { parseInterval } from "@xtandard/lib/interval";
+ * import { bigDomain } from "@xtandard/lib/big";
+ *
+ * bigDomain.compare(new Big("0.1"), new Big("0.10")); // 0
+ * parseInterval(bigDomain, "[1.5,2.5]").toString(); // "[1.5,2.5]"
+ * ```
+ */
 export const bigDomain: IntervalDomain<BigValue> = {
   name: "big",
   compare: (a, b) => a.cmp(b),
@@ -29,10 +42,17 @@ export const bigDomain: IntervalDomain<BigValue> = {
 /**
  * Interval over big.js `Big` values — exact, continuous.
  *
- *   import { BigInterval } from "@xtandard/lib/big";
- *   import Big from "big.js";
+ * @example
+ * ```ts
+ * import Big from "big.js";
+ * import { BigInterval } from "@xtandard/lib/big";
  *
- *   BigInterval.closed(new Big("0.1"), new Big("0.3")).length(); // 0.2 (exact)
+ * const r = BigInterval.closed(new Big("0.1"), new Big("0.3"));
+ * r.length(); // 0.2 (no float fuzz)
+ * r.toString(); // "[0.1,0.3]"
+ * r.contains(new Big("0.2")); // true
+ * r.middle()?.toString(); // "0.2"
+ * ```
  */
 export const BigInterval: BoundIntervalType<BigValue> = defineIntervalType(bigDomain);
 /** Instance type of {@link BigInterval}. */

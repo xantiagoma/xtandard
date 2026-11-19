@@ -62,6 +62,15 @@ export type CursorCodecOptions<T = Record<string, unknown>> = {
 /**
  * Encode a UTF-8 string as base64url (no padding). Unlike `btoa`, handles
  * non-Latin1 input; unlike `Buffer`, works in browsers and edge runtimes.
+ * The default encoder of {@link createCursorCodec}; reverse with {@link decodeBase64Url}.
+ *
+ * @example
+ * ```ts
+ * import { encodeBase64Url } from "@xtandard/lib/pagination";
+ *
+ * encodeBase64Url('{"id":7}'); // "eyJpZCI6N30"
+ * encodeBase64Url("café ☕"); // "Y2Fmw6kg4piV"
+ * ```
  */
 export function encodeBase64Url(str: string): string {
   const bytes = new TextEncoder().encode(str);
@@ -73,7 +82,18 @@ export function encodeBase64Url(str: string): string {
 }
 
 /**
- * Decode a base64url (or plain base64) string back to UTF-8.
+ * Decode a base64url (or plain base64) string back to UTF-8. Missing `=`
+ * padding is fine. The default decoder of {@link createCursorCodec}; throws on
+ * input that isn't base64.
+ *
+ * @example
+ * ```ts
+ * import { decodeBase64Url } from "@xtandard/lib/pagination";
+ *
+ * decodeBase64Url("eyJpZCI6N30"); // '{"id":7}'
+ * decodeBase64Url("eyJpZCI6N30="); // '{"id":7}' (padded base64 works too)
+ * decodeBase64Url("Y2Fmw6kg4piV"); // "café ☕"
+ * ```
  */
 export function decodeBase64Url(token: string): string {
   const base64 = token.replaceAll("-", "+").replaceAll("_", "/");
@@ -92,7 +112,22 @@ const ISO_DATE_TIME_REGEX =
 /**
  * Check whether a value is an ISO-8601 date or datetime string
  * (`YYYY-MM-DD`, optionally with time and `Z`/offset) that the host engine
- * can actually parse.
+ * can actually parse. {@link createCursorCodec} uses it to revive dates on decode.
+ *
+ * Note: the check is a pattern plus `Date.parse`, not a calendar check. Engines
+ * roll over day overflow, so `"2024-02-30"` passes (and revives as March 1),
+ * while an out-of-range month like `"2024-13-01"` fails.
+ *
+ * @example
+ * ```ts
+ * import { isIsoDateString } from "@xtandard/lib/pagination";
+ *
+ * isIsoDateString("2024-01-15"); // true
+ * isIsoDateString("2024-01-15T10:30:00.123+02:00"); // true
+ * isIsoDateString("2024-13-01"); // false
+ * isIsoDateString("yesterday"); // false
+ * isIsoDateString(1705312200000); // false (not a string)
+ * ```
  */
 export function isIsoDateString(value: unknown): value is string {
   return (

@@ -76,18 +76,51 @@ function ipExtras(
   };
 }
 
+/**
+ * The IPv4 interval class without the `.ip()`/`.cidr()` helpers. Internal: it is
+ * not exported and shows up in the API only as the instance type behind
+ * {@link Ipv4Interval}. Use `Ipv4Interval`, which is this same class plus the helpers.
+ *
+ * @example
+ * ```ts
+ * import { Ipv4Interval } from "@xtandard/lib/ip";
+ *
+ * const r: Ipv4Interval = Ipv4Interval.parse("[10.0.0.0,10.0.0.255]");
+ * r.length(); // 256
+ * ```
+ */
 const Ipv4Base = defineIntervalType(ipDomain("ipv4", 4, ipaddr.IPv4));
+/**
+ * The IPv6 interval class without the `.ip()`/`.cidr()` helpers. Internal: it is
+ * not exported and shows up in the API only as the instance type behind
+ * {@link Ipv6Interval}. Use `Ipv6Interval`, which is this same class plus the helpers.
+ *
+ * @example
+ * ```ts
+ * import { Ipv6Interval } from "@xtandard/lib/ip";
+ *
+ * const r: Ipv6Interval = Ipv6Interval.cidr("2001:db8::/120");
+ * r.length(); // 256
+ * ```
+ */
 const Ipv6Base = defineIntervalType(ipDomain("ipv6", 16, ipaddr.IPv6));
 
 /**
- * Interval over IPv4 addresses (discrete, ε = one address).
+ * Interval over IPv4 addresses (discrete, ε = one address). Values are the
+ * address as a `bigint`: convert with `.ip("10.0.0.1")`, or build a whole
+ * block with `.cidr("10.0.0.0/8")`. `toString()`/`parse()` use dotted form.
  *
- *   import { Ipv4Interval } from "@xtandard/lib/ip";
+ * @example
+ * ```ts
+ * import { Ipv4Interval } from "@xtandard/lib/ip";
  *
- *   const lan = Ipv4Interval.cidr("192.168.0.0/16");      // or .closed(Ipv4Interval.ip("192.168.0.0"), …)
- *   lan.contains(Ipv4Interval.ip("192.168.1.50"));        // true
- *   lan.length();                                         // 65536
- *   lan.toString();                                       // "[192.168.0.0,192.168.255.255]"
+ * const lan = Ipv4Interval.cidr("192.168.0.0/16");
+ * lan.contains(Ipv4Interval.ip("192.168.1.50")); // true
+ * lan.length(); // 65536
+ * lan.toString(); // "[192.168.0.0,192.168.255.255]"
+ * Ipv4Interval.cidr("10.0.0.0/24").difference(Ipv4Interval.cidr("10.0.0.64/26")).map(String);
+ * // ["[10.0.0.0,10.0.0.63]", "[10.0.0.128,10.0.0.255]"]
+ * ```
  */
 export const Ipv4Interval = Object.assign(
   Ipv4Base,
@@ -96,7 +129,21 @@ export const Ipv4Interval = Object.assign(
 /** Instance type of {@link Ipv4Interval}. */
 export type Ipv4Interval = InstanceType<typeof Ipv4Base>;
 
-/** Interval over IPv6 addresses (discrete, ε = one address). Build with `.ip()` / `.cidr()`. */
+/**
+ * Interval over IPv6 addresses (discrete, ε = one address). Build with `.ip()` /
+ * `.cidr()`; `toString()`/`parse()` use the compressed form. `length()` is a
+ * `number`, so it loses precision for blocks larger than 2^53 addresses.
+ *
+ * @example
+ * ```ts
+ * import { Ipv6Interval } from "@xtandard/lib/ip";
+ *
+ * const net = Ipv6Interval.cidr("2001:db8::/32");
+ * net.contains(Ipv6Interval.ip("2001:db8::1")); // true
+ * net.encloses(Ipv6Interval.cidr("2001:db8:abcd::/48")); // true
+ * net.toString(); // "[2001:db8::,2001:db8:ffff:ffff:ffff:ffff:ffff:ffff]"
+ * ```
+ */
 export const Ipv6Interval = Object.assign(
   Ipv6Base,
   ipExtras(16, ipaddr.IPv6, (lo, hi) => Ipv6Base.closed(lo, hi)),

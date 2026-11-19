@@ -17,7 +17,21 @@ import Decimal from "decimal.js";
 
 import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from "./interval.ts";
 
-/** Exact-decimal {@link IntervalDomain} backed by decimal.js. Continuous; finite-only. */
+/**
+ * Exact-decimal {@link IntervalDomain} backed by decimal.js. Continuous;
+ * finite-only (`NaN`/`±Infinity` fail `isValid`). Bound to a class as
+ * {@link DecimalInterval}.
+ *
+ * @example
+ * ```ts
+ * import Decimal from "decimal.js";
+ * import { parseInterval } from "@xtandard/lib/interval";
+ * import { decimalDomain } from "@xtandard/lib/decimal";
+ *
+ * decimalDomain.isValid?.(new Decimal(NaN)); // false
+ * parseInterval(decimalDomain, "[0.1,0.3]").length(); // 0.2
+ * ```
+ */
 export const decimalDomain: IntervalDomain<Decimal> = {
   name: "decimal",
   compare: (a, b) => a.cmp(b),
@@ -31,13 +45,18 @@ export const decimalDomain: IntervalDomain<Decimal> = {
 /**
  * Interval over decimal.js `Decimal` values — exact, continuous.
  *
- *   import { DecimalInterval } from "@xtandard/lib/decimal";
- *   import Decimal from "decimal.js";
+ * @example
+ * ```ts
+ * import Decimal from "decimal.js";
+ * import { DecimalInterval } from "@xtandard/lib/decimal";
  *
- *   const r = DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3"));
- *   r.length();        // 0.2   (exact — no float fuzz)
- *   r.toString();      // "[0.1,0.3]"
- *   r.contains(new Decimal("0.2")); // true
+ * const r = DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3"));
+ * r.length(); // 0.2 (no float fuzz)
+ * r.toString(); // "[0.1,0.3]"
+ * r.contains(new Decimal("0.2")); // true
+ * DecimalInterval.parse("[1.000000000000000000000000000001,2]").toString();
+ * // "[1.000000000000000000000000000001,2]" (31 significant digits kept)
+ * ```
  */
 export const DecimalInterval: BoundIntervalType<Decimal> = defineIntervalType(decimalDomain);
 /** Instance type of {@link DecimalInterval}. */

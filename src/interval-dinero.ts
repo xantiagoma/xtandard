@@ -38,7 +38,20 @@ export type DineroInterval<TCurrency extends string = string> = Interval<Dinero<
  * Build an {@link IntervalDomain} for one dinero.js currency. DISCRETE — the
  * epsilon is one minor unit at the currency's standard `exponent`. All
  * stepping/measuring/serialization happens in those minor units; `compare`
- * defers to dinero's own (scale-aware) comparison.
+ * defers to dinero's own (scale-aware) comparison. {@link createDineroInterval}
+ * wraps this in a class; use the domain directly with `parseInterval`/`mergeIntervals`.
+ *
+ * @example
+ * ```ts
+ * import { dinero, toDecimal, USD } from "dinero.js";
+ * import { parseInterval } from "@xtandard/lib/interval";
+ * import { dineroDomain } from "@xtandard/lib/dinero";
+ *
+ * const usdDomain = dineroDomain(USD);
+ * usdDomain.name; // "dinero:USD"
+ * toDecimal(usdDomain.next!(dinero({ amount: 199, currency: USD }))); // "2.00"
+ * parseInterval(usdDomain, "[0,999]").length(); // 1000 (cents $0.00..$9.99)
+ * ```
  */
 export function dineroDomain<TCurrency extends string>(
   currency: DineroCurrency<number, TCurrency>,
@@ -62,18 +75,23 @@ export function dineroDomain<TCurrency extends string>(
 
 /**
  * Bind a dinero.js currency to a `new`-able interval CLASS (see
- * {@link defineIntervalType}). The string form is the currency's minor units:
+ * {@link defineIntervalType}). The string form is the currency's minor units.
  *
- *   import { dinero, USD } from "dinero.js";
- *   const UsdInterval = createDineroInterval(USD);
+ * @example
+ * ```ts
+ * import { dinero, USD } from "dinero.js";
+ * import { createDineroInterval } from "@xtandard/lib/dinero";
  *
- *   const tier = UsdInterval.closed(
- *     dinero({ amount: 5_000, currency: USD }),  // $50.00
- *     dinero({ amount: 10_000, currency: USD }), // $100.00
- *   );
- *   tier.contains(dinero({ amount: 7_500, currency: USD })); // true
- *   tier.toString(); // "[5000,10000]"  (minor units)
- *   UsdInterval.parse("[5000,10000]");
+ * const UsdInterval = createDineroInterval(USD);
+ * const usd = (cents: number) => dinero({ amount: cents, currency: USD });
+ *
+ * const tier = UsdInterval.closed(usd(5_000), usd(10_000)); // $50.00 to $100.00
+ * tier.contains(usd(7_500)); // true
+ * tier.length(); // 5001 (cents, both ends included)
+ * tier.toString(); // "[5000,10000]" (minor units)
+ * UsdInterval.closed(usd(100), usd(105)).union(UsdInterval.closed(usd(106), usd(110)))?.toString();
+ * // "[100,110]" (adjacent cents merge)
+ * ```
  */
 export function createDineroInterval<TCurrency extends string>(
   currency: DineroCurrency<number, TCurrency>,

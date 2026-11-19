@@ -81,6 +81,24 @@ export type TanStackQueryStateAdapterProps = {
  * Bridges the query-params store to TanStack Router. Shallow updates (default)
  * write the URL directly; `shallow: false` updates navigate through the router
  * so loaders, validation, pending state, and Start SSR participate.
+ *
+ * Render it inside `RouterProvider` (it calls `useRouter`), typically in the
+ * root route component. Also exported as {@link NuqsAdapter}.
+ *
+ * @example
+ * ```tsx
+ * import { createRootRoute, Outlet } from "@tanstack/react-router";
+ * import { NuqsAdapter, throttle } from "@xtandard/lib/tanstack";
+ * import { keepSubDelims } from "@xtandard/lib/web";
+ *
+ * export const Route = createRootRoute({
+ *   component: () => (
+ *     <NuqsAdapter defaultOptions={{ limitUrlUpdates: throttle(120) }} serializeSearch={keepSubDelims}>
+ *       <Outlet />
+ *     </NuqsAdapter>
+ *   ),
+ * });
+ * ```
  */
 export function TanStackQueryStateAdapter({
   children,
@@ -131,7 +149,24 @@ export function TanStackQueryStateAdapter({
   );
 }
 
-/** nuqs-compatible alias. */
+/**
+ * nuqs-compatible alias of {@link TanStackQueryStateAdapter}: the same
+ * component, so code written against nuqs's `<NuqsAdapter>` keeps working.
+ *
+ * @example
+ * ```tsx
+ * import { createRootRoute, Outlet } from "@tanstack/react-router";
+ * import { NuqsAdapter } from "@xtandard/lib/tanstack";
+ *
+ * export const Route = createRootRoute({
+ *   component: () => (
+ *     <NuqsAdapter>
+ *       <Outlet />
+ *     </NuqsAdapter>
+ *   ),
+ * });
+ * ```
+ */
 export { TanStackQueryStateAdapter as NuqsAdapter };
 
 export { keepSubDelims } from "../core/urlsearchparams.ts";

@@ -13,7 +13,21 @@ import { BigNumber } from "bignumber.js";
 
 import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from "./interval.ts";
 
-/** Exact-decimal {@link IntervalDomain} backed by bignumber.js. Continuous; finite-only. */
+/**
+ * Exact-decimal {@link IntervalDomain} backed by bignumber.js. Continuous;
+ * finite-only (`NaN`/`±Infinity` fail `isValid`). Bound to a class as
+ * {@link BigNumberInterval}.
+ *
+ * @example
+ * ```ts
+ * import { BigNumber } from "bignumber.js";
+ * import { parseInterval } from "@xtandard/lib/interval";
+ * import { bigNumberDomain } from "@xtandard/lib/bignumber";
+ *
+ * bigNumberDomain.isValid?.(new BigNumber(Infinity)); // false
+ * parseInterval(bigNumberDomain, "[0.1,0.3]").length(); // 0.2
+ * ```
+ */
 export const bigNumberDomain: IntervalDomain<BigNumber> = {
   name: "bignumber",
   // comparedTo is null only when a NaN is involved; finite members never hit that.
@@ -28,10 +42,17 @@ export const bigNumberDomain: IntervalDomain<BigNumber> = {
 /**
  * Interval over bignumber.js `BigNumber` values — exact, continuous.
  *
- *   import { BigNumberInterval } from "@xtandard/lib/bignumber";
- *   import { BigNumber } from "bignumber.js";
+ * @example
+ * ```ts
+ * import { BigNumber } from "bignumber.js";
+ * import { BigNumberInterval } from "@xtandard/lib/bignumber";
  *
- *   BigNumberInterval.closed(new BigNumber("0.1"), new BigNumber("0.3")).length(); // 0.2 (exact)
+ * const r = BigNumberInterval.closed(new BigNumber("0.1"), new BigNumber("0.3"));
+ * r.length(); // 0.2 (no float fuzz)
+ * r.toString(); // "[0.1,0.3]"
+ * r.contains(new BigNumber("0.25")); // true
+ * r.contains(new BigNumber(NaN)); // false
+ * ```
  */
 export const BigNumberInterval: BoundIntervalType<BigNumber> = defineIntervalType(bigNumberDomain);
 /** Instance type of {@link BigNumberInterval}. */

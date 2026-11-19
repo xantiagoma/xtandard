@@ -294,6 +294,21 @@ behavior are identical:
 | `@xtandard/lib/big`       | `BigInterval`       | `big.js`       | Smallest footprint; always finite   |
 | `@xtandard/lib/bignumber` | `BigNumberInterval` | `bignumber.js` | Base conversion; common in finance  |
 
+Each entry also exports its bare domain (`decimalDomain`, `bigDomain`, `bigNumberDomain`)
+for `parseInterval`, `mergeIntervals`, or your own `defineIntervalType` class:
+
+```ts
+import Big from "big.js";
+import { mergeIntervals, parseInterval } from "@xtandard/lib/interval";
+import { BigInterval, bigDomain } from "@xtandard/lib/big";
+
+parseInterval(bigDomain, "[1.5,2.5]").toString(); // "[1.5,2.5]"
+mergeIntervals(bigDomain, [
+  BigInterval.closed(new Big("0"), new Big("0.5")),
+  BigInterval.closed(new Big("0.5"), new Big("1")),
+]).map(String); // ["[0,1]"]
+```
+
 ## Fraction intervals
 
 `@xtandard/lib/fraction` binds the engine to [fraction.js](https://github.com/rawify/Fraction.js)
@@ -314,7 +329,9 @@ FractionInterval.parse("[1/3,2/3]").toString(); // "[1/3,2/3]"  (round-trips, ex
 
 CONTINUOUS (rationals are dense). `compare`, `contains`, and the `"n/d"` string form are
 exact rationals; `measure`/`length()`/`middle()` round-trip through a JS `number` (so a
-length is a floating-point magnitude even though the endpoints stay exact).
+length is a floating-point magnitude even though the endpoints stay exact):
+`FractionInterval.closed(third(1), third(2)).length()` is `0.3333333333333333`.
+`fractionDomain` is exported too, for `parseInterval`/`mergeIntervals`/`defineIntervalType`.
 
 ## Money intervals
 
@@ -409,6 +426,20 @@ CONTINUOUS — prereleases (`1.0.0-rc.1 < 1.0.0`) mean no clean successor, so th
 semver (`parse` normalizes and rejects invalid versions). `semverDomain` is exported for use
 with `defineIntervalType`/`parseInterval`.
 
+Membership is plain semver **precedence**, not npm range matching. A prerelease of the
+upper bound sorts below it, so it is inside a half-open range, while npm's
+`>=1.2.0 <2.0.0` excludes prereleases by default:
+
+```ts
+compatible.contains("2.0.0-rc.1"); // true (2.0.0-rc.1 < 2.0.0)
+// semver.satisfies("2.0.0-rc.1", ">=1.2.0 <2.0.0") → false
+```
+
+To keep the upper bound's prereleases out, end at `2.0.0-0`, the lowest possible prerelease:
+`SemverInterval.closedOpen("1.2.0", "2.0.0-0").contains("2.0.0-rc.1")` is `false`.
+Prereleases of versions inside the range (`1.5.0-beta.1`) are still members; filter them
+yourself if you need npm's full rules.
+
 ## IP intervals
 
 `@xtandard/lib/ip` binds the engine to IPv4/IPv6 addresses via
@@ -429,7 +460,20 @@ Ipv6Interval.cidr("2001:db8::/32").contains(Ipv6Interval.ip("2001:db8::1")); // 
 
 Addresses are modeled as their integer value (`bigint`) so arithmetic never overflows the
 address space; `toString()` renders the canonical dotted (v4) / compressed (v6) form. Build
-from a string with `.ip(addr)` or from a block with `.cidr(block)`.
+from a string with `.ip(addr)` or from a block with `.cidr(block)`. `Ipv4Interval` and
+`Ipv6Interval` are also types (the instance type), and all the set operations work on
+address ranges:
+
+```ts
+Ipv4Interval.ip("10.0.0.1"); // 167772161n
+Ipv4Interval.cidr("10.0.0.0/25").union(Ipv4Interval.cidr("10.0.0.128/25"))?.toString();
+// "[10.0.0.0,10.0.0.255]" (adjacent blocks merge)
+Ipv4Interval.cidr("10.0.0.0/24").difference(Ipv4Interval.cidr("10.0.0.64/26")).map(String);
+// ["[10.0.0.0,10.0.0.63]", "[10.0.0.128,10.0.0.255]"]
+```
+
+`length()` is a JS `number`, so it is exact up to 2^53 addresses; a large IPv6 block
+(`/32` has 2^96) reports an approximate count.
 
 ## Edge cases
 

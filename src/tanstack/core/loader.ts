@@ -27,6 +27,26 @@ function inputToSearchParams(input: Exclude<LoaderInput, Promise<unknown>>): URL
  * Server-side parser. Accepts a URL string, query string, `URL`,
  * `URLSearchParams`, `Request`, a record, or a promise of any of those, and
  * returns the parsed values. In strict mode, present-but-invalid values throw.
+ *
+ * Absent or invalid keys resolve to the parser default (or `null`). A promise
+ * input returns a promise; any other input returns the values directly.
+ * `urlKeys` maps logical keys to the URL keys they read from, and `strict`
+ * can be set per loader or per call.
+ *
+ * @example
+ * ```ts
+ * import { createLoader, parseAsIndex, parseAsString } from "@xtandard/lib/tanstack/server";
+ *
+ * const loadSearch = createLoader({
+ *   pageIndex: parseAsIndex.withDefault(0),
+ *   sort: parseAsString.withDefault("createdAt"),
+ * });
+ *
+ * loadSearch("https://app.test/users?pageIndex=3&sort=name"); // → { pageIndex: 2, sort: "name" }
+ * loadSearch(new Request("https://app.test/users")); // → { pageIndex: 0, sort: "createdAt" }
+ * loadSearch("?pageIndex=abc"); // → { pageIndex: 0, sort: "createdAt" }
+ * loadSearch("?pageIndex=abc", { strict: true }); // throws Error: Invalid value for search param "pageIndex"
+ * ```
  */
 export function createLoader<M extends ParserMap>(
   parsers: M,

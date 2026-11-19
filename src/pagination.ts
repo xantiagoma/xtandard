@@ -67,6 +67,20 @@ export type Paginated<T> = { items: T[]; pageInfo: PageInfo };
 /**
  * Convert page or offset input into a `{ limit, offset }` window
  * (`page` is 1-based). Cursor input is intentionally not convertible.
+ *
+ * Never throws: bad transport numbers are clamped. Values are truncated to
+ * integers, `page`/`pageSize`/`limit` to at least 1, and `offset` to at least 0.
+ * The returned `limit` is the raw page size (no lookahead row added here).
+ *
+ * @example
+ * ```ts
+ * import { toOffsetWindow } from "@xtandard/lib/pagination";
+ *
+ * toOffsetWindow({ type: "page", page: 3, pageSize: 20 }); // { limit: 20, offset: 40 }
+ * toOffsetWindow({ type: "offset", limit: 20, offset: 40 }); // { limit: 20, offset: 40 }
+ * toOffsetWindow({ type: "page", page: 0, pageSize: -5 }); // { limit: 1, offset: 0 }
+ * toOffsetWindow({ type: "offset", limit: 2.7, offset: -10 }); // { limit: 2, offset: 0 }
+ * ```
  */
 export function toOffsetWindow(input: PagePagination | OffsetPagination): OffsetWindow {
   if (input.type === "page") {
@@ -207,7 +221,7 @@ export type PaginatorMaybeAsync<T> = PaginatorIteration<T> & {
  * const { items, pageInfo } = paginator.paginate({ type: "page", page: 1, pageSize: 10 }); // no await
  * ```
  *
- * @example Iterating everything — `pages()` / `items()` auto-walk lazily
+ * @example Iterating everything (pages and items walk lazily)
  * ```ts
  * for await (const page of paginator.pages({ type: "cursor", limit: 100 })) {
  *   await exportBatch(page.items); // one fetch per loop turn

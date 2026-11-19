@@ -24,6 +24,30 @@ export type QueryStateTestingAdapterProps = {
 /**
  * Adapter for unit tests: drives `useQueryState`/`useQueryStates` from a static
  * search string and reports commits via `onUrlUpdate` — no router required.
+ *
+ * The store is created once from `searchParams` and re-synced when that prop
+ * changes. Commits still go through the rate limit (default throttle 50 ms),
+ * so wait for `onUrlUpdate` (or await the setter's promise) before asserting.
+ * Each event's `queryString` has no leading `?`.
+ *
+ * @example
+ * ```tsx
+ * import { expect, vi } from "vitest";
+ * import { render } from "vitest-browser-react";
+ * import { QueryStateTestingAdapter, type UrlUpdateEvent } from "@xtandard/lib/tanstack/testing";
+ *
+ * // <Counter> uses useQueryState("count", parseAsInteger.withDefault(0)) and a "+1" button.
+ * const updates: UrlUpdateEvent[] = [];
+ * const screen = await render(<Counter />, {
+ *   wrapper: ({ children }) => (
+ *     <QueryStateTestingAdapter searchParams="?count=42" onUrlUpdate={(e) => updates.push(e)}>
+ *       {children}
+ *     </QueryStateTestingAdapter>
+ *   ),
+ * });
+ * await screen.getByText("+1").click();
+ * await vi.waitFor(() => expect(updates.at(-1)?.queryString).toBe("count=43"));
+ * ```
  */
 export function QueryStateTestingAdapter({
   children,
