@@ -18,7 +18,7 @@ function* enumerateSync<T>(iterable: Iterable<T>, start: number): Generator<[num
  * Note: for a *sync* iterable of Promises, values are yielded as-is. Use
  * `enumerateAsync` to await each value instead.
  *
- * @example Sync iterables — plain `Generator`, no `await` anywhere
+ * @example Sync iterables give a plain Generator, no await anywhere
  * ```ts
  * for (const [i, ch] of enumerate("abc")) {
  *   // [0, "a"], [1, "b"], [2, "c"]
@@ -35,7 +35,7 @@ function* enumerateSync<T>(iterable: Iterable<T>, start: number): Generator<[num
  * [...enumerate(["a", "b"], 5)]; // [[5, "a"], [6, "b"]]
  * ```
  *
- * @example Async iterables — `AsyncGenerator`, drive with `for await`
+ * @example Async iterables give an AsyncGenerator, drive it with for await
  * ```ts
  * async function* rows() {
  *   yield await db.row(1);
@@ -80,7 +80,7 @@ export function enumerate<T>(
  * `for await`s the source, so Promise values inside a sync iterable are
  * awaited (sequentially, in order) before being yielded.
  *
- * @example The difference from `enumerate`
+ * @example The difference from enumerate
  * ```ts
  * const promises = [fetchUser(1), fetchUser(2)]; // sync array OF Promises
  *

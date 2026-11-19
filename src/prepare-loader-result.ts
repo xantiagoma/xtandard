@@ -1,5 +1,30 @@
 import type { MaybePromise } from "./types";
 
+// ─── One-to-one ────────────────────────────────────────────
+
+interface PrepareLoaderResultOneOptions<TKey, TDBResult, TFinalResult, TDefault> {
+  keys: readonly TKey[];
+  results: TDBResult[];
+  mode?: "one";
+  getKey?: (row: TDBResult) => TKey;
+  mapValue?: (row: TDBResult) => MaybePromise<TFinalResult>;
+  keyToString?: (key: TKey) => string;
+  defaultValue?: TDefault;
+}
+
+// ─── One-to-many ───────────────────────────────────────────
+
+interface PrepareLoaderResultManyOptions<TKey, TDBResult, TFinalResult> {
+  keys: readonly TKey[];
+  results: TDBResult[];
+  mode: "many";
+  getKey?: (row: TDBResult) => TKey;
+  mapValue?: (row: TDBResult) => MaybePromise<TFinalResult>;
+  keyToString?: (key: TKey) => string;
+}
+
+// ─── Overloads ─────────────────────────────────────────────
+
 /**
  * Map a batch of DB results back to the original keys in order.
  *
@@ -14,7 +39,24 @@ import type { MaybePromise } from "./types";
  * - Custom `defaultValue`: fallback for missing keys (instead of undefined)
  * - Composite keys via `keyToString`
  *
- * @example Basic (rows have `id` or `uid`)
+ * Without `getKey`, a row's key is `row.id`, else `row.uid`; a row with neither
+ * makes the call throw. Always returns a Promise (because `mapValue` may be async).
+ *
+ * @example Align rows with keys
+ * ```ts
+ * import { prepareLoaderResult } from "@xtandard/lib";
+ *
+ * const keys = [3, 1, 2];
+ * const rows = [
+ *   { id: 1, name: "Ada" },
+ *   { id: 2, name: "Linus" },
+ * ];
+ *
+ * await prepareLoaderResult({ keys, results: rows });
+ * // [undefined, { id: 1, name: "Ada" }, { id: 2, name: "Linus" }]
+ * ```
+ *
+ * @example Inside a DataLoader batch function (rows keyed by id or uid)
  * ```ts
  * const loader = createLoader<User | undefined, Ctx>(async ({ keys }) => {
  *   const rows = await db.users.findMany({ where: { id: { in: [...keys] } } });
@@ -54,33 +96,22 @@ import type { MaybePromise } from "./types";
  * });
  * // Missing keys return null instead of undefined
  * ```
+ *
+ * @example Composite keys
+ * ```ts
+ * await prepareLoaderResult({
+ *   keys: [
+ *     { org: "x", slug: "home" },
+ *     { org: "y", slug: "home" },
+ *   ],
+ *   results: [{ org: "y", slug: "home", title: "Y home" }],
+ *   getKey: (row) => ({ org: row.org, slug: row.slug }),
+ *   keyToString: (key) => `${key.org}:${key.slug}`, // match object keys by value
+ *   mapValue: (row) => row.title,
+ * });
+ * // [undefined, "Y home"]
+ * ```
  */
-
-// ─── One-to-one ────────────────────────────────────────────
-
-interface PrepareLoaderResultOneOptions<TKey, TDBResult, TFinalResult, TDefault> {
-  keys: readonly TKey[];
-  results: TDBResult[];
-  mode?: "one";
-  getKey?: (row: TDBResult) => TKey;
-  mapValue?: (row: TDBResult) => MaybePromise<TFinalResult>;
-  keyToString?: (key: TKey) => string;
-  defaultValue?: TDefault;
-}
-
-// ─── One-to-many ───────────────────────────────────────────
-
-interface PrepareLoaderResultManyOptions<TKey, TDBResult, TFinalResult> {
-  keys: readonly TKey[];
-  results: TDBResult[];
-  mode: "many";
-  getKey?: (row: TDBResult) => TKey;
-  mapValue?: (row: TDBResult) => MaybePromise<TFinalResult>;
-  keyToString?: (key: TKey) => string;
-}
-
-// ─── Overloads ─────────────────────────────────────────────
-
 export function prepareLoaderResult<TKey, TDBResult, TFinalResult = TDBResult>(
   options: PrepareLoaderResultManyOptions<TKey, TDBResult, TFinalResult>,
 ): Promise<TFinalResult[][]>;

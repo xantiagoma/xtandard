@@ -30,6 +30,20 @@ const MONGO_FIELD_PATH = /^[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*$/
  * Accepts dotted paths such as `author.name`; rejects `$` operators,
  * whitespace, empty segments, and other unsafe field strings. Field mappings
  * must be server-owned and should never come from request data.
+ * {@link toMongoKeyset} runs every mapped field through it; call it yourself
+ * when building other filters from configurable field names.
+ *
+ * @returns The same `field`, unchanged, when valid.
+ * @throws If `field` is not a dot-separated list of identifiers.
+ *
+ * @example
+ * ```ts
+ * import { assertMongoFieldPath } from "@xtandard/lib/pagination/mongo";
+ *
+ * assertMongoFieldPath("author.name"); // "author.name"
+ * assertMongoFieldPath("$where"); // throws: invalid field path "$where"
+ * assertMongoFieldPath("a..b"); // throws: invalid field path "a..b"
+ * ```
  */
 export function assertMongoFieldPath(field: string): string {
   if (!MONGO_FIELD_PATH.test(field)) {

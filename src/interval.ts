@@ -166,6 +166,31 @@ const OPEN_UPPER: Bound<never> = { unbounded: true, closed: false };
  * (or, more ergonomically, a domain-bound class from {@link defineIntervalType});
  * `new Interval(...)` is blocked because the constructor is `protected`. Every
  * operation returns a fresh `Interval` — nothing mutates in place.
+ *
+ * @example
+ * ```ts
+ * import { Interval, NumberInterval } from "@xtandard/lib/interval";
+ *
+ * const a = NumberInterval.closed(1, 5);
+ * const b = NumberInterval.closedOpen(3, 8);
+ * a.intersection(b).toString(); // "[3,5]"
+ * a.union(b)?.toString(); // "[1,8)"
+ * a.difference(b).map(String); // ["[1,3)"]
+ * a instanceof Interval; // true
+ * ```
+ *
+ * @example Low-level builder, no bound class
+ * ```ts
+ * import { Interval, numberDomain } from "@xtandard/lib/interval";
+ *
+ * const nonNegative = Interval.of(
+ *   numberDomain,
+ *   { unbounded: false, value: 0, closed: true },
+ *   { unbounded: true, closed: false },
+ * );
+ * nonNegative.toString(); // "[0,+Infinity)"
+ * Interval.blank(numberDomain).toString(); // "∅"
+ * ```
  */
 export class Interval<T> {
   /** The domain that orders/steps/serializes `T` (and decides discreteness). */
@@ -177,8 +202,13 @@ export class Interval<T> {
   /** `true` for the empty interval (contains nothing). All ops guard on this. */
   readonly isEmpty: boolean;
 
-  // Protected so domain-bound subclasses ({@link defineIntervalType}) can call
-  // `super(...)`, but `new Interval(...)` is blocked — use `Interval.of`.
+  /**
+   * Store already-canonical bounds as-is (no validation). Protected so the
+   * domain-bound subclasses from {@link defineIntervalType} can call
+   * `super(...)`, while `new Interval(...)` is blocked: build with
+   * {@link Interval.of}, {@link Interval.blank}, or a bound class such as
+   * `NumberInterval` (`new NumberInterval({ start: 1, startClose: true })`).
+   */
   protected constructor(
     domain: IntervalDomain<T>,
     lower: Bound<T>,
@@ -582,7 +612,22 @@ function requireAdd<T>(domain: IntervalDomain<T>): (value: T, delta: number) => 
   return domain.add;
 }
 
-/** Merge a bag of intervals into the minimal sorted set of disjoint pieces. */
+/**
+ * Merge a bag of intervals into the minimal sorted set of disjoint pieces:
+ * overlapping or adjacent intervals are combined, empty ones are dropped, and
+ * the result is ordered by lower bound. Pass the domain the intervals use.
+ *
+ * @example
+ * ```ts
+ * import { IntegerInterval, integerDomain, mergeIntervals } from "@xtandard/lib/interval";
+ *
+ * mergeIntervals(integerDomain, [
+ *   IntegerInterval.closed(10, 12),
+ *   IntegerInterval.closed(1, 3),
+ *   IntegerInterval.closed(4, 6), // adjacent to [1,3] on the integers
+ * ]).map(String); // ["[1,6]", "[10,12]"]
+ * ```
+ */
 export function mergeIntervals<T>(
   domain: IntervalDomain<T>,
   intervals: readonly Interval<T>[],
@@ -612,6 +657,22 @@ const INFINITY_TOKEN = /^[+-]?(inf|infinity|∞)$/i;
  * Parse `[a,b)`, `(-Infinity,5]`, `∅`, etc. into an `Interval<T>` via `domain.parse`.
  * The unbounded token is lenient — `inf` / `infinity` / `∞`, any case, with an
  * optional `+`/`-` sign — but `toString()` always emits the canonical `±Infinity`.
+ * Empty text or `∅` gives the empty interval. Discrete domains are canonicalized,
+ * so `(0,5]` over the integers reads back as `[1,5]`.
+ *
+ * @throws If the text isn't bracketed, has no comma, an endpoint fails
+ * `domain.parse`, or the domain has no `parse`.
+ *
+ * @example
+ * ```ts
+ * import { integerDomain, numberDomain, parseInterval } from "@xtandard/lib/interval";
+ *
+ * parseInterval(numberDomain, "[1,5)").contains(5); // false
+ * parseInterval(numberDomain, "(-inf, 0]").toString(); // "(-Infinity,0]"
+ * parseInterval(integerDomain, "(0,5]").toString(); // "[1,5]"
+ * parseInterval(numberDomain, "∅").isEmpty; // true
+ * parseInterval(numberDomain, "1,5"); // throws: must start with [ or (
+ * ```
  */
 export function parseInterval<T>(domain: IntervalDomain<T>, text: string): Interval<T> {
   const trimmed = text.trim();
@@ -729,19 +790,31 @@ export interface BoundIntervalType<T> {
 /**
  * Bind a {@link IntervalDomain} to a concrete, `new`-able interval CLASS that
  * extends {@link Interval}, so instances are `instanceof Interval` (and
- * `instanceof` the bound class):
- *
- *   const NumberInterval = defineIntervalType(numberDomain);
- *   type NumberInterval = InstanceType<typeof NumberInterval>;
- *
- *   const r = new NumberInterval({ start: 5, startClose: true, end: 6, endClose: false }); // [5,6)
- *   r instanceof NumberInterval;        // true
- *   r instanceof Interval;              // true
- *   NumberInterval.closedOpen(5, 6);    // static; also an instance of both
- *   NumberInterval.parse("(-Infinity,5]");
+ * `instanceof` the bound class). The built-in classes (`NumberInterval`,
+ * `DateInterval`, …) are made this way; use it for your own domains.
  *
  * Operations inherited from `Interval` (`union`, `intersection`, …) return base
- * `Interval<T>` values (still `instanceof Interval`).
+ * `Interval<T>` values (still `instanceof Interval`, but not `instanceof` the
+ * bound class).
+ *
+ * @example
+ * ```ts
+ * import { defineIntervalType, Interval, numberDomain } from "@xtandard/lib/interval";
+ *
+ * const PercentInterval = defineIntervalType({
+ *   ...numberDomain,
+ *   name: "percent",
+ *   isValid: (v: number) => v >= 0 && v <= 100,
+ * });
+ * type PercentInterval = InstanceType<typeof PercentInterval>;
+ *
+ * const r = new PercentInterval({ start: 20, startClose: true, end: 80, endClose: true });
+ * r.toString(); // "[20,80]"
+ * r instanceof PercentInterval; // true
+ * r instanceof Interval; // true
+ * PercentInterval.atLeast(50).contains(150); // false (fails isValid)
+ * PercentInterval.parse("[0,100)").toString(); // "[0,100)"
+ * ```
  */
 export function defineIntervalType<T>(domain: IntervalDomain<T>): BoundIntervalType<T> {
   return class BoundInterval extends Interval<T> {

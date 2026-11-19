@@ -19,11 +19,25 @@ import type { ValueCodec } from "./core/built-in-parsers.ts";
  * token or failed validation) into `null`, so a stale/tampered URL resolves to
  * the parser's default instead of crashing.
  *
- *   import { parseAsCodec } from "@xtandard/lib/tanstack";
- *   import { risonCodec } from "@xtandard/lib/tanstack/rison";
+ * Used on its own, `decode` throws on a malformed token or a valibot
+ * `ValiError` on a value that fails the schema. In the URL the token is
+ * percent-encoded unless the adapter's `serializeSearch` is `keepSubDelims`.
  *
- *   const filters = parseAsCodec(risonCodec(FiltersSchema));
- *   const [value, setValue] = useQueryState("filters", filters);
+ * @example
+ * ```ts
+ * import { parseAsCodec, useQueryState } from "@xtandard/lib/tanstack";
+ * import { risonCodec } from "@xtandard/lib/tanstack/rison";
+ * import * as v from "valibot";
+ *
+ * const FiltersSchema = v.object({ status: v.picklist(["open", "done"]), tags: v.array(v.string()) });
+ * const codec = risonCodec(FiltersSchema);
+ * codec.encode({ status: "open", tags: ["a", "b"] }); // → "(status:open,tags:!(a,b))"
+ * codec.decode("(status:open,tags:!(a,b))"); // → { status: "open", tags: ["a", "b"] }
+ *
+ * const filters = parseAsCodec(codec);
+ * filters.parse("(status:nope,tags:!())"); // → null
+ * const [value, setValue] = useQueryState("filters", filters);
+ * ```
  */
 export function risonCodec<S extends v.GenericSchema>(schema: S): ValueCodec<v.InferOutput<S>> {
   return {

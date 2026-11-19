@@ -31,25 +31,9 @@ import {
 import type { ColumnFilter, CompiledCond, CompiledWhere, FilterNode } from "../types.ts";
 import type { FilterSpec } from "./spec.ts";
 
-/**
- * Render the portable {@link CompiledWhere} AST to a Drizzle `SQL`. `buildWhere`
- * / `buildFilterNode` compile the filter model (via the driver-free core) and
- * render it here against the spec's columns. The `date` preset is resolved by an
- * injected `resolveDate` (e.g. an app's `@demi.casa/time` `resolveDateFilter`).
- *
- * @example
- * ```ts
- * import { buildWhere, textField, numberField, dateField } from "@xtandard/lib/filters/drizzle";
- *
- * const spec = {
- *   name: textField({ column: tasks.name }), // ColumnOf<string> — kind↔column mismatch = compile error
- *   amount: numberField({ column: tasks.amount }),
- *   createdAt: dateField({ column: tasks.createdAt }),
- * };
- * const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate injected for `date`
- * const rows = await db.select().from(tasks).where(where);
- * ```
- */
+// Render the portable CompiledWhere AST to a Drizzle `SQL`. `buildWhere` /
+// `buildFilterNode` compile the filter model (via the driver-free core) and
+// render it here against the spec's columns.
 
 function condToSql(cond: CompiledCond, column: AnyColumn): SQL | undefined {
   switch (cond.op) {
@@ -100,7 +84,30 @@ function isSql(value: SQL | undefined): value is SQL {
   return value !== undefined;
 }
 
-/** Render a {@link CompiledWhere} AST to a Drizzle `SQL` against a column map. */
+/**
+ * Render an already-compiled {@link CompiledWhere} AST (from `compileFilters` /
+ * `compileFilterNode` in `@xtandard/lib/filters`) to a Drizzle `SQL`, looking each field up in
+ * `columns`. Conditions on fields missing from `columns` are dropped; `null` (or an AST that
+ * drops to nothing) gives `undefined`. Most code calls `buildWhere`, which compiles and renders
+ * in one step.
+ *
+ * @example
+ * ```ts
+ * import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
+ * import { toDrizzleWhere } from "@xtandard/lib/filters/drizzle";
+ *
+ * const tasks = pgTable("tasks", { name: text("name"), amount: integer("amount") });
+ * const where = toDrizzleWhere({
+ *   where: { type: "and", nodes: [
+ *     { type: "cond", cond: { field: "amount", op: "gt", value: 5 } },
+ *     { type: "cond", cond: { field: "name", op: "isNotNull" } },
+ *   ] },
+ *   columns: { amount: tasks.amount, name: tasks.name },
+ * });
+ * const { sql, params } = new PgDialect().sqlToQuery(where!);
+ * // sql → '("tasks"."amount" > $1 and "tasks"."name" is not null)', params → [5]
+ * ```
+ */
 export function toDrizzleWhere(input: {
   where: CompiledWhere | null;
   columns: Record<string, AnyColumn>;
@@ -141,7 +148,30 @@ function kindsOf(spec: FilterSpec): Record<string, FilterSpec[string]["kind"]> {
   return out;
 }
 
-/** Flat AND-combined list of column filters → a Drizzle `WHERE` (or undefined). */
+/**
+ * Compile a flat, AND-combined list of column filters into a Drizzle `SQL` for
+ * `db.select().from(t).where(where)`. Only fields in `spec` whose kind matches the filter's
+ * `kind` are kept (the allow-list); the rest are silently dropped. `where` is `undefined`
+ * when nothing survives, which Drizzle's `.where()` treats as "no filter". A `date` preset
+ * filter needs `resolveDate` (it throws without one).
+ *
+ * @example
+ * ```ts
+ * import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
+ * import { buildWhere, numberField, textField } from "@xtandard/lib/filters/drizzle";
+ *
+ * const tasks = pgTable("tasks", { name: text("name"), amount: integer("amount") });
+ * const spec = { name: textField({ column: tasks.name }), amount: numberField({ column: tasks.amount }) };
+ * const { where } = buildWhere({ spec, filters: [
+ *   { field: "name", filter: { kind: "text", operator: "startsWith", value: "Re" } },
+ *   { field: "amount", filter: { kind: "number", operator: "gte", value: 100 } },
+ *   { field: "secret", filter: { kind: "text", operator: "eq", value: "x" } }, // not in spec → dropped
+ * ] });
+ * const { sql, params } = new PgDialect().sqlToQuery(where!);
+ * // sql → '("tasks"."name" ilike $1 and "tasks"."amount" >= $2)', params → ["Re%", 100]
+ * // in an app: await db.select().from(tasks).where(where)
+ * ```
+ */
 export function buildWhere(input: {
   spec: FilterSpec;
   filters: ColumnFilter[];
@@ -156,7 +186,26 @@ export function buildWhere(input: {
   return { where: toDrizzleWhere({ where, columns: columnsOf(input.spec) }) };
 }
 
-/** Recursive and/or/not tree → a Drizzle `WHERE` (or undefined). */
+/**
+ * Compile a recursive `and`/`or`/`not` {@link FilterNode} tree into a Drizzle `SQL`. Same
+ * allow-list rules as `buildWhere`: leaves on unknown fields or with a mismatched kind are
+ * dropped, and `where` is `undefined` when nothing is left.
+ *
+ * @example
+ * ```ts
+ * import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
+ * import { buildFilterNode, numberField, textField } from "@xtandard/lib/filters/drizzle";
+ *
+ * const tasks = pgTable("tasks", { name: text("name"), amount: integer("amount") });
+ * const spec = { name: textField({ column: tasks.name }), amount: numberField({ column: tasks.amount }) };
+ * const { where } = buildFilterNode({ spec, node: { type: "or", nodes: [
+ *   { type: "column", field: "name", filter: { kind: "text", operator: "eq", value: "Rent" } },
+ *   { type: "column", field: "amount", filter: { kind: "number", operator: "gte", value: 100 } },
+ * ] } });
+ * const { sql, params } = new PgDialect().sqlToQuery(where!);
+ * // sql → '("tasks"."name" = $1 or "tasks"."amount" >= $2)', params → ["Rent", 100]
+ * ```
+ */
 export function buildFilterNode(input: {
   spec: FilterSpec;
   node: FilterNode;

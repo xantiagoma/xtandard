@@ -450,6 +450,10 @@ For a cursor `{ createdAt: "2024-01-01", id: 42 }`, the helper emits:
 }
 ```
 
+That `OR` of growing prefixes is built by `generateSubArrays` (also exported, for writing
+your own adapter): `generateSubArrays(["createdAt", "id"])` returns
+`[["createdAt"], ["createdAt", "id"]]`, one branch per prefix.
+
 #### Knex raw bindings
 
 [Knex `whereRaw`](https://knexjs.org/guide/raw.html) accepts SQL plus
@@ -712,6 +716,10 @@ The Prisma adapter targets scalar fields. Prisma's typed client cannot express
 arbitrary computed SQL keysets; use the raw SQL helpers (`toKeysetWhereSql` /
 `toKeysetOrderBySql`) with Prisma raw queries for computed expressions.
 
+Every mapped field passes through `assertPrismaField` (exported from
+`@xtandard/lib/pagination/prisma`), which accepts a single identifier and throws on
+anything else, including dotted relation paths like `author.name`.
+
 ### MongoDB / Mongoose
 
 ```ts
@@ -745,7 +753,9 @@ const paginator = createPaginator({
 
 The Mongo adapter accepts dotted field paths such as `author.name`, rejects
 operator-like field strings such as `$where`, and works with both the MongoDB
-driver and Mongoose's `find(filter).sort(sort)` API.
+driver and Mongoose's `find(filter).sort(sort)` API. That check is exported as
+`assertMongoFieldPath` (it returns the path or throws), handy when you build other
+filters from configurable field names.
 
 ### TypeORM
 
@@ -1554,7 +1564,11 @@ Notes:
   (matching drizzle-cursor). If a cursor field is a string that merely looks
   like a date (a `"2024-06-11"` SKU), pass `reviveDates: false`.
 - **`isIsoDateString`** — helper used by the default parser to detect
-  ISO-shaped strings for date revival.
+  ISO-shaped strings for date revival. It checks the pattern plus `Date.parse`,
+  not the calendar: `"2024-02-30"` passes (engines roll it over to March 1).
+- **`encodeBase64Url` / `decodeBase64Url`** — the default encoder/decoder
+  stages, exported for reuse (`encodeBase64Url('{"id":7}')` → `"eyJpZCI6N30"`).
+  Both handle non-Latin1 text and run in browsers and edge runtimes.
 - **Opaque ≠ secret.** base64url hides structure from casual eyes but anyone
   can decode it. Don't put sensitive values in cursors, or use an
   encrypting/signing encoder.

@@ -44,7 +44,32 @@ function renderValue(value: string | number | boolean): string {
 /** Render a `date`-preset filter to text. Supply via {@link describeFieldFilter}. */
 export type DescribeDate = (filter: DatePreset, locale?: string) => string;
 
-/** A short, human description of a single field filter (no field name). */
+/**
+ * A short, human description of a single field filter (no field name), for
+ * chips and summaries. A `date` preset uses `describeDate` when given;
+ * without it the label is just the preset's operator (e.g. `"is"`).
+ *
+ * @example
+ * ```ts
+ * import { describeFieldFilter } from "@xtandard/lib/filters";
+ *
+ * describeFieldFilter({ filter: { kind: "number", operator: "between", from: 1, to: 9 } });
+ * // → "between 1 – 9"
+ * describeFieldFilter({ filter: { kind: "text", operator: "contains", value: "ada" } });
+ * // → 'contains "ada"'
+ * describeFieldFilter({ filter: { kind: "enum", operator: "inArray", values: ["open", "done"] } });
+ * // → "in open, done"
+ * describeFieldFilter({ filter: { kind: "date", operator: "isNull" } }); // → "is empty"
+ * ```
+ *
+ * @example A date preset with an injected label
+ * ```ts
+ * describeFieldFilter({
+ *   filter: { kind: "date", operator: "is", unit: "month", timeZone: "UTC", anchor: "2026-02-01T00:00:00" },
+ *   describeDate: (f) => `${f.unit} of ${f.anchor.slice(0, 7)}`,
+ * }); // → "month of 2026-02"
+ * ```
+ */
 export function describeFieldFilter(input: {
   filter: FieldFilter;
   locale?: string;
@@ -67,7 +92,24 @@ export function describeFieldFilter(input: {
   return label(f.operator);
 }
 
-/** `<field> <description>`, e.g. `createdAt is between Jun 1 and Jun 30`. */
+/**
+ * `<field> <description>`, e.g. `createdAt is between Jun 1 and Jun 30`: the
+ * {@link describeFieldFilter} text prefixed by `label` (or the field name).
+ *
+ * @example
+ * ```ts
+ * import { describeColumnFilter } from "@xtandard/lib/filters";
+ *
+ * describeColumnFilter({
+ *   columnFilter: { field: "status", filter: { kind: "enum", operator: "ne", value: "done" } },
+ * }); // → 'status ≠ "done"'
+ *
+ * describeColumnFilter({
+ *   columnFilter: { field: "amount", filter: { kind: "number", operator: "gte", value: 10 } },
+ *   label: "Amount",
+ * }); // → "Amount ≥ 10"
+ * ```
+ */
 export function describeColumnFilter(input: {
   columnFilter: ColumnFilter;
   label?: string;

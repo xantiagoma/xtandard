@@ -103,7 +103,28 @@ Which operators each kind accepts:
 | `array`   | array (PG) + unary                            |
 
 `OPERATORS_BY_KIND` and the `*_OPERATORS` constants (e.g. `TEXT_OPERATORS`,
-`NUMBER_OPERATORS`) expose these lists for building UI operator pickers.
+`NUMBER_OPERATORS`) expose these lists for building UI operator pickers. All are
+`as const` tuples exported from `@xtandard/lib/filters`:
+
+| Constant                             | Contents                                                  |
+| ------------------------------------ | --------------------------------------------------------- |
+| `TEXT_SCALAR_OPERATORS`              | `eq` `ne` + text-match (single `value`)                   |
+| `NUMBER_SCALAR_OPERATORS`            | `eq` `ne` `lt` `gt` `lte` `gte`                           |
+| `EQUALITY_OPERATORS`                 | `eq` `ne`                                                 |
+| `RANGE_OPERATORS`                    | `between` `notBetween`                                    |
+| `SET_OPERATORS`                      | `inArray` `notInArray`                                    |
+| `ARRAY_COL_OPERATORS`                | `arrayContains` `arrayContained` `arrayOverlaps`          |
+| `UNARY_OPERATORS`                    | `isNull` `isNotNull`                                      |
+| `DATE_PRESET_OPERATORS`              | `is` `before` `after` `between`                           |
+| `TEXT_OPERATORS` … `ARRAY_OPERATORS` | everything one kind accepts (= `OPERATORS_BY_KIND[kind]`) |
+
+```ts
+import { OPERATORS_BY_KIND, UNARY_OPERATORS } from "@xtandard/lib/filters";
+
+const pickerOptions = OPERATORS_BY_KIND.number.map((op) => ({ value: op, label: op }));
+const needsValue = (op: string) => !(UNARY_OPERATORS as readonly string[]).includes(op);
+needsValue("isNull"); // false: hide the value input
+```
 
 ### Examples of each kind
 
@@ -176,6 +197,10 @@ Each subpath exports the **same names** — `FieldFilterSchema`,
 Every one validates `timeZone` as a real IANA id and `anchor`/`end` as
 `Temporal.PlainDateTime` strings, and a `*.test-d.ts` asserts each schema's
 inferred output **equals** the model type — so they can't drift.
+
+> **Known issue (ArkType):** with arktype 2.2.1, the ArkType `FilterNodeSchema`
+> throws a `TypeError` when called, for any input. The flat `FiltersRequestSchema`
+> works; validate and/or/not trees with the valibot, Zod or Effect subpath for now.
 
 ```ts
 // pick one — the parsed result is the same `ColumnFilter[]` either way
@@ -554,7 +579,7 @@ allow-listed to columns (the SQL adapters expose `buildOrderBy`):
 ```ts
 import { parseSortParam, serializeSort } from "@xtandard/lib/filters";
 
-const { sort } = parseSortParam({ value: "createdAt:desc,name:asc" }); // unknown/malformed dropped
+const { sort } = parseSortParam({ value: "createdAt:desc,name:asc" }); // any dir but "asc" → "desc"
 serializeSort({ sort }); // "createdAt:desc,name:asc"
 
 // drizzle / kysely:

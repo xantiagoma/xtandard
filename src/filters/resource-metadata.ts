@@ -57,7 +57,23 @@ export interface ResourceMetadata {
   crud: ResourceCrud;
 }
 
-/** The operator vocabulary a field of each kind supports (for UI operator pickers). */
+/**
+ * The operator vocabulary a field of each kind supports (for UI operator
+ * pickers and `FieldMetadata.operators`). Each entry is the matching
+ * `*_OPERATORS` constant (`text` → `TEXT_OPERATORS`, …).
+ *
+ * @example Fill a field's operators and build a picker
+ * ```ts
+ * import { OPERATORS_BY_KIND, type FieldKind } from "@xtandard/lib/filters";
+ *
+ * OPERATORS_BY_KIND.boolean; // → ["eq", "ne", "isNull", "isNotNull"]
+ *
+ * const pickerOptions = (kind: FieldKind) =>
+ *   OPERATORS_BY_KIND[kind].map((op) => ({ value: op, label: op }));
+ * pickerOptions("number").slice(0, 2);
+ * // → [{ value: "eq", label: "eq" }, { value: "ne", label: "ne" }]
+ * ```
+ */
 export const OPERATORS_BY_KIND: Record<FieldKind, readonly string[]> = {
   text: TEXT_OPERATORS,
   number: NUMBER_OPERATORS,

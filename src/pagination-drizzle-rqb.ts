@@ -60,7 +60,32 @@ const predicate = (op: "eq" | "gt" | "lt", value: unknown): RqbKeysetCondition =
 /**
  * Create an RQBv2 adapter for portable keyset predicates and ordering. `columns`
  * maps logical cursor keys (from `createKeysetSpec`) to RQBv2 schema property
- * keys; they need not match database column names.
+ * keys; they need not match database column names. Throws when the keyset
+ * uses a key that has no mapping.
+ *
+ * @example
+ * ```ts
+ * import { createKeysetSpec } from "@xtandard/lib/pagination";
+ * import { toDrizzleRqbKeyset } from "@xtandard/lib/pagination/drizzle-rqb";
+ *
+ * const keyset = createKeysetSpec({
+ *   sort: [{ key: "createdAt", order: "desc" }, { key: "id", order: "asc" }],
+ * });
+ * const rqb = toDrizzleRqbKeyset({ createdAt: "createdAt", id: "id" });
+ *
+ * rqb.where(keyset.where({ createdAt: "2025-01-01", id: 42 }, "forward"));
+ * // { OR: [
+ * //   { AND: [{ createdAt: { lt: "2025-01-01" } }] },
+ * //   { AND: [{ createdAt: { eq: "2025-01-01" } }, { id: { gt: 42 } }] },
+ * // ] }
+ * rqb.orderBy(keyset.orderBy("forward")); // { createdAt: "desc", id: "asc" }
+ *
+ * const rows = await db.query.posts.findMany({
+ *   where: rqb.where(keyset.where(cursor, direction)), // undefined on the first page
+ *   orderBy: rqb.orderBy(keyset.orderBy(direction)),
+ *   limit,
+ * });
+ * ```
  */
 export function toDrizzleRqbKeyset(columns: Record<string, string>): DrizzleRqbKeyset {
   const where = (keysetWhere: KeysetWhere | null): RqbKeysetWhere | undefined => {
@@ -120,7 +145,27 @@ export type DrizzleRqbV1Keyset = {
 /**
  * RQB **v1** keyset adapter — renders the keyset AST to drizzle v1's legacy
  * `where`/`orderBy` CALLBACKS (`(fields, operators) => …`), building via the
- * provided operators/fields (no raw-SQL alias footgun). Driver-free.
+ * provided operators/fields (no raw-SQL alias footgun). Driver-free. `columns`
+ * maps logical cursor keys to the table's field keys, as in {@link toDrizzleRqbKeyset}.
+ *
+ * @example
+ * ```ts
+ * import { createKeysetSpec } from "@xtandard/lib/pagination";
+ * import { toDrizzleRqbV1Keyset } from "@xtandard/lib/pagination/drizzle-rqb";
+ *
+ * const keyset = createKeysetSpec({
+ *   sort: [{ key: "createdAt", order: "desc" }, { key: "id", order: "asc" }],
+ * });
+ * const rqb = toDrizzleRqbV1Keyset({ createdAt: "createdAt", id: "id" });
+ *
+ * // drizzle calls each callback with (fields, operators); for a cursor it builds
+ * // createdAt < x OR (createdAt = x AND id > y)
+ * const rows = await db.query.posts.findMany({
+ *   where: rqb.where(keyset.where(cursor, direction)), // undefined on the first page
+ *   orderBy: rqb.orderBy(keyset.orderBy(direction)), // [desc(createdAt), asc(id)] forward
+ *   limit,
+ * });
+ * ```
  */
 export function toDrizzleRqbV1Keyset(columns: Record<string, string>): DrizzleRqbV1Keyset {
   const where = (keysetWhere: KeysetWhere | null) => {

@@ -28,8 +28,28 @@ const defaultParser = createParser<unknown>({
  * `useState`, but backed by a single URL query key. Route-agnostic: components
  * never import a route object. See `useQueryStates` for multiple keys.
  *
- *   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1))
- *   setPage(null) // removes the key
+ * Without a parser the value is the raw `string | null`; with a plain parser
+ * it is `T | null`; with `.withDefault()` it is `T`. The setter takes a value,
+ * `null` (removes the key) or an updater function, plus per-call options.
+ * State updates at once; the returned promise resolves with the committed
+ * params after the rate-limited URL write. Must render inside an adapter
+ * (`NuqsAdapter` or `QueryStateTestingAdapter`).
+ *
+ * @example
+ * ```tsx
+ * import { parseAsInteger, useQueryState } from "@xtandard/lib/tanstack";
+ *
+ * function Pagination() {
+ *   // ?page=3 → 3; no ?page → 1
+ *   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+ *   return (
+ *     <>
+ *       <button onClick={() => void setPage((p) => p + 1)}>Next</button>
+ *       <button onClick={() => void setPage(null, { history: "push" })}>First</button>
+ *     </>
+ *   );
+ * }
+ * ```
  */
 // oxlint-disable-next-line typescript/no-explicit-any -- variance constraint (see ParserMap)
 export function useQueryState<P extends AnyParser<any> | undefined = undefined>(

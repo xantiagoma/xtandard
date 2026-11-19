@@ -8,6 +8,20 @@ export { keepSubDelims } from "../../url-search-params-utils.ts";
  * Whether a key is PRESENT in the URL but its raw value fails to parse — stale
  * or tampered junk that `clearOnInvalid` strips. An absent key is NOT invalid
  * (it just resolves to the default), so this returns `false` for it.
+ *
+ * The hooks use it to implement `clearOnInvalid`; adapter authors and
+ * loaders can reuse it. Parsers that never return `null` for a present
+ * value (`parseAsBoolean`, `parseAsArrayOf`, `parseAsNativeArrayOf`) never
+ * report a key as invalid.
+ *
+ * @example
+ * ```ts
+ * import { hasInvalidKey, parseAsInteger } from "@xtandard/lib/tanstack";
+ *
+ * hasInvalidKey(new URLSearchParams("page=3"), "page", parseAsInteger); // → false
+ * hasInvalidKey(new URLSearchParams("page=abc"), "page", parseAsInteger); // → true
+ * hasInvalidKey(new URLSearchParams(""), "page", parseAsInteger); // → false (absent)
+ * ```
  */
 export function hasInvalidKey<T>(
   params: URLSearchParams,

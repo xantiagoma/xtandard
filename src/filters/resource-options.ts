@@ -32,6 +32,27 @@ export type FieldOptions = FieldOption[] | ((query: OptionsQuery) => MaybePromis
  * `query`) or returning the static list. Stays the color of its input: a static
  * list or sync getter resolves synchronously (no microtask), an async getter
  * yields a `Promise`. `await` works on either.
+ *
+ * @example A static list resolves synchronously
+ * ```ts
+ * import { resolveFieldOptions } from "@xtandard/lib/filters";
+ *
+ * resolveFieldOptions({ options: [{ value: "open", label: "Open" }] });
+ * // → [{ value: "open", label: "Open" }]  (no Promise)
+ * ```
+ *
+ * @example An async getter (search by q, or resolve labels by ids)
+ * ```ts
+ * const users = [
+ *   { value: "u1", label: "Ada" },
+ *   { value: "u2", label: "Grace" },
+ * ];
+ * const options = async ({ q = "", ids }: { q?: string; ids?: string[] }) =>
+ *   users.filter((u) => (ids ? ids.includes(u.value) : u.label.toLowerCase().includes(q)));
+ *
+ * await resolveFieldOptions({ options, query: { q: "gr" } }); // → [{ value: "u2", label: "Grace" }]
+ * await resolveFieldOptions({ options, query: { ids: ["u1"] } }); // → [{ value: "u1", label: "Ada" }]
+ * ```
  */
 export function resolveFieldOptions(input: {
   options: FieldOptions;

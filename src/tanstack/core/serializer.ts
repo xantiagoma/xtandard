@@ -34,9 +34,25 @@ function isBase(value: unknown): value is Base {
  * Build a query string or URL from a parser map. Preserves unrelated params on
  * the base, removes keys set to `null`, and honors `clearOnDefault`/`urlKeys`.
  *
- *   serialize({ q: "x", page: 2 })            // "?q=x&page=3"
- *   serialize("/users", { q: "x" })           // "/users?q=x"
- *   serialize(new URL("https://h/u?a=1"), {}) // "https://h/u?a=1"
+ * Call it with just values for a query string (`"?…"`, or `""` when empty), or
+ * with a base (path string, `URL` or `URLSearchParams`) first to merge into
+ * it. A string base keeps its path and `#hash`; a `URL` base returns a full href.
+ *
+ * @example
+ * ```ts
+ * import { createSerializer, parseAsIndex, parseAsString } from "@xtandard/lib/tanstack/server";
+ *
+ * const serialize = createSerializer({
+ *   q: parseAsString,
+ *   page: parseAsIndex.withDefault(0),
+ * });
+ *
+ * serialize({ q: "x", page: 2 }); // → "?q=x&page=3"
+ * serialize({ page: 0 }); // → "" (default cleared)
+ * serialize("/users?tab=all#top", { q: "x" }); // → "/users?tab=all&q=x#top"
+ * serialize("/users?q=old&tab=all", { q: null }); // → "/users?tab=all"
+ * serialize(new URL("https://h/u?a=1"), {}); // → "https://h/u?a=1"
+ * ```
  */
 export function createSerializer<M extends ParserMap>(
   parsers: M,

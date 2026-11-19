@@ -67,7 +67,19 @@ type AnyOperator =
   | DateOperator
   | ArrayOperator;
 
-/** Model operator → short URL code (the inverse is {@link operatorFromCode}). */
+/**
+ * Model operator → short URL code (the inverse is {@link operatorFromCode}).
+ * The compact codec writes these into each leaf's `o` key.
+ *
+ * @example
+ * ```ts
+ * import { OPERATOR_CODE } from "@xtandard/lib/filters";
+ *
+ * OPERATOR_CODE.contains; // → "ct"
+ * OPERATOR_CODE.inArray; // → "iA"
+ * OPERATOR_CODE.gte; // → "ge"
+ * ```
+ */
 export const OPERATOR_CODE: Record<AnyOperator, string> = {
   eq: "eq",
   ne: "ne",
@@ -95,7 +107,19 @@ export const OPERATOR_CODE: Record<AnyOperator, string> = {
   after: "af",
 };
 
-/** Short URL code → model operator (inverse of {@link OPERATOR_CODE}). */
+/**
+ * Short URL code → model operator (inverse of {@link OPERATOR_CODE}), or
+ * `null` for an unknown code.
+ *
+ * @example
+ * ```ts
+ * import { operatorFromCode } from "@xtandard/lib/filters";
+ *
+ * operatorFromCode("ct"); // → "contains"
+ * operatorFromCode("ge"); // → "gte"
+ * operatorFromCode("zz"); // → null
+ * ```
+ */
 export function operatorFromCode(code: string): AnyOperator | null {
   switch (code) {
     case "eq":
@@ -151,7 +175,18 @@ export function operatorFromCode(code: string): AnyOperator | null {
   }
 }
 
-/** Date unit → short URL code (the inverse is {@link unitFromCode}). */
+/**
+ * Date unit → short URL code (the inverse is {@link unitFromCode}). The compact
+ * codec writes these into a date-preset leaf's `u` key.
+ *
+ * @example
+ * ```ts
+ * import { UNIT_CODE } from "@xtandard/lib/filters";
+ *
+ * UNIT_CODE.month; // → "mo"
+ * UNIT_CODE.halfYear; // → "hy"
+ * ```
+ */
 export const UNIT_CODE: Record<DateUnit, string> = {
   millisecond: "ms",
   second: "s",
@@ -165,7 +200,19 @@ export const UNIT_CODE: Record<DateUnit, string> = {
   year: "y",
 };
 
-/** Short URL code → date unit (inverse of {@link UNIT_CODE}). */
+/**
+ * Short URL code → date unit (inverse of {@link UNIT_CODE}), or `null` for an
+ * unknown code.
+ *
+ * @example
+ * ```ts
+ * import { unitFromCode } from "@xtandard/lib/filters";
+ *
+ * unitFromCode("mo"); // → "month"
+ * unitFromCode("hy"); // → "halfYear"
+ * unitFromCode("x"); // → null
+ * ```
+ */
 export function unitFromCode(code: string): DateUnit | null {
   switch (code) {
     case "ms":
@@ -491,7 +538,27 @@ function expandNode(x: unknown, kinds: FieldKindSpec, keepEmptyGroups: boolean):
 
 // ── public surface ──────────────────────────────────────────────────────────
 
-/** Encode a recursive and/or/not tree to its compact (Rison-ready) form. */
+/**
+ * Encode a recursive and/or/not tree to its compact (Rison-ready) form: `kind`
+ * is dropped, keys and operators are abbreviated, and connectives become a
+ * single key. Total — every valid `FilterNode` encodes.
+ *
+ * @example
+ * ```ts
+ * import { compactFilterNode } from "@xtandard/lib/filters";
+ *
+ * const { compact } = compactFilterNode({
+ *   node: {
+ *     type: "or",
+ *     nodes: [
+ *       { type: "column", field: "title", filter: { kind: "text", operator: "contains", value: "inves" } },
+ *       { type: "column", field: "status", filter: { kind: "enum", operator: "inArray", values: ["todo", "doing"] } },
+ *     ],
+ *   },
+ * });
+ * // compact → { or: [{ f: "title", o: "ct", v: "inves" }, { f: "status", o: "iA", vs: ["todo", "doing"] }] }
+ * ```
+ */
 export function compactFilterNode(input: { node: FilterNode }): { compact: CompactNode } {
   return { compact: compactNode(input.node) };
 }
@@ -508,7 +575,31 @@ export function compactFilterNode(input: { node: FilterNode }): { compact: Compa
  * → empty box pattern) survives the encode→URL→decode round-trip instead of
  * vanishing before you can fill it. Invalid LEAVES (non-allow-listed field,
  * unknown operator, bad value) are still dropped in both modes, and `not` is
- * resolved the same way — only the empty-container collapse changes. */
+ * resolved the same way — only the empty-container collapse changes.
+ *
+ * Note: a wrong-typed element inside a `vs` list is filtered out rather than
+ * dropping the leaf (`{ o: "iA", vs: ["1", 2] }` on a `number` field decodes
+ * to `values: [2]`).
+ *
+ * @example
+ * ```ts
+ * import { expandFilterNode } from "@xtandard/lib/filters";
+ *
+ * const kinds = { title: "text", status: "enum", priority: "number" } as const;
+ *
+ * expandFilterNode({
+ *   compact: { or: [{ f: "secret", o: "eq", v: "x" }, { f: "priority", o: "ge", v: 2 }] },
+ *   kinds,
+ * });
+ * // → { node: { type: "or", nodes: [
+ * //     { type: "column", field: "priority", filter: { kind: "number", operator: "gte", value: 2 } },
+ * //   ] } }   ("secret" isn't in `kinds`, so it is dropped)
+ *
+ * expandFilterNode({ compact: { and: [] }, kinds }); // → { node: null }
+ * expandFilterNode({ compact: { and: [] }, kinds, keepEmptyGroups: true });
+ * // → { node: { type: "and", nodes: [] } }
+ * ```
+ */
 export function expandFilterNode(input: {
   compact: unknown;
   kinds: FieldKindSpec;
@@ -519,13 +610,47 @@ export function expandFilterNode(input: {
   return { node: expandNode(input.compact, input.kinds, input.keepEmptyGroups ?? false) };
 }
 
-/** Encode a flat AND list of column filters to compact leaves. */
+/**
+ * Encode a flat AND list of column filters to compact leaves (`kind` dropped,
+ * keys and operators abbreviated).
+ *
+ * @example
+ * ```ts
+ * import { compactFilters } from "@xtandard/lib/filters";
+ *
+ * compactFilters({
+ *   filters: [
+ *     { field: "priority", filter: { kind: "number", operator: "between", from: 1, to: 3 } },
+ *     { field: "status", filter: { kind: "enum", operator: "isNull" } },
+ *   ],
+ * });
+ * // → { compact: [{ f: "priority", o: "bt", fr: 1, to: 3 }, { f: "status", o: "nu" }] }
+ * ```
+ */
 export function compactFilters(input: { filters: FiltersRequest }): { compact: CompactLeaf[] } {
   return { compact: input.filters.map((c) => compactLeaf(c.field, c.filter)) };
 }
 
-/** Decode compact leaves back to a flat `FiltersRequest` (non-allow-listed /
- * malformed leaves are dropped), restoring `kind` from `kinds`. */
+/**
+ * Decode compact leaves back to a flat `FiltersRequest` (non-allow-listed /
+ * malformed leaves are dropped), restoring `kind` from `kinds`. A non-array
+ * `compact` decodes to `[]`.
+ *
+ * @example
+ * ```ts
+ * import { expandFilters } from "@xtandard/lib/filters";
+ *
+ * expandFilters({
+ *   compact: [
+ *     { f: "priority", o: "bt", fr: 1, to: 3 },
+ *     { f: "nope", o: "eq", v: 1 }, // not in `kinds` → dropped
+ *     { f: "priority", o: "eq", v: "1" }, // string for a number field → dropped
+ *   ],
+ *   kinds: { priority: "number" },
+ * });
+ * // → { filters: [{ field: "priority", filter: { kind: "number", operator: "between", from: 1, to: 3 } }] }
+ * ```
+ */
 export function expandFilters(input: { compact: unknown; kinds: FieldKindSpec }): {
   filters: FiltersRequest;
 } {
@@ -555,7 +680,24 @@ export function expandFilters(input: { compact: unknown; kinds: FieldKindSpec })
  * `true` for an interactive filter-builder whose tree lives in the URL, so a
  * freshly-added empty `and`/`or` group survives the round-trip (see
  * {@link expandFilterNode}). It does not affect `decodeFilters` (a flat list has
- * no groups). */
+ * no groups).
+ *
+ * @example
+ * ```ts
+ * import { createFilterUrlCodec } from "@xtandard/lib/filters";
+ *
+ * const codec = createFilterUrlCodec({ kinds: { title: "text", status: "enum" } });
+ *
+ * const compact = codec.encodeFilters([
+ *   { field: "title", filter: { kind: "text", operator: "startsWith", value: "Q3" } },
+ * ]); // → [{ f: "title", o: "sw", v: "Q3" }]
+ * codec.decodeFilters(compact);
+ * // → [{ field: "title", filter: { kind: "text", operator: "startsWith", value: "Q3" } }]
+ *
+ * codec.decodeNode({ not: { f: "status", o: "eq", v: "done" } });
+ * // → { type: "not", node: { type: "column", field: "status", filter: { kind: "enum", operator: "eq", value: "done" } } }
+ * ```
+ */
 export function createFilterUrlCodec(input: { kinds: FieldKindSpec; keepEmptyGroups?: boolean }): {
   encodeNode: (node: FilterNode) => CompactNode;
   decodeNode: (compact: unknown) => FilterNode | null;

@@ -27,6 +27,23 @@ export type PrismaKeyset = {
 
 const PRISMA_FIELD = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
+/**
+ * Validate a Prisma scalar field name used by the keyset adapter: a single
+ * identifier (`[a-zA-Z_][a-zA-Z0-9_]*`), no dots or relation paths.
+ * {@link toPrismaKeyset} runs every mapped field through it. Field mappings
+ * must be server-owned and should never come from request data.
+ *
+ * @returns The same `field`, unchanged, when valid.
+ * @throws If `field` is not a plain identifier.
+ *
+ * @example
+ * ```ts
+ * import { assertPrismaField } from "@xtandard/lib/pagination/prisma";
+ *
+ * assertPrismaField("createdAt"); // "createdAt"
+ * assertPrismaField("author.name"); // throws: invalid field "author.name"
+ * ```
+ */
 export function assertPrismaField(field: string): string {
   if (!PRISMA_FIELD.test(field)) {
     throw new Error(`assertPrismaField: invalid field "${field}" (use [a-zA-Z_][a-zA-Z0-9_]*)`);

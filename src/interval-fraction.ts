@@ -16,7 +16,20 @@ import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from 
 
 type FractionValue = InstanceType<typeof Fraction>;
 
-/** Exact-rational {@link IntervalDomain} backed by fraction.js. Continuous. */
+/**
+ * Exact-rational {@link IntervalDomain} backed by fraction.js. Continuous; the
+ * string form is `"n/d"`. Bound to a class as {@link FractionInterval}.
+ *
+ * @example
+ * ```ts
+ * import Fraction from "fraction.js";
+ * import { parseInterval } from "@xtandard/lib/interval";
+ * import { fractionDomain } from "@xtandard/lib/fraction";
+ *
+ * fractionDomain.compare(new Fraction(1, 3), new Fraction(2, 6)); // 0
+ * parseInterval(fractionDomain, "[1/4,3/4)").contains(new Fraction(1, 2)); // true
+ * ```
+ */
 export const fractionDomain: IntervalDomain<FractionValue> = {
   name: "fraction",
   compare: (a, b) => a.compare(b),
@@ -29,12 +42,18 @@ export const fractionDomain: IntervalDomain<FractionValue> = {
 /**
  * Interval over fraction.js `Fraction` values — exact rationals, continuous.
  *
- *   import { FractionInterval } from "@xtandard/lib/fraction";
- *   import Fraction from "fraction.js";
+ * @example
+ * ```ts
+ * import Fraction from "fraction.js";
+ * import { FractionInterval } from "@xtandard/lib/fraction";
  *
- *   const third = (n: number) => new Fraction(n, 3);
- *   FractionInterval.closed(third(1), third(2)).toString(); // "[1/3,2/3]"  (exact)
- *   FractionInterval.closed(third(1), third(2)).contains(new Fraction(1, 2)); // true
+ * const third = (n: number) => new Fraction(n, 3);
+ * const r = FractionInterval.closed(third(1), third(2));
+ * r.toString(); // "[1/3,2/3]" (exact)
+ * r.contains(new Fraction(1, 2)); // true
+ * r.length(); // 0.3333333333333333 (lengths are plain numbers)
+ * FractionInterval.parse("[1/3,2/3]").equals(r); // true
+ * ```
  */
 export const FractionInterval: BoundIntervalType<FractionValue> =
   defineIntervalType(fractionDomain);
