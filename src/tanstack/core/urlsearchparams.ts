@@ -11,8 +11,7 @@ export { keepSubDelims } from "../../url-search-params-utils.ts";
  *
  * The hooks use it to implement `clearOnInvalid`; adapter authors and
  * loaders can reuse it. Parsers that never return `null` for a present
- * value (`parseAsBoolean`, `parseAsArrayOf`, `parseAsNativeArrayOf`) never
- * report a key as invalid.
+ * value (`parseAsBoolean`, `parseAsArrayOf`) never report a key as invalid.
  *
  * @example
  * ```ts

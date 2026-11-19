@@ -127,10 +127,27 @@ export const parseAsZonedDateTime: Parser<Temporal.ZonedDateTime> = temporalPars
   eq: (a, b) => a.equals(b),
 });
 
+const calendarUnits = ["years", "months", "weeks"] as const;
+
 /**
- * A length of time — ISO-8601 duration (`PT30M`, `P1DT2H`). Compared by
- * canonical string (Temporal.Duration has no `equals`, and a relative-to-free
- * compare throws on calendar units), so `PT90M` and `PT1H30M` are not equal.
+ * Equal lengths of time. `Temporal.Duration.compare` needs a `relativeTo`
+ * date once years, months or weeks are involved (a month has no fixed
+ * length), so those units must match field by field; the rest (days as 24 h,
+ * hours … nanoseconds) is compared by total length.
+ */
+function durationEquals(a: Temporal.Duration, b: Temporal.Duration): boolean {
+  if (calendarUnits.some((unit) => a[unit] !== b[unit])) return false;
+  const timePart = (d: Temporal.Duration): Temporal.Duration =>
+    d.with({ years: 0, months: 0, weeks: 0 });
+  return Temporal.Duration.compare(timePart(a), timePart(b)) === 0;
+}
+
+/**
+ * A length of time — ISO-8601 duration (`PT30M`, `P1DT2H`). Equality is by
+ * length, not spelling: `PT90M` equals `PT1H30M`, and `P1D` equals `PT24H`
+ * (a day is 24 h, as in `Temporal.Duration.compare` without `relativeTo`).
+ * Years, months and weeks have no fixed length, so they must match exactly:
+ * `P1M` ≠ `P30D`, `P1Y` ≠ `P12M`, `P1W` ≠ `P7D`.
  *
  * @example
  * ```ts
@@ -140,11 +157,12 @@ export const parseAsZonedDateTime: Parser<Temporal.ZonedDateTime> = temporalPars
  * parseAsDuration.parse("PT90M")?.total("minutes"); // → 90
  * parseAsDuration.serialize(Temporal.Duration.from({ hours: 1, minutes: 30 })); // → "PT1H30M"
  * parseAsDuration.parse("90 minutes"); // → null
+ * parseAsDuration.eq(Temporal.Duration.from("PT90M"), Temporal.Duration.from("PT1H30M")); // → true
  * ```
  */
 export const parseAsDuration: Parser<Temporal.Duration> = temporalParser({
   from: (value) => Temporal.Duration.from(value),
-  eq: (a, b) => a.toString() === b.toString(),
+  eq: durationEquals,
 });
 
 /**

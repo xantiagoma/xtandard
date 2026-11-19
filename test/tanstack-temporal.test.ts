@@ -83,13 +83,29 @@ describe("temporal parsers", () => {
     expect(parseAsZonedDateTime.serialize(zoned)).toContain("[America/Los_Angeles]");
   });
 
-  test("duration eq is by canonical string", () => {
-    expect(
-      parseAsDuration.eq(Temporal.Duration.from("PT30M"), Temporal.Duration.from("PT30M")),
-    ).toBe(true);
-    expect(
-      parseAsDuration.eq(Temporal.Duration.from("PT30M"), Temporal.Duration.from("PT60M")),
-    ).toBe(false);
+  test("duration eq compares length, not spelling", () => {
+    const eq = (a: string, b: string): boolean =>
+      parseAsDuration.eq(Temporal.Duration.from(a), Temporal.Duration.from(b));
+    expect(eq("PT30M", "PT30M")).toBe(true);
+    expect(eq("PT30M", "PT60M")).toBe(false);
+    expect(eq("PT90M", "PT1H30M")).toBe(true);
+    expect(eq("PT3600S", "PT1H")).toBe(true);
+    expect(eq("P1D", "PT24H")).toBe(true);
+    expect(eq("-PT90M", "-PT1H30M")).toBe(true);
+    expect(eq("-PT90M", "PT90M")).toBe(false);
+  });
+
+  test("duration eq needs calendar units (Y/M/W) to match exactly, without throwing", () => {
+    const eq = (a: string, b: string): boolean =>
+      parseAsDuration.eq(Temporal.Duration.from(a), Temporal.Duration.from(b));
+    expect(eq("P1M", "P1M")).toBe(true);
+    expect(eq("P1M", "P2M")).toBe(false);
+    expect(eq("P1M", "P30D")).toBe(false);
+    expect(eq("P1Y", "P12M")).toBe(false);
+    expect(eq("P1W", "P7D")).toBe(false);
+    // Same calendar part, time part compared by length.
+    expect(eq("P1MT90M", "P1MT1H30M")).toBe(true);
+    expect(eq("P1MT90M", "P1MT1H")).toBe(false);
   });
 
   describe("parseAsTimeZone", () => {

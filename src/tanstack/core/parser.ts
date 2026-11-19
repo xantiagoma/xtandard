@@ -11,7 +11,8 @@ import type { QueryStateOptions } from "./options.ts";
  * multi-value parsers (repeated keys, `params.getAll`).
  */
 
-type Eq<T> = (a: T, b: T) => boolean;
+/** Equality check a parser uses to compare values (e.g. against its default for `clearOnDefault`). */
+export type Eq<T> = (a: T, b: T) => boolean;
 
 function mergeOptions(
   base: QueryStateOptions | undefined,
