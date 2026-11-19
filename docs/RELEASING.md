@@ -59,11 +59,26 @@ ever gains many external `^`-pinning consumers, switch to the caret-protective
 - `bunx playwright install --with-deps chromium`
 - `bun run test`
 - `bun run build`
-- `npm publish --provenance --access public || npm publish --access public`
+- `npm publish --provenance --access public`
 - `gh release create <tag> --generate-notes || echo "Release already exists"`
 
-The publish workflow requires `NPM_TOKEN` in repository secrets. GitHub release
-creation uses the workflow `GITHUB_TOKEN`.
+npm auth is **trusted publishing** (OIDC), with no `NPM_TOKEN` secret: npmjs.com
+trusts this repository's `publish.yml`, set up once with
+
+```bash
+npm trust github @xtandard/lib --repo xantiagoma/xtandard --file publish.yml
+```
+
+(or in the package's settings on npmjs.com). It needs npm 11.5.1 or later, which
+the workflow gets from Node 24. GitHub release creation uses the workflow
+`GITHUB_TOKEN`.
+
+If the publish step fails after the tag is pushed, fix the cause and publish the
+same tag again from the workflow's manual trigger (no new tag needed):
+
+```bash
+gh workflow run publish.yml -f tag=v0.6.0
+```
 
 ## Normal Release Flow
 
@@ -96,7 +111,7 @@ gh run watch <run-id>
 5. Confirm npm and GitHub release state:
 
 ```bash
-npm view xtandard version
+npm view @xtandard/lib version
 gh release list --limit 5
 ```
 
