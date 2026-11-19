@@ -18,6 +18,23 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 - `bun run check` — lint + format check + typecheck
 - `bun run build` — build library (tsdown via `vp pack`, outputs CJS + ESM + DTS to `dist/`)
 - `bun run release` — bump version, update changelog, tag, push (CI publishes)
+- `bun run docs:dev` / `docs:build` / `docs:preview` — the docs site (see below)
+
+## Docs Site
+
+`site/` is an Astro Starlight site (own `package.json`/lockfile, not published) deployed by
+`.github/workflows/pages.yml` to https://me.xantiagoma.com/xtandard/.
+
+- `README.md` and `docs/*.md` stay the source of truth (they render on GitHub/npm).
+  `site/scripts/sync.ts` copies them into `site/src/content/docs/` (generated, gitignored),
+  splitting long guides into pages by H2 per `site/manifest.ts` — so **renaming an H2 in
+  `docs/*.md` needs the matching `site/manifest.ts` entry updated** (sync fails loudly otherwise).
+- Site-only pages (core, integrations, tutorials, playgrounds) live in `site/content/`.
+- The API reference is generated from `src/` by starlight-typedoc; each `src/entry-*.ts` (and
+  `src/index.ts`) starts with a `@module` doc comment that names and describes its page.
+  `site/scripts/api-overviews.ts` writes `/api/` and `/api/<module>/` overview pages.
+- Playgrounds are React islands in `site/src/components/` importing the library from source.
+- Astro runs under Bun (`bun --bun astro …`); `.mdx` is excluded from `vp fmt` (oxfmt mangles MDX).
 
 ## Release Process
 

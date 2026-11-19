@@ -11,7 +11,7 @@
     "utilities",
     "xtandard"
   ],
-  "homepage": "https://github.com/xantiagoma/xtandard#readme",
+  "homepage": "https://me.xantiagoma.com/xtandard/",
   "bugs": {
     "url": "https://github.com/xantiagoma/xtandard/issues"
   },
@@ -476,6 +476,9 @@
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "check": "vp lint && vp fmt --check && tsc --noEmit",
+    "docs:dev": "cd site && bun install && bun run dev",
+    "docs:build": "cd site && bun install && bun run build",
+    "docs:preview": "cd site && bun run preview",
     "release": "changelogen --release --push --no-open",
     "prepare": "husky"
   },

@@ -1,3 +1,11 @@
+/**
+ * Date/time and duration conversions plus Temporal intervals (peers `@js-temporal/polyfill`, `itty-time`).
+ *
+ * Import from `@xtandard/lib/temporal`.
+ *
+ * @module temporal
+ */
+
 export { dateToInstant, instantToDate, toDate, toInstant } from "./datetime-utils.ts";
 export type { DateLike } from "./datetime-utils.ts";
 

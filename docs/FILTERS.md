@@ -18,6 +18,23 @@ npm install @xtandard/lib
 # + valibot for the optional ready-made schemas
 ```
 
+How a request travels from the client to the database:
+
+```mermaid
+flowchart LR
+  REQ["Untrusted JSON<br/>(body or URL)"] -->|"schema parse"| MODEL["ColumnFilter[] or FilterNode"]
+  MODEL --> COMPILE["compileFilters / compileFilterNode<br/>(each adapter calls it for you)"]
+  SPEC["spec: field → kind allow-list"] --> COMPILE
+  RD["resolveDate (injected)"] -.-> COMPILE
+  COMPILE --> AST["CompiledWhere AST"]
+  AST --> DRZ["drizzle: SQL"]
+  AST --> RQB["drizzle-rqb: where object"]
+  AST --> KYS["kysely: RawBuilder"]
+  AST --> KNX["knex: { sql, bindings }"]
+  AST --> MGO["mongo: filter object"]
+  AST --> PRS["prisma: where object"]
+```
+
 ## Quick start
 
 ```ts
@@ -250,6 +267,19 @@ Lowering rules (uniform across every adapter):
 - Text-match ops (`contains`/`ilike`/…) stay **semantic** in the AST so each
   adapter renders them natively (SQL `ILIKE`, Mongo `$regex`, Prisma
   `contains`-mode).
+
+How one `ColumnFilter` is lowered:
+
+```mermaid
+flowchart TD
+  CF["ColumnFilter { field, filter }"] --> ALLOW{"spec[field] === filter.kind?"}
+  ALLOW -->|no| DROP["dropped"]
+  ALLOW -->|yes| OP{"kind / operator"}
+  OP -->|"number: between"| BTW["and( gte from, lte to )"]
+  OP -->|"number: notBetween"| NBT["or( lt from, gt to )"]
+  OP -->|"date preset"| DATE["resolveDate, then<br/>and( gte start, lt end )"]
+  OP -->|"anything else"| LEAF["one cond leaf<br/>{ field, op, value or values }"]
+```
 
 `CompiledWhere` shape:
 
@@ -558,6 +588,15 @@ defensive: a field not in the allow-list, an unknown operator code, or a
 wrong-typed argument is dropped (the same posture as the compiler), and you still
 validate the reconstructed model as usual.
 
+```mermaid
+flowchart LR
+  NODE["FilterNode<br/>(verbose model)"] -->|compactFilterNode| CMP["compact form<br/>(no kind, short keys)"]
+  CMP -->|"rison.encode"| URL["URL param"]
+  URL -->|"rison.decode"| CMP2["compact form"]
+  CMP2 -->|"expandFilterNode + kinds"| NODE2["FilterNode<br/>(invalid leaves dropped)"]
+  NODE2 -->|"validate, then adapter"| SRV["buildFilterNode"]
+```
+
 ```ts
 import { compactFilterNode, expandFilterNode } from "@xtandard/lib/filters";
 
@@ -734,7 +773,7 @@ import { compileFilters, type CompiledWhere } from "@xtandard/lib/filters";
 function render(node: CompiledWhere): MyWhere {
   switch (node.type) {
     case "cond":
-      return myLeaf(node.cond); // { field, op, value/values/from/to }
+      return myLeaf(node.cond); // CompiledCond: { field, op } + value | values (none for isNull/isNotNull)
     case "and":
       return myAnd(node.nodes.map(render));
     case "or":
@@ -755,7 +794,7 @@ export function buildWhere(input: {
 ```
 
 The AST already resolves dates, lowers `between`, and drops non-allow-listed
-fields, so an adapter only maps the ~16 normalized leaf ops + and/or/not.
+fields, so an adapter only maps the 19 normalized leaf ops (`CompiledOp`) + and/or/not.
 
 ## Security
 
@@ -835,7 +874,3 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 - **Frontend bundle stays lean.** Import only `@xtandard/lib/filters` (types +
   compile + describe, zero deps) on the client; keep the adapter import on the
   server.
-
-```
-
-```

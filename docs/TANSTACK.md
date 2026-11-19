@@ -82,6 +82,28 @@ Set per-parser (`.withOptions`), per-hook, or per-call. Precedence:
   instantly; only the URL commit is rate-limited. `throttle(Infinity)` keeps
   state in sync without ever touching the URL.
 
+What happens on a setter call:
+
+```mermaid
+sequenceDiagram
+  participant C as Component
+  participant S as Store (shared by all hooks)
+  participant A as NuqsAdapter
+  participant R as Router / URL
+  C->>S: setPage(2)
+  Note over S: serialize with the parser<br/>update the snapshot now
+  S-->>C: every hook on the key re-renders with 2
+  Note over S: wait for limitUrlUpdates (throttle 50 ms)
+  S->>A: commit(search, options)
+  alt shallow: true (default)
+    A->>R: history.replaceState / pushState
+  else shallow: false
+    A->>R: router.navigate({ href }) runs loaders and SSR
+  end
+  R-->>A: location changed (or popstate)
+  A->>S: syncFromSearch (no-op when unchanged)
+```
+
 ## Parsers
 
 `parseAsString`, `parseAsInteger`, `parseAsFloat`, `parseAsHex`,
@@ -90,6 +112,19 @@ Set per-parser (`.withOptions`), per-hook, or per-call. Precedence:
 `parseAsStringLiteral`, `parseAsNumberLiteral`, `parseAsStringEnum`,
 `parseAsArrayOf` (comma-separated), `parseAsNativeArrayOf` (repeated keys,
 `?tag=a&tag=b`), `parseAsJson(validator)`.
+
+Each key goes through its parser in both directions (here
+`parseAsInteger.withDefault(1)`):
+
+```mermaid
+flowchart LR
+  URL["?page=3"] -->|"read: parser.parse"| OK{"parsed?"}
+  OK -->|yes| STATE["state: 3"]
+  OK -->|"null, or key missing"| DEF["default: 1<br/>(an invalid raw value is stripped<br/>when clearOnInvalid)"]
+  STATE -->|"write: setPage(v)"| W{"v is null, or equals the<br/>default with clearOnDefault?"}
+  W -->|"no: parser.serialize"| URL
+  W -->|yes| DEL["key removed from the URL"]
+```
 
 ### Custom parsers, encoders & decoders
 

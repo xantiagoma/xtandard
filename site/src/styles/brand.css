@@ -1,0 +1,185 @@
+/* The logo's palette as Starlight's colour properties: lime on charcoal.
+   Dark: charcoal (#111311) background, lime-400 (#a3e635) for links and accents (~13:1).
+   Light: white background, lime-800 (#3f6212) for links (~7.6:1) — lime itself is too pale on white. */
+
+:root {
+  --sl-color-accent-low: #1f2d0a;
+  --sl-color-accent: #65a30d;
+  --sl-color-accent-high: #a3e635;
+
+  --sl-color-white: #f7f8f6;
+  --sl-color-gray-1: #e7e9e4;
+  --sl-color-gray-2: #c6c9c2;
+  --sl-color-gray-3: #8d9188;
+  --sl-color-gray-4: #52564e;
+  --sl-color-gray-5: #2e312b;
+  --sl-color-gray-6: #1a1c18;
+  --sl-color-black: #111311;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #ecfccb;
+  --sl-color-accent: #4d7c0f;
+  --sl-color-accent-high: #3f6212;
+
+  --sl-color-white: #111311;
+  --sl-color-gray-1: #1d201b;
+  --sl-color-gray-2: #363a33;
+  --sl-color-gray-3: #585d54;
+  --sl-color-gray-4: #8d9188;
+  --sl-color-gray-5: #d4d7d0;
+  --sl-color-gray-6: #eef0ec;
+  --sl-color-gray-7: #f7f8f6;
+  --sl-color-black: #ffffff;
+}
+
+/* Mermaid diagrams: centred, never wider than the column, scroll when they must. */
+pre.mermaid,
+.mermaid {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  background: transparent;
+}
+
+/* Wide diagrams (sequence diagrams) scroll sideways on small screens instead of shrinking
+   until their labels are unreadable. */
+.mermaid svg {
+  min-width: min(40rem, 100%);
+}
+@media (max-width: 50rem) {
+  .mermaid svg {
+    min-width: 40rem;
+  }
+}
+
+/* Playground islands (src/components/*.tsx). */
+.xt-play {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1.5rem;
+}
+.xt-play textarea,
+.xt-play input,
+.xt-play select {
+  width: 100%;
+  font-family: var(--sl-font-mono);
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-white);
+  background: var(--sl-color-gray-6);
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+}
+.xt-play textarea {
+  min-height: 14rem;
+  resize: vertical;
+}
+.xt-play label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-2);
+}
+.xt-play .xt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.xt-play .xt-tabs button {
+  font: inherit;
+  font-size: var(--sl-text-sm);
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--sl-color-gray-5);
+  background: transparent;
+  color: var(--sl-color-gray-2);
+  cursor: pointer;
+}
+.xt-play .xt-tabs button[aria-pressed="true"] {
+  background: var(--sl-color-accent-low);
+  border-color: var(--sl-color-accent);
+  color: var(--sl-color-accent-high);
+}
+.xt-play pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: var(--sl-text-sm);
+  background: var(--sl-color-gray-6);
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+}
+.xt-play .xt-error {
+  color: var(--sl-color-red-high, #f87171);
+}
+.xt-play .xt-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+/* Interval playground: the number line and its operation table. */
+.xt-play .xt-line {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.xt-line .axis {
+  stroke: var(--sl-color-gray-4);
+  stroke-width: 1.5;
+}
+.xt-line text {
+  fill: var(--sl-color-gray-3);
+  font-family: var(--sl-font-mono);
+  font-size: 11px;
+}
+.xt-line .lbl {
+  fill: var(--sl-color-gray-2);
+  font-weight: 600;
+}
+.xt-line .bar-a {
+  stroke: var(--sl-color-accent-high);
+  fill: var(--sl-color-accent-high);
+}
+.xt-line .bar-b {
+  stroke: var(--sl-color-blue-high, #60a5fa);
+  fill: var(--sl-color-blue-high, #60a5fa);
+}
+.xt-line .bar-r {
+  stroke: var(--sl-color-orange-high, #fb923c);
+  fill: var(--sl-color-orange-high, #fb923c);
+}
+.xt-line circle {
+  stroke-width: 2;
+}
+.xt-line circle.open {
+  fill: var(--sl-color-black);
+}
+.xt-play table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sl-text-sm);
+}
+.xt-play th,
+.xt-play td {
+  text-align: start;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--sl-color-gray-5);
+}
+.xt-play tr.pickable {
+  cursor: pointer;
+}
+.xt-play tr.pickable:hover {
+  background: var(--sl-color-gray-6);
+}
+.xt-play tr[aria-selected="true"] {
+  background: var(--sl-color-accent-low);
+}
+.xt-play .xt-hint {
+  margin: 0;
+  font-size: var(--sl-text-xs);
+  color: var(--sl-color-gray-3);
+}

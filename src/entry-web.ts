@@ -1,3 +1,11 @@
+/**
+ * Browser utilities: `FormData` → object, `fetchWithProgress`, an HTTP interceptor, `keepSubDelims` (peer `up-fetch`).
+ *
+ * Import from `@xtandard/lib/web`.
+ *
+ * @module web
+ */
+
 export { formDataToObject } from "./form-data-to-object-utils.ts";
 export { keepSubDelims } from "./url-search-params-utils.ts";
 export { fetchWithProgress } from "./fetch-with-progress.ts";

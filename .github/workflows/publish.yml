@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.60 does not support ubuntu-latest (26.04) yet
     permissions:
       contents: write
       id-token: write

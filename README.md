@@ -9,6 +9,13 @@
 </p>
 
 <p align="center">
+  <a href="https://me.xantiagoma.com/xtandard/"><strong>Documentation</strong></a> ·
+  <a href="https://me.xantiagoma.com/xtandard/getting-started/">Getting started</a> ·
+  <a href="https://me.xantiagoma.com/xtandard/api/">API reference</a> ·
+  <a href="https://me.xantiagoma.com/xtandard/playground/filters/">Playgrounds</a>
+</p>
+
+<p align="center">
   <a href="https://www.npmjs.com/package/@xtandard/lib"><img src="https://img.shields.io/npm/v/@xtandard/lib?color=blue" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/@xtandard/lib"><img src="https://img.shields.io/npm/dm/@xtandard/lib" alt="npm downloads" /></a>
   <a href="https://github.com/xantiagoma/xtandard/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@xtandard/lib" alt="license" /></a>
@@ -55,7 +62,7 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/filters/knex`           | Knex raw-SQL WHERE builder from filters                  | none                                 |
 | `@xtandard/lib/filters/mongo`          | Mongo filter object from filters                         | none                                 |
 | `@xtandard/lib/filters/prisma`         | Prisma `where` object from filters                       | none                                 |
-| `@xtandard/lib/web`                    | Browser/FormData utilities                               | none                                 |
+| `@xtandard/lib/web`                    | Browser/FormData utilities                               | `up-fetch`                           |
 | `@xtandard/lib/tanstack`               | nuqs-style URL query state (TanStack Router)             | `react`, `@tanstack/react-router`    |
 | `@xtandard/lib/tanstack/server`        | Framework-free parsers/serializer/loader                 | none                                 |
 | `@xtandard/lib/tanstack/testing`       | Headless testing adapter (no router)                     | `react`                              |
@@ -65,7 +72,7 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/temporal`               | Date/time/duration + Temporal intervals                  | `@js-temporal/polyfill`, `itty-time` |
 | `@xtandard/lib/dataloader`             | DataLoader factory                                       | `dataloader`                         |
 | `@xtandard/lib/unstorage`              | Cache helpers with unstorage                             | `unstorage`, `ohash`                 |
-| `@xtandard/lib/valibot`                | Branded `TimeZone` schema (valibot)                      | `valibot`                            |
+| `@xtandard/lib/valibot`                | `TimeZone`, duration & Temporal schemas (valibot)        | `valibot`, `@js-temporal/polyfill`   |
 | `@xtandard/lib/zod`                    | Branded `TimeZone` schema (Zod)                          | `zod`                                |
 | `@xtandard/lib/arktype`                | Branded `TimeZone` schema (ArkType)                      | `arktype`                            |
 | `@xtandard/lib/effect`                 | Branded `TimeZone` schema (Effect)                       | `effect`                             |

@@ -1,3 +1,11 @@
+/**
+ * React hooks and components: `useStream`/`StreamRenderer`, `Providers`, `useDynamicRefs`, `usePreventAutoFocus` (peers `react`, `@tanstack/react-query`).
+ *
+ * Import from `@xtandard/lib/react`.
+ *
+ * @module react
+ */
+
 export { useStream, StreamRenderer } from "./stream-renderer.tsx";
 export { Providers, provider } from "./providers.tsx";
 export type { ProviderSpec, ProvidersProps } from "./providers.tsx";

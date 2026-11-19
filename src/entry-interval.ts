@@ -1,8 +1,14 @@
-// @xtandard/lib/interval — a generic, immutable Interval<T> over any ordered type
-// (Guava Range + DiscreteDomain model), plus built-in domains for the JS
-// primitives (number, integer, bigint, Date). Zero runtime dependencies.
-//
-// See docs/INTERVAL.md for the full guide.
+/**
+ * A generic, immutable Interval<T> over any ordered type
+ * (Guava Range + DiscreteDomain model), plus built-in domains for the JS
+ * primitives (number, integer, bigint, Date). Zero runtime dependencies.
+ *
+ * See docs/INTERVAL.md for the full guide.
+ *
+ * Import from `@xtandard/lib/interval`.
+ *
+ * @module interval
+ */
 
 export { Interval, defineIntervalType, mergeIntervals, parseInterval } from "./interval.ts";
 export type { Bound, BoundIntervalType, IntervalDomain, IntervalSpec } from "./interval.ts";

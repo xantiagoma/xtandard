@@ -1,3 +1,11 @@
+/**
+ * Cursor/offset pagination and keyset helpers (`createPaginator`, cursor codecs). Zero dependencies.
+ *
+ * Import from `@xtandard/lib/pagination`.
+ *
+ * @module pagination
+ */
+
 export { createPaginator, toOffsetWindow } from "./pagination.ts";
 export type {
   CursorDirection,
