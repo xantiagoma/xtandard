@@ -159,7 +159,7 @@ if (error instanceof AssertError) {
 ```
 
 You can throw it from your own checks too. Without an argument, its message is
-`"The value is null or undefined"`.
+`"unexpected null or undefined"`, the same default as `assertNotNull`.
 
 ```ts
 throw new AssertError("expected at least one row");

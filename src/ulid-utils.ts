@@ -187,8 +187,8 @@ export function getTimestampFromUlid({
  * place of a stored timestamp.
  *
  * @returns The `Date`, or `null` when the id isn't a valid ULID. With
- *   `throwOnInvalid: true`, any invalid id throws instead. Note: a ULID whose
- *   timestamp is `0` (`"00000000000000000000000000"`) is also treated as invalid.
+ *   `throwOnInvalid: true`, any invalid id throws instead. A ULID whose
+ *   timestamp is `0` (`"00000000000000000000000000"`) is valid and gives the epoch.
  *
  * @example
  * ```ts
@@ -206,7 +206,7 @@ export function getDateFromUlid({
   throwOnInvalid?: boolean;
 }): Date | null {
   const timestamp = getTimestampFromUlid({ id, throwOnInvalid });
-  if (!timestamp) {
+  if (timestamp === null || timestamp === undefined) {
     return valueOrThrow({
       value: null,
       error: "Invalid ID format",

@@ -23,16 +23,15 @@ export class AssertError extends Error {
    * Creates an assertion error with the given message.
    *
    * @param message - The error message. Defaults to
-   *   `"The value is null or undefined"` (note that `assertNotNull` passes its own
-   *   default, `"unexpected null or undefined"`).
+   *   `"unexpected null or undefined"`, the same default as `assertNotNull`.
    *
    * @example
    * ```ts
-   * new AssertError().message; // "The value is null or undefined"
+   * new AssertError().message; // "unexpected null or undefined"
    * new AssertError("expected at least one row").name; // "AssertError"
    * ```
    */
-  constructor(message = "The value is null or undefined") {
+  constructor(message = "unexpected null or undefined") {
     super(message);
     this.name = "AssertError";
   }

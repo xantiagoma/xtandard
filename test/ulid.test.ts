@@ -89,4 +89,11 @@ describe("getDateFromUlid", () => {
   test("returns null for invalid", () => {
     expect(getDateFromUlid({ id: "invalid" })).toBeNull();
   });
+
+  test("a ULID with timestamp 0 is valid and gives the epoch", () => {
+    const id = "00000000000000000000000000";
+    expect(getTimestampFromUlid({ id })).toBe(0);
+    expect(getDateFromUlid({ id })?.getTime()).toBe(0);
+    expect(getDateFromUlid({ id: `usr_${id}`, throwOnInvalid: true })?.getTime()).toBe(0);
+  });
 });

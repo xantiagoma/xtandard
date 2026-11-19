@@ -12,6 +12,7 @@ export type { MaybePromise } from "./types.ts";
 
 // Error handling
 export { tryCatch, tryCatchSync } from "./try-catch.ts";
+export type { Result, TryCatchReturn } from "./try-catch.ts";
 export { assertNotNull } from "./assert-not-null.ts";
 export { valueOrThrow } from "./error.ts";
 export { AssertError } from "./errors.ts";
@@ -44,14 +45,21 @@ export { isDisposable, isAsyncDisposable, isSyncDisposable } from "./is-disposab
 
 // Disposable utilities
 export { defer, deferSync } from "./defer.ts";
+export type { DeferOptions, Deferred, DeferredSync } from "./defer.ts";
 export { makeDisposable } from "./make-disposable.ts";
+export type { MakeDisposableOptions, Disposable as MadeDisposable } from "./make-disposable.ts";
 
 // Strings
-export { ensureString, naturalSortCompare, jaroWinklerDistance } from "./string.ts";
+export {
+  ensureString,
+  naturalSortCompare,
+  jaroWinklerSimilarity,
+  jaroWinklerDistance,
+} from "./string.ts";
 
 // Stream
 export { resolveStreamSource } from "./stream-source.ts";
-export type { StreamSource } from "./stream-source.ts";
+export type { StreamSource, StreamSourceInstance } from "./stream-source.ts";
 
 // Symbols
 export { DisposedSymbol, EnabledSymbol, CanceledSymbol, CancelReasonSymbol } from "./symbols.ts";
@@ -61,6 +69,10 @@ export { secondsToMs, minutesToMs, hoursToMs } from "./time-convert.ts";
 
 // DataLoader helpers
 export { prepareLoaderResult } from "./prepare-loader-result.ts";
+export type {
+  PrepareLoaderResultOneOptions,
+  PrepareLoaderResultManyOptions,
+} from "./prepare-loader-result.ts";
 
 // Debug
 export { log } from "./log.ts";

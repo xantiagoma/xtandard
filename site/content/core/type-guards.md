@@ -49,16 +49,24 @@ function format(value: number | Promise<number>) {
 }
 ```
 
-It narrows to `Promise<T>` even when the value is only a thenable. Use the result only as something you can
-`await` or call `.then` on; don't rely on `.catch` or `.finally` being there.
+The guard's type is `value is PromiseLike<T>`, so it narrows to the promise-like part of the input: a
+`number | Promise<number>` becomes `Promise<number>`, and a `MaybePromise<T>` (`T | PromiseLike<T>`)
+becomes `PromiseLike<T>`. The `false` branch narrows to `T` in both cases, also when `T` is a type parameter,
+so no `value as T` cast is needed:
 
-:::caution[Narrowing a `MaybePromise`]
-`MaybePromise<T>` is `T | PromiseLike<T>`, and the guard narrows to `Promise<T>`. So in the `false` branch,
-TypeScript still includes `PromiseLike<T>` and does not narrow the value to `T`. When the input is a
-`MaybePromise<T>`, cast the `false` branch (`value as T`), or use
-[`chainMaybePromise`](@BASE@/core/async/#maybepromise-resolvemaybepromise-chainmaybepromise), which handles
-both cases for you.
-:::
+```ts
+import { isPromise, type MaybePromise } from "@xtandard/lib";
+
+function double<T extends number>(value: MaybePromise<T>) {
+  if (isPromise(value)) {
+    return value.then((n) => n * 2); // value: PromiseLike<T>
+  }
+  return value * 2; // value: T
+}
+```
+
+A `true` result only promises a `then` method. On a `PromiseLike`, `.catch` and `.finally` aren't in the
+type, and a non-native thenable may not have them at runtime either; `await` it or call `.then`.
 
 ## `isIterable` and `isAsyncIterable`
 

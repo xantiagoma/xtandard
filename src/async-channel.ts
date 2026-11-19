@@ -32,7 +32,7 @@ export type AsyncChannelReturnType<T> =
  *
  * - **consume** (via `create()`) - Values are consumed by first iterator, subsequent iterations get nothing
  * - **replay** (via `replay()`) - All values are buffered, each iterator reads from the start (sequential)
- * - **broadcast** (via `broadcast()`) - Multiple simultaneous consumers, each gets values pushed after subscribing
+ * - **broadcast** (via `broadcast()`) - Multiple simultaneous consumers, each gets values pushed after subscribing (nothing is kept for late subscribers)
  * - **broadcastReplay** (via `broadcastReplay()`) - Multiple simultaneous consumers, new subscribers get past values + future values
  *
  * There is no public constructor; pick the mode with a static factory.
@@ -217,8 +217,11 @@ export class AsyncChannel<T, TReturn = void> implements AsyncIterable<T> {
           sub.queue.push(value);
         }
       }
-      // Buffer for broadcastReplay (new subscribers get past values)
-      this._buffer.push(value);
+      // Only broadcastReplay keeps history (late subscribers replay it); plain
+      // broadcast must not, or the buffer grows with every push.
+      if (this._mode === "broadcastReplay") {
+        this._buffer.push(value);
+      }
     } else {
       // Consume/Replay: buffer the value
       this._buffer.push(value);
@@ -311,7 +314,10 @@ export class AsyncChannel<T, TReturn = void> implements AsyncIterable<T> {
   }
 
   /**
-   * Returns the number of buffered values.
+   * Returns the number of values in the channel's shared buffer: the unread
+   * values in consume mode, every value pushed so far in replay and
+   * broadcastReplay mode (late iterators replay them), and always `0` in
+   * broadcast mode (values go straight to the current subscribers).
    */
   get pending(): number {
     return this._buffer.length;

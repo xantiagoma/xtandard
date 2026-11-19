@@ -49,7 +49,8 @@ export const toDuration = (value: DurationLike): Temporal.Duration => {
   return value;
 };
 
-type DurationToMsOptions = {
+/** Options for `durationToMs`: the reference time that calendar units need. */
+export type DurationToMsOptions = {
   /**
    * Reference time for durations that include calendar units (days/weeks/months/years).
    *

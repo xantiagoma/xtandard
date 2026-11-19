@@ -14,7 +14,8 @@ import Big from "big.js";
 
 import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from "./interval.ts";
 
-type BigValue = InstanceType<typeof Big>;
+/** A big.js `Big` instance: the endpoint type of `BigInterval`. */
+export type BigValue = InstanceType<typeof Big>;
 
 /**
  * Exact-decimal {@link IntervalDomain} backed by big.js. Continuous. Bound to a

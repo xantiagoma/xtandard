@@ -2,12 +2,14 @@ import type { MaybePromise } from "./types";
 
 import { CanceledSymbol, CancelReasonSymbol, DisposedSymbol, EnabledSymbol } from "./symbols";
 
+/** Options for `defer` / `deferSync`: an abort signal plus dispose/cancel callbacks. */
 export interface DeferOptions {
   signal?: AbortSignal;
   onDispose?: () => void;
   onCancel?: (reason?: unknown) => void;
 }
 
+/** Handle returned by `defer`: an `AsyncDisposable` you can cancel, resume or dispose early. */
 export interface Deferred {
   /** Cancel — dispose becomes a no-op. Pass an optional reason. */
   cancel: (reason?: unknown) => void;
@@ -26,6 +28,7 @@ export interface Deferred {
   [Symbol.asyncDispose]: () => Promise<void>;
 }
 
+/** Handle returned by `deferSync`: a sync `Disposable` you can cancel, resume or dispose early. */
 export interface DeferredSync {
   cancel: (reason?: unknown) => void;
   resume: () => void;

@@ -1564,8 +1564,9 @@ Notes:
   (matching drizzle-cursor). If a cursor field is a string that merely looks
   like a date (a `"2024-06-11"` SKU), pass `reviveDates: false`.
 - **`isIsoDateString`** — helper used by the default parser to detect
-  ISO-shaped strings for date revival. It checks the pattern plus `Date.parse`,
-  not the calendar: `"2024-02-30"` passes (engines roll it over to March 1).
+  ISO-shaped strings for date revival. It checks the pattern, the calendar and
+  `Date.parse`: `"2024-02-30"` fails (and stays a string) instead of reviving
+  as a rolled-over March 1.
 - **`encodeBase64Url` / `decodeBase64Url`** — the default encoder/decoder
   stages, exported for reuse (`encodeBase64Url('{"id":7}')` → `"eyJpZCI6N30"`).
   Both handle non-Latin1 text and run in browsers and edge runtimes.

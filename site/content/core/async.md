@@ -72,8 +72,10 @@ await tick.promise(); // 2
 
 :::caution
 The completer follows normal Promise rules: after the first `resolve` or `reject`, more calls do nothing
-until you call `reset()`. `reset()` does not settle the old promise, so anything still awaiting the
-previous `promise()` waits forever. Settle it before you reset.
+until you call `reset()`. If the old promise is still pending when you call `reset()`, it is rejected with
+`Error("Completer was reset")`, so anything awaiting the previous `promise()` throws instead of waiting
+forever. That rejection is not reported as unhandled when nobody was awaiting. A promise that was already
+settled keeps its result.
 :::
 
 ## `collect`
@@ -249,16 +251,17 @@ Things to know:
 - `push` after `close`/`reject` throws `Error("Cannot push to a closed channel")`. Calling `close` or
   `reject` again does nothing.
 - `closed` tells you whether the channel has been closed. `pending` is the number of values in the internal
-  buffer. In consume mode, that's the values not yet read. In the other modes, the buffer keeps every value
-  pushed so far.
+  buffer. In consume mode, that's the values not yet read. In replay and broadcastReplay mode, the buffer
+  keeps every value pushed so far. In broadcast mode it is always `0`: each value goes straight to the
+  current subscribers' own queues.
 - `reset()` returns the channel to its empty, open state. Any consumer still waiting for a value is rejected
   with `Error("Channel was reset")`.
 - In the two broadcast modes, breaking out of a `for await` early unsubscribes that consumer.
 
 :::note
-Only consume mode drops values once they are read. Replay and broadcastReplay keep every pushed value
-because new iterations need them, and broadcast mode keeps them too. For a long-lived channel that
-receives many values, call `reset()` from time to time or create a new channel.
+Consume and broadcast mode drop values once they are delivered. Replay and broadcastReplay keep every pushed
+value because new iterations need them. For a long-lived replay or broadcastReplay channel that receives
+many values, call `reset()` from time to time or create a new channel.
 :::
 
 ## `MaybePromise`, `resolveMaybePromise`, `chainMaybePromise`
