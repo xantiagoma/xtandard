@@ -6,10 +6,10 @@
 
 ### 🩹 Fixes
 
-- **core:** ⚠️  Completer.reset, AsyncChannel broadcast, isPromise, jaroWinkler, cursor dates ([019ee35](https://github.com/xantiagoma/xtandard/commit/019ee35))
-- **filters:** ⚠️  ArkType node schema, LIKE escaping, MySQL quoting, RQB v1 arrays, strict sort ([f66dc2e](https://github.com/xantiagoma/xtandard/commit/f66dc2e))
-- **tanstack:** ⚠️  Option precedence in useQueryStates, withTransport, duration equality ([33e3d80](https://github.com/xantiagoma/xtandard/commit/33e3d80))
-- **react,sonner,web,unstorage:** ⚠️  ToastStreamAsync, StreamRenderer, useStream keys, interceptor, cache keys ([0d09deb](https://github.com/xantiagoma/xtandard/commit/0d09deb))
+- **core:** ⚠️ Completer.reset, AsyncChannel broadcast, isPromise, jaroWinkler, cursor dates ([019ee35](https://github.com/xantiagoma/xtandard/commit/019ee35))
+- **filters:** ⚠️ ArkType node schema, LIKE escaping, MySQL quoting, RQB v1 arrays, strict sort ([f66dc2e](https://github.com/xantiagoma/xtandard/commit/f66dc2e))
+- **tanstack:** ⚠️ Option precedence in useQueryStates, withTransport, duration equality ([33e3d80](https://github.com/xantiagoma/xtandard/commit/33e3d80))
+- **react,sonner,web,unstorage:** ⚠️ ToastStreamAsync, StreamRenderer, useStream keys, interceptor, cache keys ([0d09deb](https://github.com/xantiagoma/xtandard/commit/0d09deb))
 
 ### 📖 Documentation
 
@@ -26,10 +26,10 @@
 
 #### ⚠️ Breaking Changes
 
-- **core:** ⚠️  Completer.reset, AsyncChannel broadcast, isPromise, jaroWinkler, cursor dates ([019ee35](https://github.com/xantiagoma/xtandard/commit/019ee35))
-- **filters:** ⚠️  ArkType node schema, LIKE escaping, MySQL quoting, RQB v1 arrays, strict sort ([f66dc2e](https://github.com/xantiagoma/xtandard/commit/f66dc2e))
-- **tanstack:** ⚠️  Option precedence in useQueryStates, withTransport, duration equality ([33e3d80](https://github.com/xantiagoma/xtandard/commit/33e3d80))
-- **react,sonner,web,unstorage:** ⚠️  ToastStreamAsync, StreamRenderer, useStream keys, interceptor, cache keys ([0d09deb](https://github.com/xantiagoma/xtandard/commit/0d09deb))
+- **core:** ⚠️ Completer.reset, AsyncChannel broadcast, isPromise, jaroWinkler, cursor dates ([019ee35](https://github.com/xantiagoma/xtandard/commit/019ee35))
+- **filters:** ⚠️ ArkType node schema, LIKE escaping, MySQL quoting, RQB v1 arrays, strict sort ([f66dc2e](https://github.com/xantiagoma/xtandard/commit/f66dc2e))
+- **tanstack:** ⚠️ Option precedence in useQueryStates, withTransport, duration equality ([33e3d80](https://github.com/xantiagoma/xtandard/commit/33e3d80))
+- **react,sonner,web,unstorage:** ⚠️ ToastStreamAsync, StreamRenderer, useStream keys, interceptor, cache keys ([0d09deb](https://github.com/xantiagoma/xtandard/commit/0d09deb))
 
 ### ❤️ Contributors
 
