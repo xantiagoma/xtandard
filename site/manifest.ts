@@ -267,6 +267,13 @@ export const sidebar: Item[] = [
     label: "Project",
     items: [
       {
+        slug: "project/ecosystem",
+        src: "README.md",
+        sections: ["The xtandard ecosystem"],
+        title: "The xtandard ecosystem",
+        label: "xtandard ecosystem",
+      },
+      {
         slug: "project/recommended-libraries",
         src: "README.md",
         sections: ["Recommended Libraries"],

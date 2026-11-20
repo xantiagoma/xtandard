@@ -578,10 +578,23 @@ These are libraries we use and recommend. They're not re-exported — install th
 | [cheerio](https://cheerio.js.org/)                                         | Fast HTML parsing + manipulation     |
 | [dexie](https://dexie.org/)                                                | IndexedDB wrapper with clean API     |
 
-## See Also
+## The xtandard ecosystem
 
-- [drizzle-cursor](https://github.com/xantiagoma/drizzle-cursor) — Cursor-based pagination for Drizzle ORM
-- [drizzle-audit](https://github.com/xantiagoma/drizzle-audit) — Configurable audit logging for Drizzle ORM
+`@xtandard/lib` is one of a family of open-source, MIT-licensed projects that share the xtandard
+name. They are independent of each other: use any of them on its own.
+
+| Project                            | What it is                                                                                                                                                                                                      | Links                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`@xtandard/lib`** (this package) | Lightweight, type-safe TypeScript utilities with a zero-dependency core                                                                                                                                         | [Docs](https://me.xantiagoma.com/xtandard/) · [npm](https://www.npmjs.com/package/@xtandard/lib)                                                                  |
+| **`@xtandard/flags`**              | A self-hosted, embeddable, OpenFeature-compatible feature-flag control plane with pluggable storage                                                                                                             | [GitHub](https://github.com/xantiagoma/xtandard-flags) · [npm](https://www.npmjs.com/package/@xtandard/flags)                                                     |
+| **`@xtandard/webhooks`**           | A self-hosted, embeddable, Standard Webhooks-compliant outbound-webhooks control plane: a Svix alternative as a library                                                                                         | [GitHub](https://github.com/xantiagoma/xtandard-webhooks) · [npm](https://www.npmjs.com/package/@xtandard/webhooks)                                               |
+| **`@xtandard/xyte`**               | A Zyte API-compatible `/v1/extract` client and server that runs on any proxy provider, or none                                                                                                                  | [Docs](https://me.xantiagoma.com/xyte/) · [GitHub](https://github.com/xantiagoma/xyte) · [npm](https://www.npmjs.com/package/@xtandard/xyte)                      |
+| **xtandard-image**                 | A self-hosted image and video processing server in Go and libvips: imgproxy-compatible URLs plus the imgix, Cloudinary, ImageKit, Cloudflare and Thumbor dialects, with a TypeScript client (`@xtandard/image`) | [Docs](https://me.xantiagoma.com/xtandard-image/) · [GitHub](https://github.com/xantiagoma/xtandard-image) · [npm](https://www.npmjs.com/package/@xtandard/image) |
+
+### Related
+
+- [drizzle-cursor](https://github.com/xantiagoma/drizzle-cursor): cursor-based pagination for Drizzle ORM
+- [drizzle-audit](https://github.com/xantiagoma/drizzle-audit): configurable audit logging for Drizzle ORM
 
 ## License
 
