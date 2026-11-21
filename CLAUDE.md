@@ -6,7 +6,7 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 
 - **Package manager**: Bun (`bun install`, `bun run <script>`)
 - **Toolchain**: Vite+ (`vp`) — test, lint, fmt, build
-- **TypeScript**: the toolchain stays on 5.9 (`typescript` devDep; tsdown's `.d.ts` build needs the JS compiler API, which TypeScript 7 doesn't ship). The `typescript-v7` alias devDep type-checks the repo with TypeScript 7 so the `^5 || ^6 || ^7` peer stays honest.
+- **TypeScript**: the toolchain stays on 5.9 (`typescript` devDep; tsdown's `.d.ts` build needs the JS compiler API, which TypeScript 7 doesn't ship). The `typescript-v7` alias devDep type-checks the repo with TypeScript 7 so the `^5 || ^6 || ^7` peer stays honest. The `filters/drizzle-rqb` and `filters/tanstack-table` typings use `NoInfer` and need TS 5.4+ (documented, peer not narrowed).
 - **Node**: Managed via mise (requires >= 22.18.0 for TS config support)
 
 ## Scripts
