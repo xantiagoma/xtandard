@@ -32,7 +32,6 @@
         "fraction.js": "^5.3.4",
         "husky": "^9.1.7",
         "ipaddr.js": "^2.4.0",
-        "itty-time": "^2.0.2",
         "kysely": "^0.29.2",
         "msw": "^2.14.6",
         "ohash": "^2.0.11",
@@ -69,7 +68,6 @@
         "effect": "^3.10.0 || ^4.0.0",
         "fraction.js": "^5.3.4",
         "ipaddr.js": "^2.4.0",
-        "itty-time": "^1.0.6 || ^2",
         "kysely": "^0.29.0",
         "ohash": "^2.0.11",
         "react": "^18.0.0 || ^19.0.0",
@@ -97,7 +95,6 @@
         "effect",
         "fraction.js",
         "ipaddr.js",
-        "itty-time",
         "kysely",
         "ohash",
         "react",
@@ -611,8 +608,6 @@
     "istanbul-lib-report": ["istanbul-lib-report@3.0.1", "", { "dependencies": { "istanbul-lib-coverage": "^3.0.0", "make-dir": "^4.0.0", "supports-color": "^7.1.0" } }, "sha512-GCfE1mtsHGOELCU8e/Z7YWzpmybrx/+dSTfLrvY8qRmaY6zXTKWn6WQIjaAFw069icm6GVMNkgu0NzI4iPZUNw=="],
 
     "istanbul-reports": ["istanbul-reports@3.2.0", "", { "dependencies": { "html-escaper": "^2.0.0", "istanbul-lib-report": "^3.0.0" } }, "sha512-HGYWWS/ehqTV3xN10i23tkPkpH46MLCIMFNCaaKNavAXTF1RkqxawEPtnjnGZ6XKSInBKkiOA5BKS+aZiY3AvA=="],
-
-    "itty-time": ["itty-time@2.0.2", "", {}, "sha512-95U9Xo3Qggz/e82ewZQJw8x76HgiMvbrijzoPy6nCTae4FZEwbcVJgrB57Kvddf8Q5pQdgJKTX6euFJpDr6Low=="],
 
     "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 
