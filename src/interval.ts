@@ -65,8 +65,10 @@ export interface IntervalDomain<T> {
  * bounded/unbounded comparison into a single total order, so the set operations
  * don't need per-bracket special cases. `belowAll`/`aboveAll` are the cuts past
  * either end; `below v` sits just left of `v`, `above v` just right of it.
+ *
+ * @internal Shared with `IntervalSet`/`IntervalMap`; not part of the public API.
  */
-type Cut<T> =
+export type Cut<T> =
   | { readonly kind: "belowAll" }
   | { readonly kind: "aboveAll" }
   | { readonly kind: "below"; readonly value: T }
@@ -75,8 +77,10 @@ type Cut<T> =
 /**
  * The cut for a lower bound. An unbounded lower maps to its `-∞` value when the
  * domain has one (so the closed/open bracket orders correctly), else `belowAll`.
+ *
+ * @internal Shared with `IntervalSet`/`IntervalMap`; not part of the public API.
  */
-function lowerCut<T>(domain: IntervalDomain<T>, bound: Bound<T>): Cut<T> {
+export function lowerCut<T>(domain: IntervalDomain<T>, bound: Bound<T>): Cut<T> {
   if (bound.unbounded) {
     if (domain.negativeInfinity === undefined) return { kind: "belowAll" };
 
@@ -93,8 +97,10 @@ function lowerCut<T>(domain: IntervalDomain<T>, bound: Bound<T>): Cut<T> {
 /**
  * The cut for an upper bound. An unbounded upper maps to its `+∞` value when the
  * domain has one (so the closed/open bracket orders correctly), else `aboveAll`.
+ *
+ * @internal Shared with `IntervalSet`/`IntervalMap`; not part of the public API.
  */
-function upperCut<T>(domain: IntervalDomain<T>, bound: Bound<T>): Cut<T> {
+export function upperCut<T>(domain: IntervalDomain<T>, bound: Bound<T>): Cut<T> {
   if (bound.unbounded) {
     if (domain.positiveInfinity === undefined) return { kind: "aboveAll" };
 
@@ -108,8 +114,12 @@ function upperCut<T>(domain: IntervalDomain<T>, bound: Bound<T>): Cut<T> {
     : { kind: "below", value: bound.value };
 }
 
-/** Total order on cuts: negative if `a` is left of `b`, 0 if equal, positive if right. */
-function compareCut<T>(domain: IntervalDomain<T>, a: Cut<T>, b: Cut<T>): number {
+/**
+ * Total order on cuts: negative if `a` is left of `b`, 0 if equal, positive if right.
+ *
+ * @internal Shared with `IntervalSet`/`IntervalMap`; not part of the public API.
+ */
+export function compareCut<T>(domain: IntervalDomain<T>, a: Cut<T>, b: Cut<T>): number {
   if (a.kind === "belowAll") return b.kind === "belowAll" ? 0 : -1;
   if (a.kind === "aboveAll") return b.kind === "aboveAll" ? 0 : 1;
   if (b.kind === "belowAll") return 1;
@@ -601,6 +611,40 @@ export class Interval<T> {
   toString(): string {
     return this.format();
   }
+}
+
+/** Whether `value` is the domain's declared `-∞` (or `+∞`) value. */
+function isInfinity<T>(domain: IntervalDomain<T>, value: T, infinity: T | undefined): boolean {
+  return infinity !== undefined && domain.compare(value, infinity) === 0;
+}
+
+/**
+ * The interval between two cuts, `lo` to `hi` (empty unless `lo < hi`) — the
+ * inverse of `lowerCut`/`upperCut`. A cut on the domain's own `±∞` value maps
+ * back to an unbounded side with the matching bracket, so a result never holds
+ * `±Infinity` as a "finite" endpoint.
+ *
+ * @internal Shared with `IntervalSet`/`IntervalMap`; not part of the public API.
+ */
+export function intervalBetween<T>(domain: IntervalDomain<T>, lo: Cut<T>, hi: Cut<T>): Interval<T> {
+  if (compareCut(domain, lo, hi) >= 0 || lo.kind === "aboveAll" || hi.kind === "belowAll") {
+    return Interval.blank(domain);
+  }
+
+  const lower: Bound<T> =
+    lo.kind === "belowAll"
+      ? { unbounded: true, closed: false }
+      : isInfinity(domain, lo.value, domain.negativeInfinity)
+        ? { unbounded: true, closed: lo.kind === "below" }
+        : { unbounded: false, value: lo.value, closed: lo.kind === "below" };
+  const upper: Bound<T> =
+    hi.kind === "aboveAll"
+      ? { unbounded: true, closed: false }
+      : isInfinity(domain, hi.value, domain.positiveInfinity)
+        ? { unbounded: true, closed: hi.kind === "above" }
+        : { unbounded: false, value: hi.value, closed: hi.kind === "above" };
+
+  return Interval.of(domain, lower, upper);
 }
 
 /** Return `domain.add`, or throw if the domain can't shift values (no `add` hook). */

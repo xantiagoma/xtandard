@@ -2,6 +2,8 @@ import { BigNumber } from "bignumber.js";
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { BigNumberInterval, bigNumberDomain } from "../src/interval-bignumber";
 
 const bn = (s: string) => new BigNumber(s);
@@ -55,5 +57,19 @@ describe("BigNumberInterval — exact decimals (bignumber.js, continuous)", () =
     expect(r).toBeInstanceOf(Interval);
     expect(bigNumberDomain.name).toBe("bignumber");
     expect(bigNumberDomain.next).toBeUndefined();
+  });
+});
+
+describe("IntervalSet / IntervalMap over bignumber.js", () => {
+  test("coalesce, complement, lookup", () => {
+    const set = IntervalSet.of(BigNumberInterval.domain, [
+      BigNumberInterval.closedOpen(bn("0.1"), bn("0.2")),
+      BigNumberInterval.closedOpen(bn("0.2"), bn("0.3")),
+    ]);
+    expect(set.toString()).toBe("[0.1,0.3)");
+    expect(set.complement().toString()).toBe("(-Infinity,0.1) ∪ [0.3,+Infinity)");
+    expect(set.contains(bn("0.29999999999999999999"))).toBe(true);
+    const map = IntervalMap.of(BigNumberInterval.domain, [[set.span(), "in"]]);
+    expect(map.get(bn("0.3"))).toBeUndefined();
   });
 });

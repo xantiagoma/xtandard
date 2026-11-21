@@ -2,6 +2,8 @@ import Fraction from "fraction.js";
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { FractionInterval, fractionDomain } from "../src/interval-fraction";
 
 const f = (n: number, d: number) => new Fraction(n, d);
@@ -52,5 +54,21 @@ describe("FractionInterval — exact rationals (fraction.js, continuous)", () =>
     expect(r).toBeInstanceOf(Interval);
     expect(fractionDomain.name).toBe("fraction");
     expect(fractionDomain.next).toBeUndefined();
+  });
+});
+
+describe("IntervalSet / IntervalMap over fraction.js", () => {
+  test("thirds coalesce exactly", () => {
+    const set = IntervalSet.of(FractionInterval.domain, [
+      FractionInterval.closedOpen(f(0, 1), f(1, 3)),
+      FractionInterval.closedOpen(f(1, 3), f(2, 3)),
+      FractionInterval.closed(f(5, 6), f(1, 1)),
+    ]);
+    expect(set.toString()).toBe("[0,2/3) ∪ [5/6,1]");
+    expect(set.gaps().toString()).toBe("[2/3,5/6)");
+    const map = IntervalMap.of(FractionInterval.domain, [[set.span(), "x"]]).remove(
+      FractionInterval.point(f(1, 2)),
+    );
+    expect(map.toString()).toBe("{[0,1/2) => x, (1/2,1] => x}");
   });
 });

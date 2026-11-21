@@ -2,6 +2,8 @@ import Decimal from "decimal.js";
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { DecimalInterval, decimalDomain } from "../src/interval-decimal";
 import { NumberInterval } from "../src/interval-domains";
 
@@ -77,5 +79,24 @@ describe("DecimalInterval — exact decimals (continuous)", () => {
   test("the domain is continuous and named", () => {
     expect(decimalDomain.name).toBe("decimal");
     expect(decimalDomain.next).toBeUndefined(); // no successor → continuous
+  });
+});
+
+describe("IntervalSet / IntervalMap over decimals", () => {
+  test("exact coalescing and difference (no float fuzz at the seams)", () => {
+    const set = IntervalSet.of(DecimalInterval.domain, [
+      DecimalInterval.closedOpen(d("0.1"), d("0.2")),
+      DecimalInterval.closed(d("0.2"), d("0.3")),
+    ]);
+    expect(set.toString()).toBe("[0.1,0.3]");
+    expect(set.length()).toBe(0.2);
+    expect(set.remove(DecimalInterval.open(d("0.15"), d("0.25"))).toString()).toBe(
+      "[0.1,0.15] ∪ [0.25,0.3]",
+    );
+    const map = IntervalMap.of(DecimalInterval.domain, [
+      [DecimalInterval.closed(d("0"), d("1")), "a"],
+    ]);
+    expect(map.get(d("0.30000000000000004"))).toBe("a");
+    expect(map.get(d("1.0000000000000000001"))).toBeUndefined();
   });
 });

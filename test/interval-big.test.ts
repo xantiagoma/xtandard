@@ -2,6 +2,8 @@ import Big from "big.js";
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { BigInterval, bigDomain } from "../src/interval-big";
 
 const b = (s: string) => new Big(s);
@@ -49,5 +51,18 @@ describe("BigInterval — exact decimals (big.js, continuous)", () => {
     expect(r).toBeInstanceOf(Interval);
     expect(bigDomain.name).toBe("big");
     expect(bigDomain.next).toBeUndefined();
+  });
+});
+
+describe("IntervalSet / IntervalMap over big.js", () => {
+  test("coalesce, complement, lookup", () => {
+    const set = IntervalSet.of(BigInterval.domain, [
+      BigInterval.closed(b("0"), b("0.5")),
+      BigInterval.closed(b("0.5"), b("1")),
+      BigInterval.closed(b("2"), b("3")),
+    ]);
+    expect(set.toString()).toBe("[0,1] ∪ [2,3]");
+    expect(set.gaps().toString()).toBe("(1,2)");
+    expect(IntervalMap.of(BigInterval.domain, [[set.span(), 7]]).get(b("1.5"))).toBe(7);
   });
 });
