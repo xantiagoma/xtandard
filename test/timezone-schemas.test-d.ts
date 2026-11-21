@@ -17,6 +17,12 @@ export type _ZodTz = Expect<Equal<z.infer<typeof ZodTimeZone>, TimeZone>>;
 import type { Schema } from "effect";
 import type { TimeZoneSchema as EffectTimeZone } from "../src/effect-utils.ts";
 export type _EffectTz = Expect<Equal<Schema.Schema.Type<typeof EffectTimeZone>, TimeZone>>;
+export type _EffectTzEncoded = Expect<Equal<Schema.Schema.Encoded<typeof EffectTimeZone>, string>>;
+
+import type { Schema as Schema4 } from "effect-v4";
+import type { TimeZoneSchema as Effect4TimeZone } from "../src/effect-v4-utils.ts";
+export type _Effect4Tz = Expect<Equal<Schema4.Schema.Type<typeof Effect4TimeZone>, TimeZone>>;
+export type _Effect4TzEncoded = Expect<Equal<(typeof Effect4TimeZone)["Encoded"], string>>;
 
 import type { TimeZoneSchema as ArkTimeZone } from "../src/arktype-utils.ts";
 export type _ArkTz = Expect<Equal<(typeof ArkTimeZone)["infer"], TimeZone>>;

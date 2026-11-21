@@ -5,17 +5,18 @@ description: "A branded IANA TimeZone schema for valibot, Zod, ArkType and Effec
 
 Four sibling entries ship small, ready-made schemas for the validator you already use. Each has a `TimeZoneSchema` that checks a string is a real IANA time zone and **brands** it as `TimeZone`. The valibot entry also has schemas for ISO 8601 durations and the Temporal date/time string formats. Use them at API boundaries (request bodies, query strings, settings) so the rest of your code can rely on the type.
 
-| Entry                   | Install                                 | Exports                                                                                                                                                  |
-| ----------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@xtandard/lib/valibot` | `valibot` (v1), `@js-temporal/polyfill` | `TimeZoneSchema`, `parseTimeZone`, `DurationSchema`, `InstantSchema`, `PlainDateSchema`, `PlainTimeSchema`, `PlainDateTimeSchema`, `ZonedDateTimeSchema` |
-| `@xtandard/lib/zod`     | `zod` (v4)                              | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
-| `@xtandard/lib/arktype` | `arktype` (v2)                          | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
-| `@xtandard/lib/effect`  | `effect` (v3.10+)                       | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
+| Entry                     | Install                                 | Exports                                                                                                                                                  |
+| ------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@xtandard/lib/valibot`   | `valibot` (v1), `@js-temporal/polyfill` | `TimeZoneSchema`, `parseTimeZone`, `DurationSchema`, `InstantSchema`, `PlainDateSchema`, `PlainTimeSchema`, `PlainDateTimeSchema`, `ZonedDateTimeSchema` |
+| `@xtandard/lib/zod`       | `zod` (v4)                              | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
+| `@xtandard/lib/arktype`   | `arktype` (v2)                          | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
+| `@xtandard/lib/effect`    | `effect` (v3.10+)                       | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
+| `@xtandard/lib/effect/v4` | `effect` (v4)                           | `TimeZoneSchema`, `parseTimeZone`                                                                                                                        |
 
 Every entry also exports `isValidTimeZone`, `asTimeZone` and the `TimeZone` type. All peers are optional; install only the row you use. The valibot entry needs `@js-temporal/polyfill` too, because its Temporal schemas import it.
 
 :::tip[Looking for filter schemas?]
-The schemas for the filter model (`FiltersRequestSchema`, `FilterNodeSchema`, `SortSchema`, …) live at `@xtandard/lib/filters/{valibot,zod,arktype,effect}`. See [Filters → Validation](@BASE@/filters/#validation--ready-made-schemas-or-bring-your-own).
+The schemas for the filter model (`FiltersRequestSchema`, `FilterNodeSchema`, `SortSchema`, …) live at `@xtandard/lib/filters/{valibot,zod,arktype,effect}` (and `@xtandard/lib/filters/effect/v4` for effect 4). See [Filters → Validation](@BASE@/filters/#validation--ready-made-schemas-or-bring-your-own).
 :::
 
 ## The `TimeZone` brand
@@ -126,6 +127,8 @@ The ArkType schema has no custom message, so failures read "must be valid accord
 
 ## Effect
 
+Effect 4 changed the Schema API, so there are two entries with the same exports: `@xtandard/lib/effect` for effect 3 and `@xtandard/lib/effect/v4` for effect 4. Import the one that matches the `effect` major you have installed.
+
 ```ts
 import { Either, Schema } from "effect";
 import { TimeZoneSchema, parseTimeZone } from "@xtandard/lib/effect";
@@ -138,21 +141,35 @@ Either.isLeft(Schema.decodeUnknownEither(Settings)({ timeZone: "Mars/Olympus" })
 parseTimeZone("Europe/Berlin"); // = Schema.decodeUnknownSync(TimeZoneSchema)
 ```
 
-The Effect schema is a two-way transformation: its encoded side is a plain `string` and its type side is `TimeZone`, so `Schema.encodeSync` gives the string back.
+On effect 4, `Either` became `Result` and `ParseError` became `SchemaError`:
+
+```ts
+import { Result, Schema } from "effect";
+import { TimeZoneSchema, parseTimeZone } from "@xtandard/lib/effect/v4";
+
+const Settings = Schema.Struct({ timeZone: TimeZoneSchema });
+
+Schema.decodeUnknownSync(Settings)({ timeZone: "Europe/Berlin" }); // { timeZone: TimeZone }
+Result.isFailure(Schema.decodeUnknownResult(Settings)({ timeZone: "Mars/Olympus" })); // true; message "Invalid IANA time zone"
+
+parseTimeZone("Mars/Olympus"); // throws SchemaError
+```
+
+On either version the Effect schema is a two-way transformation: its encoded side is a plain `string` and its type side is `TimeZone`, so `Schema.encodeSync` gives the string back.
 
 ## Which one?
 
-| Library | Duration / Temporal schemas | Invalid-zone message                | `parseTimeZone` throws     |
-| ------- | --------------------------- | ----------------------------------- | -------------------------- |
-| valibot | Yes                         | `Invalid IANA time zone`            | `ValiError`                |
-| Zod     | No                          | `Invalid IANA time zone`            | `ZodError`                 |
-| ArkType | No                          | ArkType's generic predicate message | ArkType's `TraversalError` |
-| Effect  | No                          | `Invalid IANA time zone`            | `ParseError`               |
+| Library | Duration / Temporal schemas | Invalid-zone message                | `parseTimeZone` throws           |
+| ------- | --------------------------- | ----------------------------------- | -------------------------------- |
+| valibot | Yes                         | `Invalid IANA time zone`            | `ValiError`                      |
+| Zod     | No                          | `Invalid IANA time zone`            | `ZodError`                       |
+| ArkType | No                          | ArkType's generic predicate message | ArkType's `TraversalError`       |
+| Effect  | No                          | `Invalid IANA time zone`            | `ParseError` (v4: `SchemaError`) |
 
 Pick the one your project already uses; the `TimeZone` type is the same either way. If you need duration or Temporal string validation with Zod, ArkType or Effect, wrap `Temporal.*.from` in a refinement, or validate those fields with [`toDuration`](@BASE@/integrations/temporal/#durations) after parsing.
 
 ## See also
 
 - [Temporal](@BASE@/integrations/temporal/): converting the validated strings into `Date`, `Temporal.Instant` and milliseconds.
-- API reference: [valibot](@BASE@/api/valibot/), [zod](@BASE@/api/zod/), [arktype](@BASE@/api/arktype/), [effect](@BASE@/api/effect/)
+- API reference: [valibot](@BASE@/api/valibot/), [zod](@BASE@/api/zod/), [arktype](@BASE@/api/arktype/), [effect](@BASE@/api/effect/), [effect/v4](@BASE@/api/effect/v4/)
 - Source: [`timezone.ts`](@REPO@/blob/main/src/timezone.ts), [`temporal-schemas.ts`](@REPO@/blob/main/src/temporal-schemas.ts)

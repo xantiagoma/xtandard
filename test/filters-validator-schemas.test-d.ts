@@ -1,6 +1,6 @@
 /**
  * Compile-time drift guards for every ready-made schema subpath (`/valibot`,
- * `/zod`, `/arktype`, `/effect`). Each schema's inferred OUTPUT must equal the
+ * `/zod`, `/arktype`, `/effect`, `/effect/v4`). Each schema's inferred OUTPUT must equal the
  * `@xtandard/lib/filters` model type — so a model change that isn't mirrored in a
  * schema fails `tsc --noEmit` (via `bun run check`). Not run by the test runner.
  */
@@ -53,6 +53,24 @@ export type _EffectRequest = Expect<
 >;
 export type _EffectNode = Expect<Equal<Schema.Schema.Type<typeof EffectFilterNode>, FilterNode>>;
 export type _EffectSort = Expect<Equal<Schema.Schema.Type<typeof EffectSort>, Sort>>;
+
+// ── effect 4 (`effect-v4` dev alias = npm:effect@^4) ────────────────────────
+import type { Schema as Schema4 } from "effect-v4";
+import type {
+  FieldFilterSchema as Effect4FieldFilter,
+  FilterNodeSchema as Effect4FilterNode,
+  FiltersRequestSchema as Effect4FiltersRequest,
+  SortSchema as Effect4Sort,
+} from "../src/filters/schemas-effect-v4.ts";
+
+export type _Effect4Field = Expect<
+  Equal<Schema4.Schema.Type<typeof Effect4FieldFilter>, FieldFilter>
+>;
+export type _Effect4Request = Expect<
+  Equal<Schema4.Schema.Type<typeof Effect4FiltersRequest>, FiltersRequest>
+>;
+export type _Effect4Node = Expect<Equal<Schema4.Schema.Type<typeof Effect4FilterNode>, FilterNode>>;
+export type _Effect4Sort = Expect<Equal<Schema4.Schema.Type<typeof Effect4Sort>, Sort>>;
 
 // ── arktype ──────────────────────────────────────────────────────────────────
 import type {

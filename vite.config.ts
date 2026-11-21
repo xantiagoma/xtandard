@@ -91,6 +91,7 @@ export default defineConfig({
       "src/entry-filters-zod.ts",
       "src/entry-filters-arktype.ts",
       "src/entry-filters-effect.ts",
+      "src/entry-filters-effect-v4.ts",
       "src/entry-filters-drizzle.ts",
       "src/entry-filters-drizzle-rqb.ts",
       "src/entry-filters-kysely.ts",
@@ -110,10 +111,19 @@ export default defineConfig({
       "src/entry-zod.ts",
       "src/entry-arktype.ts",
       "src/entry-effect.ts",
+      "src/entry-effect-v4.ts",
       "src/entry-sonner.ts",
       "src/entry-react.ts",
     ],
     dts: true,
+    // The effect 4 sources (`*-v4.ts`) import the `effect-v4` dev alias (npm:effect@^4) because the
+    // `effect` devDep stays on 3 for the effect 3 entries. Keep the alias external (never inline
+    // effect's own .d.ts) and remap it to the `effect` peer in every output chunk (JS and .d.ts).
+    // `scripts/check-dist.ts` (run by `bun run build`) fails if any dist file still imports it.
+    deps: { neverBundle: [/^effect-v4(\/|$)/] },
+    outputOptions: {
+      paths: (id: string) => (/^effect-v4(\/|$)/.test(id) ? `effect${id.slice(9)}` : id),
+    },
     format: ["esm", "cjs"],
     sourcemap: true,
   },

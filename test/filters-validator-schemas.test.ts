@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import * as v from "valibot";
 import type { z } from "zod";
 import { Schema } from "effect";
+import { Schema as Schema4 } from "effect-v4";
 import { type } from "arktype";
 
 import type { ColumnFilter } from "../src/filters/types.ts";
@@ -9,8 +10,9 @@ import * as valibot from "../src/filters/schemas.ts";
 import * as zod from "../src/filters/schemas-zod.ts";
 import * as ark from "../src/filters/schemas-arktype.ts";
 import * as effect from "../src/filters/schemas-effect.ts";
+import * as effect4 from "../src/filters/schemas-effect-v4.ts";
 
-// The four ready-made schema subpaths export the same 13 names; every one of
+// The ready-made schema subpaths (effect 3 and effect 4 both) export the same 13 names; every one of
 // them is exercised against every library below. Invalid inputs go through
 // each library's NON-throwing check (`safeParse` / `is` / `instanceof
 // type.errors`), so a schema that crashes (e.g. a `TypeError` from a bad
@@ -25,9 +27,10 @@ type Lib = {
 };
 
 type AnyEffectSchema = Schema.Schema<unknown, unknown, never>;
+type AnyEffect4Schema = Schema4.Codec<unknown, unknown>;
 type AnyArkType = (input: unknown) => unknown;
 
-const libs: Record<"valibot" | "zod" | "effect" | "arktype", Lib> = {
+const libs: Record<"valibot" | "zod" | "effect" | "effect4" | "arktype", Lib> = {
   valibot: {
     parse: (name, input) => v.parse(valibot[name] as v.GenericSchema, input),
     accepts: (name, input) => v.safeParse(valibot[name] as v.GenericSchema, input).success,
@@ -39,6 +42,10 @@ const libs: Record<"valibot" | "zod" | "effect" | "arktype", Lib> = {
   effect: {
     parse: (name, input) => Schema.decodeUnknownSync(effect[name] as AnyEffectSchema)(input),
     accepts: (name, input) => Schema.is(effect[name] as AnyEffectSchema)(input),
+  },
+  effect4: {
+    parse: (name, input) => Schema4.decodeUnknownSync(effect4[name] as AnyEffect4Schema)(input),
+    accepts: (name, input) => Schema4.is(effect4[name] as AnyEffect4Schema)(input),
   },
   arktype: {
     parse: (name, input) => {
@@ -281,5 +288,6 @@ test("every library exports exactly the same schema names", () => {
   expect(names(valibot)).toEqual([...schemaNames].sort());
   expect(names(zod)).toEqual(names(valibot));
   expect(names(effect)).toEqual(names(valibot));
+  expect(names(effect4)).toEqual(names(valibot));
   expect(names(ark)).toEqual(names(valibot));
 });

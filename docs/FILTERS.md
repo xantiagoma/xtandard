@@ -187,12 +187,13 @@ before it reaches an adapter — `buildWhere` consumes already-typed objects and
 never validates. The library **ships ready-made schemas for four validators** as
 optional subpaths; import the one you already use:
 
-| Validator     | Subpath                         | Peers                               |
-| ------------- | ------------------------------- | ----------------------------------- |
-| valibot       | `@xtandard/lib/filters/valibot` | `valibot` + `@js-temporal/polyfill` |
-| Zod           | `@xtandard/lib/filters/zod`     | `zod` + `@js-temporal/polyfill`     |
-| ArkType       | `@xtandard/lib/filters/arktype` | `arktype` + `@js-temporal/polyfill` |
-| Effect Schema | `@xtandard/lib/filters/effect`  | `effect` + `@js-temporal/polyfill`  |
+| Validator     | Subpath                           | Peers                                |
+| ------------- | --------------------------------- | ------------------------------------ |
+| valibot       | `@xtandard/lib/filters/valibot`   | `valibot` + `@js-temporal/polyfill`  |
+| Zod           | `@xtandard/lib/filters/zod`       | `zod` + `@js-temporal/polyfill`      |
+| ArkType       | `@xtandard/lib/filters/arktype`   | `arktype` + `@js-temporal/polyfill`  |
+| Effect Schema | `@xtandard/lib/filters/effect`    | `effect` 3 + `@js-temporal/polyfill` |
+| Effect Schema | `@xtandard/lib/filters/effect/v4` | `effect` 4 + `@js-temporal/polyfill` |
 
 Each subpath exports the **same names** — `FieldFilterSchema`,
 `ColumnFilterSchema`, `FiltersRequestSchema` (the flat AND list),
@@ -202,6 +203,11 @@ Every one validates `timeZone` as a real IANA id and `anchor`/`end` as
 `Temporal.PlainDateTime` strings, and a `*.test-d.ts` asserts each schema's
 inferred output **equals** the model type — so they can't drift. A runtime test
 runs the same valid and invalid inputs through all four libraries.
+
+Effect has two subpaths with the same exports: `@xtandard/lib/filters/effect` is
+built on effect 3 and `@xtandard/lib/filters/effect/v4` on effect 4 (whose Schema
+API changed shape). Import the one that matches the `effect` major you have
+installed; the peer range covers both.
 
 `anchor`/`end` are wall-clock times, read in the preset's `timeZone`, not
 instants: `Z`-suffixed strings such as `"2026-02-01T00:00:00Z"` are rejected,
@@ -226,7 +232,7 @@ const filters = FiltersRequestSchema.parse(await req.json());
 import { FiltersRequestSchema } from "@xtandard/lib/filters/arktype";
 const filters = FiltersRequestSchema.assert(await req.json());
 
-// Effect Schema
+// Effect Schema (on effect 4: "@xtandard/lib/filters/effect/v4", same call)
 import { Schema } from "effect";
 import { FiltersRequestSchema } from "@xtandard/lib/filters/effect";
 const filters = Schema.decodeUnknownSync(FiltersRequestSchema)(await req.json());
@@ -1467,8 +1473,10 @@ The four ready-made schema subpaths export the **same names**: `FieldFilterSchem
 `TextFilterSchema`, `NumberFilterSchema`, `EnumFilterSchema`, `BooleanFilterSchema`,
 `DateFilterSchema`, `DatePresetSchema`, `ArrayFilterSchema`, `ColumnFilterSchema`,
 `FiltersRequestSchema`, `FilterNodeSchema`, `SortItemSchema`, `SortSchema`. Peer is
-the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
-`*.test-d.ts` asserts each schema's inferred output equals the model type.
+the matching validator (`valibot` / `zod` / `arktype` / `effect`). For effect 4,
+`@xtandard/lib/filters/effect/v4` exports the same names (`/effect` stays on
+effect 3). A `*.test-d.ts` asserts each schema's inferred output equals the model
+type.
 
 ### `@xtandard/lib/filters/tanstack-table` (zero deps; TanStack Table v8 and v9)
 
