@@ -1,5 +1,51 @@
 # Changelog
 
+## v0.7.0
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.6.0...v0.7.0)
+
+### 🚀 Enhancements
+
+- **filters:** @xtandard/lib/filters/memory — in-memory predicate, comparator and array pagination ([#17](https://github.com/xantiagoma/xtandard/pull/17))
+- **interval:** IntervalSet and IntervalMap (Guava RangeSet / RangeMap) ([#18](https://github.com/xantiagoma/xtandard/pull/18))
+- **filters:** Sql-tag adapter for Bun.sql and postgres.js (filters + pagination keyset) ([#19](https://github.com/xantiagoma/xtandard/pull/19))
+- **filters:** TanStack Table bridge (@xtandard/lib/filters/tanstack-table) + table playground ([#23](https://github.com/xantiagoma/xtandard/pull/23))
+- **filters:** PostgREST/Supabase and Elasticsearch/OpenSearch adapters ([#22](https://github.com/xantiagoma/xtandard/pull/22))
+- **effect:** Support effect 4 via @xtandard/lib/effect/v4 and /filters/effect/v4 ([#26](https://github.com/xantiagoma/xtandard/pull/26))
+- **brand:** Vector brand kit in the family system (logo, lockups, favicon set, social card) ([#30](https://github.com/xantiagoma/xtandard/pull/30))
+
+### 🩹 Fixes
+
+- **interval:** Difference keeps an included ±∞ on the extended line ([#21](https://github.com/xantiagoma/xtandard/pull/21))
+- **site:** Serve og:url, og:image and sitemap URLs over https ([#28](https://github.com/xantiagoma/xtandard/pull/28))
+- **interval:** Decimal and bignumber types under nodenext (+ dist consumer type check) ([#32](https://github.com/xantiagoma/xtandard/pull/32))
+- **brand:** Centre the symbol vertically on the wordmark in the horizontal lockups ([#37](https://github.com/xantiagoma/xtandard/pull/37))
+
+### 📖 Documentation
+
+- The xtandard ecosystem ([#15](https://github.com/xantiagoma/xtandard/pull/15))
+- **ecosystem:** Link the flags and webhooks docs sites ([#16](https://github.com/xantiagoma/xtandard/pull/16))
+- **recs:** Make "Recommended libraries" a verified, generated catalog ([#20](https://github.com/xantiagoma/xtandard/pull/20))
+- TypeScript 5.4+ for the drizzle-rqb and tanstack-table typings ([#33](https://github.com/xantiagoma/xtandard/pull/33))
+- **ecosystem:** Add @xtandard/audit, @xtandard/links and @xtandard/entitlements ([#35](https://github.com/xantiagoma/xtandard/pull/35))
+- **brand:** No tile on pages — stacked lockups for the home hero, symbol-light.svg ([#36](https://github.com/xantiagoma/xtandard/pull/36))
+
+### 🏡 Chore
+
+- Format CHANGELOG ([ff3918e](https://github.com/xantiagoma/xtandard/commit/ff3918e))
+- **recs:** Drop deprecated picks, add successors, flag new-major prereleases ([#24](https://github.com/xantiagoma/xtandard/pull/24))
+- **temporal:** Drop the unused itty-time peer ([#31](https://github.com/xantiagoma/xtandard/pull/31))
+- **brand:** Show only SVG logos; drop the unused PNG variants ([#34](https://github.com/xantiagoma/xtandard/pull/34))
+
+### 🤖 CI
+
+- Publish to npm with trusted publishing (OIDC) ([#14](https://github.com/xantiagoma/xtandard/pull/14))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+- Santiago Montoya ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.6.0
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.5.3...v0.6.0)
