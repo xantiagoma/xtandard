@@ -206,6 +206,8 @@ function loadDoc(src: string): Doc | undefined {
 const blockPage = new Map<string, Map<Block, string>>();
 /** Whole-file pages: source → slug. */
 const filePage = new Map<string, string>();
+/** Blocks shown alone on a page, whose H2 is dropped for the page title (no anchor of its own). */
+const titleBlocks = new Set<Block>();
 
 for (const p of all) {
   if (!p.src) continue;
@@ -222,7 +224,10 @@ for (const p of all) {
     const block = doc.blocks.find((b) => b.heading === name);
     if (!block) fail(`${p.src}: no "## ${name}" section for /${p.slug}/`);
     else if (owners.has(block)) fail(`${p.src}: "## ${name}" is on two pages`);
-    else owners.set(block, p.slug);
+    else {
+      owners.set(block, p.slug);
+      if (!p.intro && p.sections.length === 1) titleBlocks.add(block);
+    }
   }
 }
 
@@ -255,7 +260,12 @@ function anchorRoute(src: string, anchor: string): string | undefined {
     const first = doc.blocks.find((b) => owners.has(b));
     return first ? route(owners.get(first)!) : undefined;
   }
-  for (const [b, slug] of owners) if (b.anchors.has(anchor)) return `${route(slug)}#${anchor}`;
+  for (const [b, slug] of owners) {
+    if (!b.anchors.has(anchor)) continue;
+    // The H2 of a single-section page became its title: link to the page itself.
+    const [own] = b.anchors;
+    return titleBlocks.has(b) && anchor === own ? route(slug) : `${route(slug)}#${anchor}`;
+  }
   return undefined;
 }
 

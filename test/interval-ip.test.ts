@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { Ipv4Interval, Ipv6Interval } from "../src/interval-ip";
 
 describe("Ipv4Interval (discrete, ε = one address)", () => {
@@ -59,5 +61,34 @@ describe("Ipv6Interval (discrete)", () => {
     expect(Ipv6Interval.closed(Ipv6Interval.ip("::1"), Ipv6Interval.ip("::ff")).toString()).toBe(
       "[::1,::ff]",
     );
+  });
+});
+
+describe("IntervalSet / IntervalMap over IP addresses", () => {
+  test("allowlist: adjacent blocks merge; complement within the address space", () => {
+    const allow = IntervalSet.of(Ipv4Interval.domain, [
+      Ipv4Interval.cidr("10.0.0.0/25"),
+      Ipv4Interval.cidr("10.0.0.128/25"),
+      Ipv4Interval.cidr("192.168.1.0/24"),
+    ]);
+    expect(allow.toString()).toBe("[10.0.0.0,10.0.0.255] ∪ [192.168.1.0,192.168.1.255]");
+    expect(allow.contains(Ipv4Interval.ip("10.0.0.200"))).toBe(true);
+    expect(allow.length()).toBe(512);
+    expect(allow.encloses(Ipv4Interval.cidr("10.0.0.64/26"))).toBe(true);
+    // the domain has no min/max, so clip the complement to the address space:
+    const deny = allow.complement().subSet(Ipv4Interval.cidr("0.0.0.0/0"));
+    expect(deny.toString()).toBe(
+      "[0.0.0.0,9.255.255.255] ∪ [10.0.1.0,192.168.0.255] ∪ [192.168.2.0,255.255.255.255]",
+    );
+  });
+
+  test("route table: most specific put last wins", () => {
+    const routes = IntervalMap.of(Ipv6Interval.domain, [
+      [Ipv6Interval.cidr("2001:db8::/32"), "wan"],
+      [Ipv6Interval.cidr("2001:db8:1::/48"), "lan"],
+    ]);
+    expect(routes.get(Ipv6Interval.ip("2001:db8:1::42"))).toBe("lan");
+    expect(routes.get(Ipv6Interval.ip("2001:db8:2::1"))).toBe("wan");
+    expect(routes.size).toBe(3);
   });
 });

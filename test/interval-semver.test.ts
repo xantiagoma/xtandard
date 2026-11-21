@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { SemverInterval, semverDomain } from "../src/interval-semver";
 
 describe("SemverInterval — version ranges (continuous)", () => {
@@ -45,5 +47,28 @@ describe("SemverInterval — version ranges (continuous)", () => {
     const r = SemverInterval.closed("1.0.0", "2.0.0");
     expect(r).toBeInstanceOf(SemverInterval);
     expect(r).toBeInstanceOf(Interval);
+  });
+});
+
+describe("IntervalSet / IntervalMap over semver", () => {
+  test("affected versions and per-range support status", () => {
+    const affected = IntervalSet.of(SemverInterval.domain, [
+      SemverInterval.closedOpen("1.2.0", "1.4.3"),
+      SemverInterval.closedOpen("2.0.0", "2.1.1"),
+    ]);
+    expect(affected.contains("1.3.9")).toBe(true);
+    expect(affected.contains("1.4.3")).toBe(false);
+    expect(affected.toString()).toBe("[1.2.0,1.4.3) ∪ [2.0.0,2.1.1)");
+    expect(
+      affected.complement().subSet(SemverInterval.closedOpen("1.0.0", "3.0.0")).toString(),
+    ).toBe("[1.0.0,1.2.0) ∪ [1.4.3,2.0.0) ∪ [2.1.1,3.0.0)");
+
+    const support = IntervalMap.of(SemverInterval.domain, [
+      [SemverInterval.closedOpen("1.0.0", "2.0.0"), "maintenance"],
+      [SemverInterval.atLeast("2.0.0"), "active"],
+    ]);
+    expect(support.get("1.9.0")).toBe("maintenance");
+    expect(support.get("2.3.0")).toBe("active");
+    expect(support.get("0.9.0")).toBeUndefined();
   });
 });

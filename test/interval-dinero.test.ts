@@ -2,6 +2,8 @@ import { dinero, JPY, toSnapshot, USD } from "dinero.js";
 import { describe, expect, test } from "vitest";
 
 import { Interval } from "../src/interval";
+import { IntervalMap } from "../src/interval-map";
+import { IntervalSet } from "../src/interval-set";
 import { createDineroInterval, dineroDomain } from "../src/interval-dinero";
 
 const UsdInterval = createDineroInterval(USD);
@@ -103,5 +105,29 @@ describe("DineroInterval — JPY (discrete, ε 1 yen, exponent 0)", () => {
 
   test("the domain is named per currency", () => {
     expect(dineroDomain(JPY).name).toBe("dinero:JPY");
+  });
+});
+
+describe("IntervalSet / IntervalMap over money (discrete, ε 1 cent)", () => {
+  test("cent-adjacent bands coalesce; gaps show a hole in the table", () => {
+    const bands = IntervalSet.of(UsdInterval.domain, [
+      UsdInterval.closed(usd(0), usd(9_999)),
+      UsdInterval.closed(usd(10_000), usd(24_999)),
+      UsdInterval.closed(usd(25_001), usd(50_000)), // typo: should start at 25_000
+    ]);
+    expect(bands.toString()).toBe("[0,24999] ∪ [25001,50000]");
+    expect(bands.gaps().toString()).toBe("[25000,25000]");
+    expect(bands.contains(usd(25_000))).toBe(false);
+    expect(bands.length()).toBe(50_000);
+  });
+
+  test("a price band per range", () => {
+    const rates = IntervalMap.of(UsdInterval.domain, [
+      [UsdInterval.closedOpen(usd(0), usd(10_000)), "budget"],
+      [UsdInterval.atLeast(usd(10_000)), "standard"],
+    ]);
+    expect(rates.get(usd(9_999))).toBe("budget");
+    expect(rates.get(usd(10_000))).toBe("standard");
+    expect(rates.toString()).toBe("{[0,9999] => budget, [10000,+Infinity) => standard}");
   });
 });
