@@ -53,6 +53,8 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 - Node tests: `test/**/*.test.ts` — run in node environment with MSW for HTTP mocking
 - React/browser tests: `test/**/*.test.tsx` — run in Chromium via playwright + vitest-browser-react
 - MSW setup in `test/setup-msw.ts` (node project only)
+- Real Postgres without Docker: `startPglite()` in `test/sql-tag-helpers.ts` (PGlite + pglite-socket,
+  in-process, driven by postgres.js); such suites go in the browser project's `exclude`
 - Type tests: `test/*.test-d.ts` — compile-time assertions with `type-testing` (`Expect`/`Equal`/`NotEqual`/`IsNever`/`IsUnion`…), the standard for any module whose public type inference matters. They are NOT run by the test runner (the `.test-d.ts` suffix is excluded from the vitest `include`); they are enforced by `tsc --noEmit` in `bun run check`. `export` each assertion so it doesn't trip unused-decl lint; a wrong assertion fails as `error TS2344: Type 'false' does not satisfy the constraint 'true'`.
 
 ## Entry Points
@@ -73,6 +75,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 @xtandard/lib/filters/drizzle → renders the AST to Drizzle WHERE + keyset (peer: drizzle-orm); date resolveDate INJECTED
 @xtandard/lib/filters/kysely  → renders the AST to a Kysely boolean expr (peer: kysely)
 @xtandard/lib/filters/knex    → renders the AST to raw parameterized SQL (no driver dep)
+@xtandard/lib/filters/sql-tag → renders the AST to Bun.sql / postgres.js fragments (structural `sql`, no driver dep)
 @xtandard/lib/filters/mongo   → renders the AST to a Mongo filter object (no driver dep)
 @xtandard/lib/filters/prisma  → renders the AST to a Prisma where object (no driver dep)
 @xtandard/lib/filters/memory  → evaluates the AST in memory: (row) => boolean with SQL semantics + sort comparator + sync array pagination (zero deps)

@@ -49,6 +49,7 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/pagination/drizzle-rqb` | Drizzle RQB v2 keyset (`where`/`orderBy` objects)        | none                                 |
 | `@xtandard/lib/pagination/kysely`      | Kysely adapter for pagination keysets                    | `kysely`                             |
 | `@xtandard/lib/pagination/knex`        | Knex adapter for pagination keysets                      | none                                 |
+| `@xtandard/lib/pagination/sql-tag`     | Bun.sql / postgres.js keyset fragments                   | none                                 |
 | `@xtandard/lib/pagination/mongo`       | Mongo/Mongoose adapter for keysets                       | none                                 |
 | `@xtandard/lib/pagination/prisma`      | Prisma adapter for pagination keysets                    | none                                 |
 | `@xtandard/lib/filters`                | Filter model (types) + portable compiler + sort/describe | none                                 |
@@ -60,6 +61,7 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/filters/drizzle-rqb`    | Drizzle RQB v2 `where` object from filters (`db.query`)  | none                                 |
 | `@xtandard/lib/filters/kysely`         | Kysely WHERE builder from filters                        | `kysely`                             |
 | `@xtandard/lib/filters/knex`           | Knex raw-SQL WHERE builder from filters                  | none                                 |
+| `@xtandard/lib/filters/sql-tag`        | Bun.sql / postgres.js fragments from filters             | none                                 |
 | `@xtandard/lib/filters/mongo`          | Mongo filter object from filters                         | none                                 |
 | `@xtandard/lib/filters/prisma`         | Prisma `where` object from filters                       | none                                 |
 | `@xtandard/lib/filters/memory`         | In-memory predicate, comparator + array pagination       | none                                 |
@@ -319,6 +321,7 @@ Sync/async adaptive: pass all-sync fetchers and codec (e.g. an in-memory array) 
 | `@xtandard/lib/pagination/drizzle-rqb` | `toDrizzleRqbKeyset`        | Keyset AST → Drizzle RQB v2 `where`/`orderBy` objects (`db.query`)         | [src](./src/pagination-drizzle-rqb.ts) | [tests](./test/pagination-drizzle-rqb.test.ts) |
 | `@xtandard/lib/pagination/kysely`      | `toKyselyKeyset`            | Keyset AST → Kysely `where`/`orderBy` helpers                              | [src](./src/pagination-kysely.ts)      | [tests](./test/pagination-kysely.test.ts)      |
 | `@xtandard/lib/pagination/knex`        | `applyKeysetToKnex`         | Apply keyset AST to Knex `whereRaw`/`orderByRaw`                           | [src](./src/pagination-knex.ts)        | [tests](./test/pagination-knex.test.ts)        |
+| `@xtandard/lib/pagination/sql-tag`     | `toSqlTagKeyset`            | Keyset AST → Bun.sql / postgres.js `where`/`orderBy` fragments             | [src](./src/pagination-sql-tag.ts)     | [tests](./test/pagination-sql-tag.test.ts)     |
 | `@xtandard/lib/pagination/mongo`       | `toMongoKeyset`             | Keyset AST → Mongo/Mongoose `filter`/`sort` objects                        | [src](./src/pagination-mongo.ts)       | [tests](./test/pagination-mongo.test.ts)       |
 | `@xtandard/lib/pagination/prisma`      | `toPrismaKeyset`            | Keyset AST → Prisma `where`/`orderBy` objects                              | [src](./src/pagination-prisma.ts)      | [tests](./test/pagination-prisma.test.ts)      |
 | `@xtandard/lib/pagination`             | `parsePaginationParams`     | Query params → `PaginationInput` (with clamping)                           | [src](./src/pagination-params.ts)      | [tests](./test/pagination-params.test.ts)      |
@@ -488,6 +491,7 @@ db.select().from(t).where(where);
 | `@xtandard/lib/filters/drizzle-rqb`                  | `buildWhere`/`buildFilterNode` → RQB v2 `where` object (`db.query`), `dateField`/…                          | [src](./src/filters/drizzle-rqb.ts) |
 | `@xtandard/lib/filters/kysely`                       | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                             | [src](./src/filters/kysely.ts)      |
 | `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)        |
+| `@xtandard/lib/filters/sql-tag`                      | `buildWhere`/`buildOrderBy` → Bun.sql / postgres.js fragments (+ `toSqlTagWhere`)                           | [src](./src/filters/sql-tag.ts)     |
 | `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)       |
 | `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)      |
 | `@xtandard/lib/filters/memory`                       | `buildFilterPredicate` → `(row) => boolean` (SQL semantics), `buildComparator`, `createMemoryPaginator`     | [src](./src/filters/memory.ts)      |

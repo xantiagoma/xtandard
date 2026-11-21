@@ -326,7 +326,8 @@ the raw SQL helpers or plain fetcher examples directly.
 | Objection.js                          | Knex adapter through `query()`                         |
 | AdonisJS Lucid                        | Knex-style `whereRaw` / `orderByRaw`                   |
 | Slonik                                | raw SQL helper params passed through `sql.array`-style |
-| Postgres.js                           | raw SQL helper params passed to tagged templates       |
+| Postgres.js                           | `@xtandard/lib/pagination/sql-tag`                     |
+| Bun.sql (Postgres, MySQL, SQLite)     | `@xtandard/lib/pagination/sql-tag`                     |
 | PgTyped                               | generated SQL with explicit cursor params              |
 | Zapatos                               | raw SQL helper fragments or `conditions` objects       |
 | `@databases`                          | raw SQL helper params with tagged SQL                  |
@@ -949,20 +950,55 @@ keyset predicates manually with `sql.identifier` for each server-owned column.
 
 ### Postgres.js
 
-Postgres.js supports dynamic fragments and bound values. Use raw helper output
-for predicate text and pass all cursor values through the tag.
+`@xtandard/lib/pagination/sql-tag` renders the keyset as fragments of your own
+`sql` tag, so the query stays one tagged template: cursor values are parameters,
+column strings are validated and quoted by `sql(identifier)`, and a computed sort
+key is just another fragment of your `sql`. Works with postgres.js v3 and v4,
+including the `sql` of a transaction.
 
 ```ts
-const where = toKeysetWhereSql(keyset.where(cursor, direction), columns, {
-  placeholder: (index) => `$${index}`,
-});
-const orderBy = toKeysetOrderBySql(keyset.orderBy(direction), columns);
+import postgres from "postgres";
+import { createKeysetSpec, createPaginator } from "@xtandard/lib/pagination";
+import { toSqlTagKeyset } from "@xtandard/lib/pagination/sql-tag";
 
-const rows = await sql.unsafe(
-  `SELECT * FROM posts ${where.sql ? `WHERE ${where.sql}` : ""} ORDER BY ${orderBy} LIMIT $${where.params.length + 1}`,
-  [...where.params, limit],
-);
+const sql = postgres(process.env.DATABASE_URL);
+const keyset = createKeysetSpec({
+  sort: [
+    { key: "createdAt", order: "desc" },
+    { key: "id", order: "desc" },
+  ],
+});
+const posts = toSqlTagKeyset(sql, {
+  createdAt: "posts.created_at",
+  id: "posts.id",
+  // computed key: normalizedTitle: sql`lower(${sql("posts.title")})`,
+});
+
+const paginator = createPaginator({
+  fetchCursor: async ({ limit, cursor, direction }) => {
+    const where = posts.where(keyset.where(cursor, direction)); // undefined on the first page
+    const items = await sql`
+      select * from posts
+      ${where ? sql`where ${where}` : sql``}
+      order by ${posts.orderBy(keyset.orderBy(direction))}
+      limit ${limit}
+    `;
+    return { items: [...items] };
+  },
+  cursor: { fromItem: (p) => ({ createdAt: p.created_at, id: p.id }) },
+});
+// where (("posts"."created_at" < $1) OR ("posts"."created_at" = $2 AND "posts"."id" < $3))
+// order by "posts"."created_at" DESC, "posts"."id" DESC limit $4
 ```
+
+`posts.orderBy(…)` is one comma-joined fragment (both clients join an array of
+fragments with spaces). The fragments are lazy queries: embed them, don't `await`
+them on their own. To filter the same query, `@xtandard/lib/filters/sql-tag`
+renders filters the same way (see the [filters guide](./FILTERS.md)).
+
+**Bun.sql** uses the same adapter and the same code: pass Bun's `sql` (or a
+`new SQL(…)`) instead. It works on all three of Bun's adapters, since the client
+numbers the placeholders and quotes identifiers itself (backticks on MySQL).
 
 ### PgTyped
 
