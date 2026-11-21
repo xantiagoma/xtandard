@@ -505,10 +505,12 @@
     "lint": "vp lint",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
-    "check": "vp lint && vp fmt --check && tsc --noEmit",
+    "check": "vp lint && vp fmt --check && tsc --noEmit && bun recs/generate.ts --check",
     "docs:dev": "cd site && bun install && bun run dev",
     "docs:build": "cd site && bun install && bun run build",
     "docs:preview": "cd site && bun run preview",
+    "recs:check": "bun recs/check.ts",
+    "recs:generate": "bun recs/generate.ts",
     "release": "changelogen --release --push --no-open",
     "prepare": "husky"
   },
