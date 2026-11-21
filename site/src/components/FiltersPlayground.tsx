@@ -8,6 +8,8 @@ const tabs = [
   { key: "sql", label: "SQL (Knex)" },
   { key: "mongo", label: "Mongo" },
   { key: "prisma", label: "Prisma" },
+  { key: "postgrest", label: "PostgREST" },
+  { key: "elasticsearch", label: "Elasticsearch" },
   { key: "ast", label: "Compiled AST" },
   { key: "url", label: "Compact URL" },
   { key: "labels", label: "Chip labels" },

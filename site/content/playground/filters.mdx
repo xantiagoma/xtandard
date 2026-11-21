@@ -1,6 +1,6 @@
 ---
 title: Filters playground
-description: Edit a filter request and watch the portable compiler and the Knex, Mongo and Prisma adapters render it, live in your browser.
+description: Edit a filter request and watch the portable compiler and the Knex, Mongo, Prisma, PostgREST and Elasticsearch adapters render it, live in your browser.
 tableOfContents: false
 ---
 
@@ -12,6 +12,8 @@ This page runs the real `@xtandard/lib/filters` code in your browser. It uses an
 
 - **SQL (Knex)**: the parameterized `WHERE` from [`@xtandard/lib/filters/knex`](@BASE@/filters/adapters/#knex--xtandardlibfiltersknex-no-driver-dependency) for Postgres, MySQL or SQLite.
 - **Mongo / Prisma**: the plain filter objects the driver-free adapters build.
+- **PostgREST**: the query string from [`@xtandard/lib/filters/postgrest`](@BASE@/filters/adapters/#postgrest--supabase--xtandardlibfilterspostgrest-no-driver-dependency) (what supabase-js would send).
+- **Elasticsearch**: the Query DSL clause from [`@xtandard/lib/filters/elasticsearch`](@BASE@/filters/adapters/#elasticsearch--opensearch--xtandardlibfilterselasticsearch-no-client-dependency).
 - **Compiled AST**: the portable [`CompiledWhere`](@BASE@/filters/adapters/#the-portable-compiler) every adapter renders from.
 - **Compact URL**: the shorter wire form from [`compactFilters` / `compactFilterNode`](@BASE@/filters/ui/#compact-url-encoding).
 - **Chip labels**: [`describeColumnFilter`](@BASE@/filters/ui/#describing-filters-chip-labels) output for an active-filter bar.
@@ -22,7 +24,9 @@ This page runs the real `@xtandard/lib/filters` code in your browser. It uses an
 
 - **Dropped fields**: a field missing from the spec, or one whose `kind` doesn't match it, is silently dropped. Untrusted input can't reach a column you didn't allow-list.
 - **Date preset**: change `unit` to `week` or `day`, or `timeZone` to `Europe/Madrid`. The window is DST-aware and always half-open (`>= start AND < end`). This page uses a small demo resolver; your app [injects its own](@BASE@/filters/#the-date-kind-is-injected).
-- **Prisma limits**: `like` with an internal `%` (e.g. `"a%b"`) has no Prisma equivalent, so that adapter throws a clear error.
+- **Prisma limits**: `like` with an internal `%` (e.g. `"a%b"`) has no Prisma equivalent, so that adapter throws a clear error. Elasticsearch throws on `arrayContained`, which has no script-free Query DSL form.
+- **Values that need quoting**: an `or` with `"value": "a, b"` shows PostgREST's double-quoting; `contains` with a `*` switches PostgREST to `imatch`.
+- **NULL semantics**: a `not` (or `ne`) in the Elasticsearch tab gains an `exists` guard, so documents without the field stay out, like in SQL.
 
 :::
 

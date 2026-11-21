@@ -3,8 +3,8 @@
 A typed, end-to-end filtering system: one model spans **frontend ↔ API ↔ any
 query builder**. Built like [`pagination`](./PAGINATION.md) — a **portable core**
 lowers a request into a driver-agnostic AST, and thin **per-driver adapters**
-render it (Drizzle, Kysely, Knex, Bun.sql / postgres.js, Mongo, Prisma, or your
-own).
+render it (Drizzle, Kysely, Knex, Bun.sql / postgres.js, Mongo, Prisma,
+PostgREST/Supabase, Elasticsearch/OpenSearch, in memory, or your own).
 
 - The **core** (`@xtandard/lib/filters`) is **validation-library-free** and
   **driver-free**: plain TS types + `compileFilters`.
@@ -15,7 +15,7 @@ own).
 
 ```bash
 npm install @xtandard/lib
-# + whichever adapter peer you use: drizzle-orm | kysely | (knex/sql-tag/mongo/prisma need no peer)
+# + whichever adapter peer you use: drizzle-orm | kysely | (knex/sql-tag/mongo/prisma/postgrest/elasticsearch need no peer)
 # + valibot for the optional ready-made schemas
 ```
 
@@ -35,6 +35,8 @@ flowchart LR
   AST --> TAG["sql-tag: Bun.sql / postgres.js fragment"]
   AST --> MGO["mongo: filter object"]
   AST --> PRS["prisma: where object"]
+  AST --> PGR["postgrest: query params"]
+  AST --> ES["elasticsearch: Query DSL"]
 ```
 
 ## Quick start
@@ -671,18 +673,166 @@ report `totalItems`; cursor requests seek with `createMemoryKeyset` (the in-memo
 `fromItem(row)`), forward or backward. The seek uses the comparator's order, NULLs
 included, so rows with a NULL sort key page correctly (SQL's `>` never matches NULL).
 
+### PostgREST / Supabase — `@xtandard/lib/filters/postgrest` (no driver dependency)
+
+Returns PostgREST query parameters as unencoded `[key, value]` pairs
+(`PostgrestParams`). Columns are PostgREST column names, optionally with
+`->`/`->>` JSON path steps (`meta->>city`); anything else throws.
+
+```ts
+import {
+  applyParamsToPostgrest,
+  buildOrder,
+  buildParams,
+  numberField,
+  textField,
+} from "@xtandard/lib/filters/postgrest";
+
+const spec = { name: textField({ column: "name" }), amount: numberField({ column: "amount" }) };
+const { params } = buildParams({ spec, filters, resolveDate });
+// → [["name", "ilike.*ann*"], ["amount", "gte.100"]]
+
+// plain fetch (any PostgREST server):
+const qs = new URLSearchParams([...params, ["order", "created_at.desc"], ["limit", "20"]]);
+const rows = await fetch(`${POSTGREST_URL}/tasks?${qs}`).then((r) => r.json());
+
+// supabase-js / postgrest-js: the same params through the builder's public methods
+const { order } = buildOrder({ sort, columns: { createdAt: "created_at" }, nulls: "last" });
+let query = applyParamsToPostgrest(supabase.from("tasks").select("*"), params);
+for (const t of order) query = query.order(t.column, t);
+const { data } = await query.range(offset, offset + limit - 1);
+```
+
+Mapping: `eq`/`ne`/`lt`/… → `eq.`/`neq.`/`lt.`; set → `in.(…)` / `not.in.(…)`;
+`isNull` → `is.null`, `isNotNull` → `not.is.null`; `contains`/`startsWith`/
+`endsWith` → `ilike` with `*` wildcards (the user's `%`, `_`, `\` escaped);
+`like`/`ilike`/`notIlike` pass the pattern through with `%` spelled `*`; array
+ops → `cs`/`cd`/`ov` (`@>`/`<@`/`&&`) with a Postgres array literal; dates →
+ISO-8601 instants. A top-level `and` becomes one param per condition (PostgREST
+ANDs them), `or` → `or=(…)`, a negated group → `not.or=(…)`/`not.and=(…)`, a
+negated condition → the `not.` operator prefix.
+
+How values are spelled (checked against PostgREST's parser,
+`ApiRequest/QueryParams.hs`):
+
+- **Top-level values are raw.** In `name=eq.a,b` everything after `eq.` is the
+  value, so nothing is quoted there (quotes would become part of the value).
+- **Inside `or=(…)`/`and=(…)` and `in.(…)`**, a value holding a reserved
+  character (`, . : * ( )`), a `"`/`\`, edge whitespace, or nothing at all is
+  double-quoted, with `"` and `\` backslash-escaped: `or=(name.eq."Rent, May",…)`.
+- **Array literals** always quote their string elements: `cs.{"a,b","x"}`.
+- **A literal `*` in a pattern.** PostgREST turns every `*` in a `like`/`ilike`
+  value into `%` and has no escape for it, so a pattern with a literal `*` is
+  sent as `match`/`imatch` (POSIX regex `~`/`~*`) with an escaped, anchored
+  regex instead: `contains "a*b"` → `imatch.a\*b`. Literal `%`/`_` are fine:
+  they're backslash-escaped (Postgres's default `LIKE` escape).
+- **Reserved column names.** A filter on a column named `order`, `limit`,
+  `select`, `or`, … can't be a top-level param, so it's wrapped: `and=(order.eq.a)`.
+
+`applyParamsToPostgrest(builder, params)` works with anything that has
+`filter(column, operator, value)` and `or(filters)` (postgrest-js, supabase-js,
+`@neondatabase/postgrest-js`): column params go through `.filter()`, logic
+params through `.or()` (`and=(…)` as `.or("and(…)")`). `applyFiltersToPostgrest`
+compiles and applies in one call. Filters on embedded resources
+(`author.name=…`) are out of scope: expose the column through a view.
+
+**Sorting** → `buildOrder({ sort, columns, defaultSort, nulls })` gives
+`{ column, ascending, nullsFirst? }` terms, ready for postgrest-js's
+`.order(column, { ascending, nullsFirst })`; `formatOrder(terms)` gives the raw
+`order=` value (`created_at.desc.nullslast,id.asc`). **Keyset pagination** →
+`createPostgrestKeyset({ sort, columns })` (`keys()`, `orderBy(direction)`,
+`where(cursor, direction)` → `[["or", "(created_at.lt.…,and(created_at.eq.…,id.lt.9))"]]`).
+Offset pagination is PostgREST's own `limit`/`offset` (or `.range(from, to)`).
+
+### Elasticsearch / OpenSearch — `@xtandard/lib/filters/elasticsearch` (no client dependency)
+
+Returns a Query DSL clause (plain objects) for `@elastic/elasticsearch`,
+`@opensearch-project/opensearch` or a raw `_search` body. Fields are index
+field names (dot paths allowed).
+
+```ts
+import {
+  buildQuery,
+  buildSort,
+  dateField,
+  numberField,
+  textField,
+} from "@xtandard/lib/filters/elasticsearch";
+
+const spec = {
+  name: textField({ field: "name.keyword" }), // keyword sub-field, see below
+  amount: numberField({ field: "amount" }),
+  createdAt: dateField({ field: "createdAt" }),
+};
+const { query } = buildQuery({ spec, filters, resolveDate });
+const { sort } = buildSort({ sort: request.sort, fields: { createdAt: "createdAt" } });
+const res = await client.search({
+  index: "tasks",
+  query: { bool: { filter: query ? [query, { term: { tenantId } }] : [{ term: { tenantId } }] } },
+  sort,
+  size: 20,
+});
+```
+
+Mapping: `eq` → `term`; `lt`/`gt`/… → `range`; set → `terms`; `isNotNull` →
+`exists`, `isNull` → `must_not: exists`; `contains`/`endsWith` → `wildcard` and
+`startsWith` → `prefix`, both with `case_insensitive: true`; `like`/`ilike` →
+`wildcard` (`%` → `*`, `_` → `?`; literal `*`, `?`, `\` escaped with `\`, Lucene's
+wildcard escape) — `like` case-sensitive, `ilike` with `case_insensitive`;
+`arrayContains` → one `term` per value in `bool.filter` (all must be present),
+`arrayOverlaps` → `terms`; dates → ISO-8601 strings in `range`; `and` →
+`bool.filter`, `or` → `bool.should` + `minimum_should_match: 1`. Everything is
+filter context (no scoring) — put the clause in your `bool.filter` and keep
+full-text `match` queries in `must`.
+
+**NULL semantics match SQL.** `exists` is false for a missing field, `null`,
+`[]`, and values dropped by `ignore_above`/`ignore_malformed` — all treated as
+SQL NULL. In SQL, `amount <> 5` and `NOT (amount < 5)` are UNKNOWN (no match)
+when `amount` is NULL; a naive `must_not` would match those documents. So `ne`,
+`notInArray`, `notIlike` and every `not` add an `exists` guard
+(`{ bool: { filter: [{ exists }], must_not: [p] } }`), and a `not` over a group
+is pushed down with De Morgan, so every adapter returns the same rows. (On a
+multi-valued field, `ne` means "has values, none equal".)
+
+**Mapping assumptions:**
+
+- `text`/`enum` fields must be **`keyword`** (or a text field's `.keyword`
+  sub-field). `term`/`prefix`/`wildcard` match the indexed term, so on an
+  analyzed `text` field they compare against tokens, not the original value. A
+  `normalizer` on the keyword field (e.g. `lowercase`) also changes `eq`.
+- `case_insensitive` needs Elasticsearch 7.10+ (any OpenSearch).
+- Leading-wildcard patterns (`contains`, `endsWith`) scan the terms dictionary;
+  on large indices prefer the [`wildcard` field type](https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/keyword#wildcard-field-type)
+  or an n-gram subfield.
+- `date` fields parse the ISO strings with their `format` (the default
+  `strict_date_optional_time||epoch_millis` does).
+
+**Not expressible:** `arrayContained` (every element of the field is in the
+list) has no script-free Query DSL form, so it **throws**. If you need it, use a
+`terms_set` query with
+`minimum_should_match_script: { source: "doc['tags'].size()" }`. An empty array
+and a missing field are indistinguishable in the index, so `[]` behaves like
+NULL (Postgres would treat `'{}'` as a value).
+
+**Sorting** → `buildSort({ sort, fields, defaultSort, nulls })` gives the `sort`
+array (`[{ createdAt: { order: "desc" } }]`); `nulls` sets `missing`
+(Elasticsearch's default is `_last` in both directions, unlike Postgres).
+**Keyset pagination** → `createElasticsearchKeyset({ sort, fields })` with
+`sort(direction)` and `searchAfter(cursor)` for `search_after` — see
+[docs/PAGINATION.md](./PAGINATION.md#elasticsearch--opensearch).
+
 ### Operator support matrix
 
-| op                                      | drizzle  |  kysely  |   knex   | sql-tag  |       mongo       |        prisma        |  memory   |
-| --------------------------------------- | :------: | :------: | :------: | :------: | :---------------: | :------------------: | :-------: |
-| scalar, set, unary                      |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
-| `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
-| `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        | ✅ ILIKE  |
-| `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |    ✅     |
-| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     | ✅ PG/SQL |
-| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     | ✅ PG/SQL |
-| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       | ✅ PG/SQL |
-| date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
+| op                                      | drizzle  |  kysely  |   knex   | sql-tag  |       mongo       |        prisma        |  memory   |       postgrest       |     elasticsearch      |
+| --------------------------------------- | :------: | :------: | :------: | :------: | :---------------: | :------------------: | :-------: | :-------------------: | :--------------------: |
+| scalar, set, unary                      |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |          ✅           |   ✅ `exists` guard    |
+| `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |          ✅           |           ✅           |
+| `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        | ✅ ILIKE  |      ✅ `ilike`       | ✅ `wildcard`/`prefix` |
+| `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |    ✅     | ✅ (`imatch` for `*`) |     ✅ `wildcard`      |
+| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     | ✅ PG/SQL |        ✅ `cs`        |       ✅ `term`s       |
+| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     | ✅ PG/SQL |        ✅ `ov`        |       ✅ `terms`       |
+| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       | ✅ PG/SQL |        ✅ `cd`        |       ❌ throws        |
+| date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |          ✅           |           ✅           |
 
 > **`drizzle-rqb`** (the RQBv2 `where` object) supports every operator above
 > natively — RQBv2 has `ilike` + the array ops built in — so it matches the
@@ -693,6 +843,10 @@ included, so rows with a NULL sort key page correctly (SQL's `>` never matches N
 > **memory** evaluates every operator with the SQL semantics of its `dialect`
 > (`postgres` or `sqlite`, see above); `PG/SQL` means the array ops follow Postgres
 > or SQLite's `json_each` reading of a NULL array.
+
+> **postgrest** renders PostgREST's own operators, so it inherits Postgres
+> semantics exactly. **elasticsearch** keeps SQL's NULL semantics with `exists`
+> guards (see its section); `arrayContained` has no script-free equivalent.
 
 > **drizzle** emits the PG array operators only — its array helpers are
 > Postgres-specific. **kysely / knex / sql-tag** (`multi`) render the `array` ops for all
@@ -776,6 +930,8 @@ db.select()
 
 In memory, `buildComparator` from `@xtandard/lib/filters/memory` takes the same
 `sort`/`defaultSort` with `paths` and returns `{ compare }` for `Array.prototype.sort`.
+PostgREST's `buildOrder` returns `order` terms and Elasticsearch's `buildSort` a
+`sort` array, both with an optional `nulls: "first" | "last"`.
 
 > Use `buildOrderBy` with `db.select(...).orderBy(...)`, **not** the RQB query —
 > RQB aliases the root table and breaks column-referencing SQL.
@@ -1270,11 +1426,16 @@ fields, so an adapter only maps the 19 normalized leaf ops (`CompiledOp`) + and/
   in the spec (with a matching kind) are emitted — never a client-supplied
   column. Unknown fields are silently dropped.
 - **Server-owned identifiers.** Adapter column references (Drizzle/Kysely
-  columns, Knex/sql-tag identifier strings, Mongo paths, Prisma fields) come from
-  your code, not request data. Knex and sql-tag validate identifier strings and
-  **throw** on anything outside `col` / `table.col`.
+  columns, Knex/sql-tag identifier strings, Mongo paths, Prisma fields,
+  PostgREST columns, Elasticsearch fields) come from your code, not request
+  data. Knex and sql-tag validate identifier strings and **throw** on anything
+  outside `col` / `table.col`; PostgREST columns must be identifiers (optionally
+  with `->`/`->>` steps).
 - **Parameterized values.** Every value is bound (Drizzle/Kysely SQL params,
-  Knex `?`, Bun.sql/postgres.js template parameters, Mongo/Prisma object values) — no string interpolation of user input.
+  Knex `?`, Bun.sql/postgres.js template parameters, Mongo/Prisma/Elasticsearch
+  object values) — no string interpolation of user input. PostgREST values travel
+  in the query string, quoted/escaped per its grammar so they can't change the
+  filter's structure.
 - **Validate the request shape** (valibot or your validator) before building.
 
 ## API reference
@@ -1322,16 +1483,18 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 
 ### Adapters
 
-| Entry          | Peer                       | Key exports                                                                                                                                                                                                                                          |
-| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/drizzle`     | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf`                                                                                       |
-| `/drizzle-rqb` | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`, `RqbV1Sql`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
-| `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                                    |
-| `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                                       |
-| `/sql-tag`     | —                          | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toSqlTagWhere`, `dateField`/…, `SqlTagFilterSpec`, `SqlTag`, `SqlTagFragment`, `SqlDialect`                                                                                                        |
-| `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                                   |
-| `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                                   |
-| `/memory`      | —                          | `buildFilterPredicate`, `buildFilterNodePredicate`, `toFilterPredicate`, `applyFiltersToArray`, `buildComparator`, `createMemoryKeyset`, `createMemoryPaginator`, `dateField`/…, `MemoryFilterSpec`, `MemoryDialect`                                 |
+| Entry            | Peer                       | Key exports                                                                                                                                                                                                                                          |
+| ---------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/drizzle`       | `drizzle-orm` (v0.45 ∪ v1) | `buildWhere`, `buildFilterNode`, `toDrizzleWhere`, `buildOrderBy`, `createDrizzleKeyset`, `combineWhere`, `dateField`/…, `FieldSpec`, `FilterSpec`, `ColumnOf`                                                                                       |
+| `/drizzle-rqb`   | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`, `RqbV1Sql`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
+| `/kysely`        | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                                    |
+| `/knex`          | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                                       |
+| `/sql-tag`       | —                          | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toSqlTagWhere`, `dateField`/…, `SqlTagFilterSpec`, `SqlTag`, `SqlTagFragment`, `SqlDialect`                                                                                                        |
+| `/mongo`         | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                                   |
+| `/prisma`        | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                                   |
+| `/memory`        | —                          | `buildFilterPredicate`, `buildFilterNodePredicate`, `toFilterPredicate`, `applyFiltersToArray`, `buildComparator`, `createMemoryKeyset`, `createMemoryPaginator`, `dateField`/…, `MemoryFilterSpec`, `MemoryDialect`                                 |
+| `/postgrest`     | —                          | `buildParams`, `buildFilterNode`, `toPostgrestParams`, `applyParamsToPostgrest`, `applyFiltersToPostgrest`, `buildOrder`, `formatOrder`, `createPostgrestKeyset`, `dateField`/…, `PostgrestFilterSpec`, `PostgrestParams`, `PostgrestOrderTerm`      |
+| `/elasticsearch` | —                          | `buildQuery`, `buildFilterNode`, `toElasticsearchQuery`, `buildSort`, `createElasticsearchKeyset`, `dateField`/…, `ElasticsearchFilterSpec`, `ElasticsearchQuery`, `ElasticsearchSort`                                                               |
 
 ## Gotchas & FAQ
 
@@ -1351,7 +1514,12 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
   `json_each` subqueries) for those engines — see
   [SQL dialects](#sql-dialects-array-ops--ilike). **drizzle** is PG-only (its
   array helpers are Postgres-specific). Mongo/Prisma approximate
-  (`$all`/`$setIsSubset`/`hasEvery`/…); Prisma's `arrayContained` throws.
+  (`$all`/`$setIsSubset`/`hasEvery`/…); Prisma's and Elasticsearch's
+  `arrayContained` throw.
+- **Elasticsearch `eq` doesn't match a text field.** Point text/enum specs at a
+  `keyword` field (`name.keyword`); `term` compares the indexed term, not the
+  analyzed tokens.
+
 - **Frontend bundle stays lean.** Import only `@xtandard/lib/filters` (types +
   compile + describe, zero deps) on the client; keep the adapter import on the
   server.

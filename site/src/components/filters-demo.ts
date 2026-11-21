@@ -17,6 +17,8 @@ import {
 import * as knex from "@xtandard/lib/filters/knex";
 import * as mongo from "@xtandard/lib/filters/mongo";
 import * as prisma from "@xtandard/lib/filters/prisma";
+import * as postgrest from "@xtandard/lib/filters/postgrest";
+import * as elasticsearch from "@xtandard/lib/filters/elasticsearch";
 
 export const kinds = {
   name: "text",
@@ -59,6 +61,22 @@ const prismaSpec = {
   inStock: prisma.booleanField({ field: "inStock" }),
   tags: prisma.arrayField({ field: "tags" }),
   createdAt: prisma.dateField({ field: "createdAt" }),
+};
+const postgrestSpec = {
+  name: postgrest.textField({ column: "name" }),
+  status: postgrest.enumField({ column: "status" }),
+  price: postgrest.numberField({ column: "price" }),
+  inStock: postgrest.booleanField({ column: "in_stock" }),
+  tags: postgrest.arrayField({ column: "tags" }),
+  createdAt: postgrest.dateField({ column: "created_at" }),
+};
+const elasticsearchSpec = {
+  name: elasticsearch.textField({ field: "name.keyword" }),
+  status: elasticsearch.enumField({ field: "status" }),
+  price: elasticsearch.numberField({ field: "price" }),
+  inStock: elasticsearch.booleanField({ field: "inStock" }),
+  tags: elasticsearch.arrayField({ field: "tags" }),
+  createdAt: elasticsearch.dateField({ field: "createdAt" }),
 };
 
 /**
@@ -123,6 +141,8 @@ export type Rendered = {
   sql: Output;
   mongo: Output;
   prisma: Output;
+  postgrest: Output;
+  elasticsearch: Output;
   url: Output;
   labels: Output;
 };
@@ -187,6 +207,21 @@ export function renderAll(text: string, dialect: SqlDialect): Rendered {
       : prisma.buildFilterNode({ spec: prismaSpec, node, resolveDate });
     return `prisma.product.findMany({ where: ${json(out.where ?? {})} })`;
   });
+  const postgrestOut = attempt(() => {
+    const { params } = isList
+      ? postgrest.buildParams({ spec: postgrestSpec, filters, resolveDate })
+      : postgrest.buildFilterNode({ spec: postgrestSpec, node, resolveDate });
+    if (params.length === 0)
+      return "// no conditions (everything was dropped or the request is empty)";
+    const lines = params.map(([k, v]) => `${k}=${v}`).join("\n");
+    return `GET /products?${new URLSearchParams(params)}\n\n// params, unencoded\n${lines}`;
+  });
+  const elasticsearchOut = attempt(() => {
+    const { query } = isList
+      ? elasticsearch.buildQuery({ spec: elasticsearchSpec, filters, resolveDate })
+      : elasticsearch.buildFilterNode({ spec: elasticsearchSpec, node, resolveDate });
+    return `client.search({ index: "products", query: ${json(query ?? { match_all: {} })} })`;
+  });
   const url = attempt(() => {
     const compact = isList
       ? compactFilters({ filters }).compact
@@ -225,6 +260,8 @@ export function renderAll(text: string, dialect: SqlDialect): Rendered {
     sql,
     mongo: mongoOut,
     prisma: prismaOut,
+    postgrest: postgrestOut,
+    elasticsearch: elasticsearchOut,
     url,
     labels: chips,
   };

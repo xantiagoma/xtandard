@@ -66,6 +66,8 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/filters/prisma`         | Prisma `where` object from filters                       | none                                 |
 | `@xtandard/lib/filters/memory`         | In-memory predicate, comparator + array pagination       | none                                 |
 | `@xtandard/lib/filters/tanstack-table` | TanStack Table state ⇄ filters, sort, pagination         | none                                 |
+| `@xtandard/lib/filters/postgrest`      | PostgREST / Supabase query params from filters           | none                                 |
+| `@xtandard/lib/filters/elasticsearch`  | Elasticsearch / OpenSearch Query DSL from filters        | none                                 |
 | `@xtandard/lib/web`                    | Browser/FormData utilities                               | `up-fetch`                           |
 | `@xtandard/lib/tanstack`               | nuqs-style URL query state (TanStack Router)             | `react`, `@tanstack/react-router`    |
 | `@xtandard/lib/tanstack/server`        | Framework-free parsers/serializer/loader                 | none                                 |
@@ -464,6 +466,9 @@ resolveDate })` lowers a request to a **portable `CompiledWhere` AST**. Validate
   `@xtandard/lib/filters/memory` evaluates the same AST in memory: a
   `(row) => boolean` with SQL semantics, a sort comparator and synchronous
   array pagination (client-side tables, tests, an in-browser "server").
+  `@xtandard/lib/filters/postgrest` renders PostgREST / Supabase query params
+  and `@xtandard/lib/filters/elasticsearch` an Elasticsearch / OpenSearch Query
+  DSL clause (both with sort + keyset helpers).
 - The **`date` kind is injected** — its DST-aware `resolveDate` (→ `[gte, lt)`)
   and chip-label `describeDate` are passed in, so no date library is bundled.
 - **TanStack Table** (`@xtandard/lib/filters/tanstack-table`, zero deps, v8 and
@@ -486,21 +491,23 @@ const { where } = buildWhere({ spec, filters, resolveDate }); // resolveDate inj
 db.select().from(t).where(where);
 ```
 
-| Import                                               | Export                                                                                                      | Source                              |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `@xtandard/lib/filters`                              | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                                  | [src](./src/filters/types.ts)       |
-| `@xtandard/lib/filters`                              | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                             | [src](./src/filters/compile.ts)     |
-| `@xtandard/lib/filters`                              | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata`         | [src](./src/filters/)               |
-| `@xtandard/lib/filters/{valibot,zod,arktype,effect}` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema` (same names per validator) | [src](./src/filters/)               |
-| `@xtandard/lib/filters/drizzle`                      | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                        | [src](./src/filters/drizzle/)       |
-| `@xtandard/lib/filters/drizzle-rqb`                  | `buildWhere`/`buildFilterNode` → RQB v2 `where` object (`db.query`), `dateField`/…                          | [src](./src/filters/drizzle-rqb.ts) |
-| `@xtandard/lib/filters/kysely`                       | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                             | [src](./src/filters/kysely.ts)      |
-| `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)        |
-| `@xtandard/lib/filters/sql-tag`                      | `buildWhere`/`buildOrderBy` → Bun.sql / postgres.js fragments (+ `toSqlTagWhere`)                           | [src](./src/filters/sql-tag.ts)     |
-| `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)       |
-| `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)      |
-| `@xtandard/lib/filters/memory`                       | `buildFilterPredicate` → `(row) => boolean` (SQL semantics), `buildComparator`, `createMemoryPaginator`     | [src](./src/filters/memory.ts)      |
-| `@xtandard/lib/filters/tanstack-table`               | `createTableBridge` + `textColumn`/`numberRangeColumn`/…, `toSort`, `toPagination`, `toCursorPagination`    | [src](./src/filters/)               |
+| Import                                               | Export                                                                                                      | Source                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `@xtandard/lib/filters`                              | model **types** (`FieldFilter`/`ColumnFilter`/`FilterNode`/`DatePreset`/…)                                  | [src](./src/filters/types.ts)         |
+| `@xtandard/lib/filters`                              | `compileFilters`/`compileFilterNode` → `CompiledWhere` (+ `DateFilterResolver`)                             | [src](./src/filters/compile.ts)       |
+| `@xtandard/lib/filters`                              | `*_OPERATORS` / `OPERATORS_BY_KIND` / `parseSortParam` / `describeFieldFilter` / `ResourceMetadata`         | [src](./src/filters/)                 |
+| `@xtandard/lib/filters/{valibot,zod,arktype,effect}` | `FieldFilterSchema` / `FiltersRequestSchema` / `FilterNodeSchema` / `SortSchema` (same names per validator) | [src](./src/filters/)                 |
+| `@xtandard/lib/filters/drizzle`                      | `buildWhere`/`buildFilterNode`, `dateField`/…, `buildOrderBy`, `createDrizzleKeyset`                        | [src](./src/filters/drizzle/)         |
+| `@xtandard/lib/filters/drizzle-rqb`                  | `buildWhere`/`buildFilterNode` → RQB v2 `where` object (`db.query`), `dateField`/…                          | [src](./src/filters/drizzle-rqb.ts)   |
+| `@xtandard/lib/filters/kysely`                       | `buildWhere`/`buildOrderBy` (+ `toKyselyWhere`)                                                             | [src](./src/filters/kysely.ts)        |
+| `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)          |
+| `@xtandard/lib/filters/sql-tag`                      | `buildWhere`/`buildOrderBy` → Bun.sql / postgres.js fragments (+ `toSqlTagWhere`)                           | [src](./src/filters/sql-tag.ts)       |
+| `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)         |
+| `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)        |
+| `@xtandard/lib/filters/memory`                       | `buildFilterPredicate` → `(row) => boolean` (SQL semantics), `buildComparator`, `createMemoryPaginator`     | [src](./src/filters/memory.ts)        |
+| `@xtandard/lib/filters/tanstack-table`               | `createTableBridge` + `textColumn`/`numberRangeColumn`/…, `toSort`, `toPagination`, `toCursorPagination`    | [src](./src/filters/)                 |
+| `@xtandard/lib/filters/postgrest`                    | `buildParams` → PostgREST query params, `buildOrder`, `createPostgrestKeyset`                               | [src](./src/filters/postgrest.ts)     |
+| `@xtandard/lib/filters/elasticsearch`                | `buildQuery` → Query DSL clause, `buildSort`, `createElasticsearchKeyset`                                   | [src](./src/filters/elasticsearch.ts) |
 
 ## Recommended Libraries
 
