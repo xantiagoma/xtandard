@@ -12,7 +12,7 @@ import {
   lowerCut,
   upperCut,
 } from "./interval";
-import { cutAbove, firstIndex, IntervalSet, sameInterval, subtractInterval } from "./interval-set";
+import { cutAbove, firstIndex, IntervalSet, sameInterval } from "./interval-set";
 
 /** One `[interval, value]` pair of an {@link IntervalMap} (the shape `Map` entries have). */
 export type IntervalMapEntry<T, V> = readonly [interval: Interval<T>, value: V];
@@ -247,7 +247,7 @@ export class IntervalMap<T, V> implements Iterable<IntervalMapEntry<T, V>> {
       const [key, value] = this.#entries[i]!;
       if (compareCut(this.domain, lowerCut(this.domain, key.lower), upper) >= 0) break;
 
-      for (const piece of subtractInterval(this.domain, key, interval)) out.push([piece, value]);
+      for (const piece of key.difference(interval)) out.push([piece, value]);
     }
 
     if (i === start) return this; // nothing overlapped

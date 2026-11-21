@@ -62,34 +62,6 @@ export function sameInterval<T>(
   );
 }
 
-/**
- * `a \ b` for two intervals, computed on cuts (exact on the extended line, `±∞` points kept).
- *
- * @internal
- */
-export function subtractInterval<T>(
-  domain: IntervalDomain<T>,
-  a: Interval<T>,
-  b: Interval<T>,
-): Interval<T>[] {
-  if (a.isEmpty) return [];
-  if (b.isEmpty) return [a];
-
-  const aLower = lowerCut(domain, a.lower);
-  const aUpper = upperCut(domain, a.upper);
-  const bLower = lowerCut(domain, b.lower);
-  const bUpper = upperCut(domain, b.upper);
-
-  // Disjoint: nothing to take away.
-  if (compareCut(domain, bUpper, aLower) <= 0 || compareCut(domain, aUpper, bLower) <= 0) {
-    return [a];
-  }
-
-  return [intervalBetween(domain, aLower, bLower), intervalBetween(domain, bUpper, aUpper)].filter(
-    (piece) => !piece.isEmpty,
-  );
-}
-
 /** The whole line of a domain: open `±∞` sides, closed where the domain declares `±∞` values. */
 function universe<T>(domain: IntervalDomain<T>): Interval<T> {
   return Interval.of(

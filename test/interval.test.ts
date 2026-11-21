@@ -264,6 +264,63 @@ describe("difference — continuous examples", () => {
   }
 });
 
+describe("difference — extended line keeps an included ±∞ (regression)", () => {
+  // Before the fix, the windows around `other` were open at ±∞, so an included
+  // -∞/+∞ was dropped, and an open-∞ `other` left no piece at all.
+  const cases: ReadonlyArray<readonly [string, string, string[]]> = [
+    ["[-Infinity,5]", "[3,4]", ["[-Infinity,3)", "(4,5]"]],
+    ["[0,+Infinity]", "[3,4]", ["[0,3)", "(4,+Infinity]"]],
+    ["[-Infinity,5]", "(-Infinity,0]", ["[-Infinity,-Infinity]", "(0,5]"]],
+    ["[-Infinity,5]", "[-Infinity,0]", ["(0,5]"]],
+    [
+      "[-Infinity,+Infinity]",
+      "(-Infinity,+Infinity)",
+      ["[-Infinity,-Infinity]", "[+Infinity,+Infinity]"],
+    ],
+    ["[-Infinity,+Infinity]", "[-Infinity,+Infinity]", []],
+    ["(-Infinity,5]", "(-Infinity,0]", ["(0,5]"]],
+  ];
+
+  for (const [a, b, want] of cases) {
+    test(`${a} \\ ${b} = ${want.join(" ∪ ") || "∅"}`, () => {
+      expect(
+        N(a)
+          .difference(N(b))
+          .map((p) => p.toString()),
+      ).toEqual(want);
+    });
+  }
+
+  test("symmetricDifference inherits the fix", () => {
+    expect(N("[-Infinity,5]").symmetricDifference(N("(-Infinity,5]")).map(String)).toEqual([
+      "[-Infinity,-Infinity]",
+    ]);
+  });
+
+  test("agrees with brute-force membership (incl. ±∞) over every bracket combination", () => {
+    const ends = ["-Infinity", "0", "1", "2", "+Infinity"];
+    const texts: string[] = [];
+    for (const [i, lo] of ends.entries()) {
+      for (const hi of ends.slice(i)) {
+        for (const open of ["[", "("])
+          for (const close of ["]", ")"]) texts.push(`${open}${lo},${hi}${close}`);
+      }
+    }
+    const probes = [-Infinity, -1, 0, 0.5, 1, 1.5, 2, 3, Infinity];
+    const wrong: string[] = [];
+    for (const a of texts) {
+      for (const b of texts) {
+        const pieces = N(a).difference(N(b));
+        for (const x of probes) {
+          const want = N(a).contains(x) && !N(b).contains(x);
+          if (pieces.some((p) => p.contains(x)) !== want) wrong.push(`${a} \\ ${b} @ ${x}`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+});
+
 describe("intersection — examples", () => {
   const cases: ReadonlyArray<readonly [string, string, string]> = [
     ["[0,5]", "[3,8]", "[3,5]"],

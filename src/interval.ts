@@ -494,40 +494,46 @@ export class Interval<T> {
     return Interval.of(this.domain, gapLower, gapUpper);
   }
 
-  /** `this \ other` — 0, 1, or 2 pieces. */
+  /**
+   * `this \ other` — 0, 1, or 2 pieces, in order. Brackets are exact: removing a
+   * closed end leaves an open one and vice versa. On the extended line (a domain
+   * with `±∞` values, like `number`) an included `±∞` stays included unless
+   * `other` includes it too.
+   *
+   * @example
+   * ```ts
+   * import { NumberInterval } from "@xtandard/lib/interval";
+   *
+   * NumberInterval.closed(3, 10).difference(NumberInterval.open(4, 6)).map(String); // ["[3,4]", "[6,10]"]
+   * NumberInterval.closed(3, 10).difference(NumberInterval.closed(4, 6)).map(String); // ["[3,4)", "(6,10]"]
+   * NumberInterval.parse("[-Infinity,5]").difference(NumberInterval.closed(3, 4)).map(String);
+   * // ["[-Infinity,3)", "(4,5]"]
+   * NumberInterval.parse("[-Infinity,5]").difference(NumberInterval.atMost(0)).map(String);
+   * // ["[-Infinity,-Infinity]", "(0,5]"] (atMost(0) is open at -∞)
+   * ```
+   */
   difference(other: Interval<T>): Interval<T>[] {
     if (this.isEmpty) return [];
     if (other.isEmpty) return [this];
 
-    const result: Interval<T>[] = [];
+    // The windows left and right of `other`, built on cuts from the ends of the
+    // domain's whole line, so a `±∞` value the domain declares is kept when
+    // `other` excludes it (an open `±∞` side still leaves the point `±∞` behind).
+    const domain = this.domain;
+    const start = lowerCut(domain, {
+      unbounded: true,
+      closed: domain.negativeInfinity !== undefined,
+    });
+    const end = upperCut(domain, {
+      unbounded: true,
+      closed: domain.positiveInfinity !== undefined,
+    });
+    const pieces = [
+      this.intersection(intervalBetween(domain, start, lowerCut(domain, other.lower))),
+      this.intersection(intervalBetween(domain, upperCut(domain, other.upper), end)),
+    ];
 
-    if (!other.lower.unbounded) {
-      const leftUpper: Bound<T> = {
-        unbounded: false,
-        value: other.lower.value,
-        closed: !other.lower.closed,
-      };
-      const left = this.intersection(
-        Interval.of(this.domain, { unbounded: true, closed: false }, leftUpper),
-      );
-
-      if (!left.isEmpty) result.push(left);
-    }
-
-    if (!other.upper.unbounded) {
-      const rightLower: Bound<T> = {
-        unbounded: false,
-        value: other.upper.value,
-        closed: !other.upper.closed,
-      };
-      const right = this.intersection(
-        Interval.of(this.domain, rightLower, { unbounded: true, closed: false }),
-      );
-
-      if (!right.isEmpty) result.push(right);
-    }
-
-    return result;
+    return pieces.filter((piece) => !piece.isEmpty);
   }
 
   /** Parts in exactly one of the two intervals (merged + sorted). */
