@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.1
+
+[compare changes](https://github.com/xantiagoma/xtandard/compare/v0.7.0...v0.7.1)
+
+### 📖 Documentation
+
+- **ecosystem:** Link @xtandard/entitlements on npm ([#38](https://github.com/xantiagoma/xtandard/pull/38))
+
+### ❤️ Contributors
+
+- Santiago Montoya A. ([@xantiagoma](https://github.com/xantiagoma))
+
 ## v0.7.0
 
 [compare changes](https://github.com/xantiagoma/xtandard/compare/v0.6.0...v0.7.0)
