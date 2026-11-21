@@ -27,6 +27,11 @@ def x_height(path, wght):
     return font["OS/2"].sxHeight / font["head"].unitsPerEm
 
 
+def cap_height(path, wght):
+    font, _ = _instance(path, wght)
+    return font["OS/2"].sCapHeight / font["head"].unitsPerEm
+
+
 def text_path(path, wght, text, size, tracking=0.0, x=0.0, y=0.0):
     """Returns (d, advance) for text at font size `size` with baseline at (x, y); tracking in em."""
     font, data = _instance(path, wght)
