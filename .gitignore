@@ -4,3 +4,7 @@ coverage
 *.tgz
 .DS_Store
 .understand-anything/
+
+# brand generator: downloaded fonts (scripts/brand/build.py), python cache
+scripts/brand/fonts
+__pycache__

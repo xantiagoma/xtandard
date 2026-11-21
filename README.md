@@ -1,5 +1,15 @@
 <p align="center">
-  <img src="./assets/logo.png" alt="xtandard" width="120" />
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-dark.png"
+    />
+    <img
+      alt="@xtandard/lib"
+      src="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-light.png"
+      width="420"
+    />
+  </picture>
 </p>
 
 <h1 align="center">xtandard</h1>

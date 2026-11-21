@@ -1,0 +1,18 @@
+@xtandard/lib
+Copyright (c) 2026 Santiago Montoya
+
+This product is licensed under the MIT License (see LICENSE).
+
+Third-party notices
+===================
+
+Brand artwork
+-------------
+assets/: the wordmark in the lockups and the text of assets/social.svg are
+glyph outlines of Urbanist (Black 900, SemiBold 600), Copyright 2021 The
+Urbanist Project Authors (https://github.com/coreyhu/Urbanist), and of
+JetBrains Mono Regular, Copyright 2020 The JetBrains Mono Project Authors
+(https://github.com/JetBrains/JetBrainsMono), both licensed under the SIL Open
+Font License, Version 1.1 (https://openfontlicense.org). The outlines are
+artwork made with the fonts; no font file is distributed. scripts/brand/build.py
+downloads the fonts at build time into scripts/brand/fonts/ (gitignored).

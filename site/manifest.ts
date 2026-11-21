@@ -305,6 +305,7 @@ export const sidebar: Item[] = [
       },
       { slug: "project/changelog", src: "CHANGELOG.md", label: "Changelog" },
       { slug: "project/releasing", src: "docs/RELEASING.md", label: "Releasing", internal: true },
+      { slug: "project/brand", src: "docs/BRAND.md", label: "Brand", internal: true },
       { label: "npm", link: npmUrl },
     ],
   },

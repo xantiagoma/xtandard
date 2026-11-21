@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="@xtandard/lib">
+<title>@xtandard/lib</title>
+<defs><linearGradient id="lime" x1="0" y1="0" x2="326" y2="260" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#C8F150"/><stop offset="1" stop-color="#97CC1B"/></linearGradient></defs>
+<rect width="1024" height="1024" rx="224" fill="#101113"/>
+<g transform="translate(92 183.03) scale(2.57669) translate(0 0)" fill="url(#lime)">
+<path fill-rule="evenodd" d="M21.03 23.37A14 14 0 0 1 31.44 0L87.55 0A10 10 0 0 1 94.98 3.31L198.16 117.96A18 18 0 0 1 198.16 142.04L94.98 256.69A10 10 0 0 1 87.55 260L31.44 260A14 14 0 0 1 21.03 236.63L113.39 134.01A6 6 0 0 0 113.39 125.99Z"/>
+<path fill-rule="evenodd" d="M180.82 200.91A8 8 0 0 1 180.82 190.2L216.05 151.05A8 8 0 0 1 227.95 151.05L310.98 243.31A10 10 0 0 1 303.55 260L238.45 260A10 10 0 0 1 231.02 256.69Z"/>
+<path fill-rule="evenodd" d="M180.82 69.8A8 8 0 0 1 180.82 59.09L231.02 3.31A10 10 0 0 1 238.45 0L303.55 0A10 10 0 0 1 310.98 16.69L227.95 108.95A8 8 0 0 1 216.05 108.95Z"/>
+</g>
+</svg>
