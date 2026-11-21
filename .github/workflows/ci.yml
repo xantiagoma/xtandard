@@ -40,14 +40,14 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
       postgrest:
         image: postgrest/postgrest:v14.1
         env:
-          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
+          PGRST_DB_URI: postgres://postgres@postgres:5432/postgres
           PGRST_DB_ANON_ROLE: anon
           PGRST_DB_SCHEMAS: public
         ports: ["3000:3000"]
@@ -73,8 +73,6 @@ jobs:
           node-version: "22"
       - run: bun install
       - name: Create the PostgREST schema
-        env:
-          PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
           create role anon nologin;
