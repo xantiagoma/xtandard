@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from mark import mark, H  # noqa: E402
-from text import descent, text_path, x_height  # noqa: E402
+from text import cap_height, descent, text_path, x_height  # noqa: E402
 from geom import f  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -189,6 +189,8 @@ def build_symbol():
 WORD_WGHT = 900
 WORD_TRACK = -0.012
 XH = x_height(URB, WORD_WGHT)
+OPTICAL = 0.5  # the wordmark's optical centre: halfway up its cap height (descenders ignored)
+CH = cap_height(URB, WORD_WGHT)
 
 
 def wordmark(x, baseline, xh, first_fill, second_fill, stacked_pitch=None):
@@ -205,21 +207,27 @@ def wordmark(x, baseline, xh, first_fill, second_fill, stacked_pitch=None):
 
 
 def lockup_horizontal(theme):
-    hgt = 96.0
-    s = hgt / BH
-    base = (H - BY0) * s  # wordmark baseline = the X's bottom
+    """Symbol left, wordmark right. The symbol's vertical centre sits on the wordmark's optical
+    centre (OPTICAL of the way from the baseline up to the cap height, descenders ignored); the
+    canvas is the union of both, so neither is clipped. Returns the symbol's top as `sy`."""
+    sh = 96.0  # symbol height
+    s = sh / BH
     xh = 0.5 * H * s
-    gap = 0.22 * hgt
+    gap = 0.22 * sh
     x = BW * s + gap
     dark = theme == "dark"
+    size = xh / XH
+    centre = OPTICAL * CH * size  # height of the wordmark's optical centre above its baseline
+    top = min(0.0, sh / 2 + centre - CH * size)  # canvas top: the cap height may rise above the symbol
+    sy = -top  # the symbol's top on the canvas
+    base = sy + sh / 2 + centre  # wordmark baseline
     words, right, size = wordmark(x, base, xh, PAPER if dark else INK, "url(#word)")
     w = right + 1
-    # `@` and `/` reach below the baseline (the X's bottom): the canvas grows to hold them.
-    hgt = max(hgt, base + descent(URB, WORD_WGHT, WORD_1 + WORD_2, size) + 1)
+    hgt = max(sy + sh, base + descent(URB, WORD_WGHT, WORD_1 + WORD_2, size) + 1)
     defs = lime_grad("lime", LIME_SYMBOL_DARK if dark else LIME_SYMBOL_LIGHT) + word_grad(
         "word", LIME_WORD_DARK if dark else LIME_WORD_LIGHT, base - 1.45 * xh, base
     )
-    return w, hgt, defs, symbol(0, 0, s), words, base, xh
+    return w, hgt, defs, symbol(0, sy, s), words, base, xh
 
 
 def build_lockups():
@@ -251,12 +259,14 @@ def build_lockups():
             + "</svg>\n",
         )
     for name, col in (("white", "#FFFFFF"), ("black", "#000000")):
+        # The same geometry as the horizontal lockups, in one colour.
         w, hgt, _, _, _, base, xh = lockup_horizontal("dark")
-        s = 96.0 / BH  # the symbol's height, as in lockup_horizontal (hgt includes the descenders)
+        s = 96.0 / BH
+        sy = base - 48.0 - OPTICAL * CH * (xh / XH)  # the symbol's top, as in lockup_horizontal
         words, right, _ = wordmark(BW * s + 0.22 * 96.0, base, xh, col, col)
         write(
             f"monochrome-{name}.svg",
-            header(right + 1, hgt) + symbol(0, 0, s, fill=col) + words + "</svg>\n",
+            header(right + 1, hgt) + symbol(0, sy, s, fill=col) + words + "</svg>\n",
         )
 
 

@@ -172,9 +172,10 @@ edges. The arm runs to the X's top. The symbol is 326 × 260 units (`symbol.svg`
   their points 130 units from the edges. The orbit circle (r 350) and arcs (r 422) are the family's.
   Corner radius 224 of 1024 (21.9%).
 - **Favicon**: the symbol 840 units wide on the flat `xt-ink` square, same corner radius.
-- **Horizontal lockup**: the symbol 96 units high; the wordmark's baseline is the X's bottom, its
-  x-height half the X's height, starting 22% of that height after the symbol. The canvas extends
-  below by the `@`'s descent.
+- **Horizontal lockup**: the symbol 96 units high, **vertically centred on the wordmark's optical
+  centre** (halfway up its cap height, descenders ignored); the wordmark's x-height is half the X's
+  height, starting 22% of that height after the symbol. The canvas is the union of both, so it holds
+  the `@`'s descent. The monochrome lockups use the same geometry. Same rule in every xtandard repo.
 - **Stacked lockup**: the symbol 205 units high; `lib`'s baseline is the X's bottom, x-height 27% of
   the height, `@xtandard/` one line pitch above it.
 
