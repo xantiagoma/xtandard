@@ -659,3 +659,5 @@ Bun.serve({ routes: { "/api/products": { GET: listProducts } } });
 - [TanStack URL state](@BASE@/tanstack/): options such as `history`, `shallow` and
   `limitUrlUpdates`, and `validateSearch` for route loaders.
 - [Filters playground](@BASE@/playground/filters/): try filters and see the compiled output.
+- [TanStack Table playground](@BASE@/playground/table/): the same list as a server-side TanStack
+  Table, with `@xtandard/lib/filters/tanstack-table` mapping its state to this model and the URL.

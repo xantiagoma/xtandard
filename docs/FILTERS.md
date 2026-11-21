@@ -1046,10 +1046,20 @@ export const productSearch = {
 };
 ```
 
-The table (React here; any adapter works the same way):
+The table (React and TanStack Table v9 here; with v8, `useReactTable` takes the
+same `state`, `on*Change` and `manual*` options, and any other adapter works the
+same way):
 
 ```tsx
-import { getCoreRowModel, useReactTable, functionalUpdate } from "@tanstack/react-table";
+import {
+  columnFilteringFeature,
+  functionalUpdate,
+  globalFilteringFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
+} from "@tanstack/react-table";
 import { parseSortParam, serializeSort } from "@xtandard/lib/filters";
 import {
   fromPagination,
@@ -1069,10 +1079,17 @@ const { pagination } = fromPagination({
 
 const { data } = useQuery({ queryKey: ["products", search], queryFn: () => fetchProducts(search) });
 
-const table = useReactTable({
-  data: data?.items ?? [],
+const features = tableFeatures({
+  columnFilteringFeature,
+  globalFilteringFeature,
+  rowSortingFeature,
+  rowPaginationFeature,
+});
+
+const table = useTable({
+  features,
   columns,
-  getCoreRowModel: getCoreRowModel(),
+  data: data?.items ?? emptyRows,
   manualFiltering: true,
   manualSorting: true,
   manualPagination: true,

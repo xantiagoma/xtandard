@@ -232,6 +232,7 @@ export const sidebar: Item[] = [
         label: "Reference & FAQ",
       },
       { slug: "playground/filters", site: "playground/filters.mdx", label: "Playground" },
+      { slug: "playground/table", site: "playground/table.mdx", label: "Table playground" },
     ],
   },
   {
