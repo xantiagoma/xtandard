@@ -65,6 +65,7 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/filters/mongo`          | Mongo filter object from filters                         | none                                 |
 | `@xtandard/lib/filters/prisma`         | Prisma `where` object from filters                       | none                                 |
 | `@xtandard/lib/filters/memory`         | In-memory predicate, comparator + array pagination       | none                                 |
+| `@xtandard/lib/filters/tanstack-table` | TanStack Table state ⇄ filters, sort, pagination         | none                                 |
 | `@xtandard/lib/web`                    | Browser/FormData utilities                               | `up-fetch`                           |
 | `@xtandard/lib/tanstack`               | nuqs-style URL query state (TanStack Router)             | `react`, `@tanstack/react-router`    |
 | `@xtandard/lib/tanstack/server`        | Framework-free parsers/serializer/loader                 | none                                 |
@@ -465,6 +466,10 @@ resolveDate })` lowers a request to a **portable `CompiledWhere` AST**. Validate
   array pagination (client-side tables, tests, an in-browser "server").
 - The **`date` kind is injected** — its DST-aware `resolveDate` (→ `[gte, lt)`)
   and chip-label `describeDate` are passed in, so no date library is bundled.
+- **TanStack Table** (`@xtandard/lib/filters/tanstack-table`, zero deps, v8 and
+  v9): a per-column spec converts `columnFilters` / `globalFilter` / `sorting` /
+  `pagination` to and from the model, so a `manual*` table is filtered, sorted
+  and paged on the server and synced to the URL.
 
 ```ts
 import { FiltersRequestSchema } from "@xtandard/lib/filters/valibot"; // optional validation
@@ -495,6 +500,7 @@ db.select().from(t).where(where);
 | `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)       |
 | `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)      |
 | `@xtandard/lib/filters/memory`                       | `buildFilterPredicate` → `(row) => boolean` (SQL semantics), `buildComparator`, `createMemoryPaginator`     | [src](./src/filters/memory.ts)      |
+| `@xtandard/lib/filters/tanstack-table`               | `createTableBridge` + `textColumn`/`numberRangeColumn`/…, `toSort`, `toPagination`, `toCursorPagination`    | [src](./src/filters/)               |
 
 ## Recommended Libraries
 

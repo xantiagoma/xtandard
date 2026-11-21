@@ -1,0 +1,122 @@
+---
+title: TanStack Table playground
+description: A server-side TanStack Table whose filters, search, sort and page live in the URL, answered by an in-browser server built on the memory adapter.
+tableOfContents: false
+---
+
+{/* scripts/sync.ts copies this file to src/content/docs/playground/, hence the import path. */}
+import TablePlayground from "../../../components/TablePlayground.tsx";
+
+This page runs a real [TanStack Table](https://tanstack.com/table) (v9) in **server-side mode**
+(`manualFiltering`, `manualSorting`, `manualPagination`) over 48 example products. Nothing is
+filtered in the table itself. Every change takes this path:
+
+1. **table → model.** [`@xtandard/lib/filters/tanstack-table`](@BASE@/filters/tanstack-table/) turns
+   `columnFilters`, `globalFilter` and `sorting` into `ColumnFilter[]` and a `Sort`.
+2. **model → URL.** The [compact codec](@BASE@/filters/ui/#compact-url-encoding) and Rison write them
+   to **this page's address bar**. Reload or share the page and the table comes back the same.
+3. **URL → server.** An in-browser "server" parses the request URL with `createLoader`, builds one
+   `FilterNode` with `toFilterNode` (column filters AND the global search), and answers with
+   [`@xtandard/lib/filters/memory`](@BASE@/filters/adapters/#in-memory--xtandardlibfiltersmemory-no-dependencies):
+   a predicate, a keyset sort with `id` as the tiebreaker, and page or cursor pagination.
+4. **server → table.** The rows and `PageInfo` come back; `tablePaginationOptions` gives the table its
+   `pageCount` and `rowCount`.
+
+<TablePlayground client:only="react" />
+
+:::note[Things to try]
+
+- **Sort by Price**: the column id is `price`, the model field `priceCents`. The URL says `sort=priceCents:asc`.
+- **Leave one price bound empty**: `[min, ]` becomes `gte`, `[ , max]` becomes `lte`, both become `between`.
+- **Switch to cursor pagination**: the table still pages by index; `toCursorPagination` turns the index into the
+  `after` cursor that `rememberCursor` recorded for the page before. There are no totals, so the page count is
+  "this page, plus one while there is a next page".
+- **Edit the address bar by hand** (an unknown field, a bad operator): the codec drops what isn't allow-listed.
+
+:::
+
+The shared module behind this page, imported by both the table and the server:
+
+```ts
+import { decode, encode } from "@effective/rison";
+import { createFilterUrlCodec, type FiltersRequest } from "@xtandard/lib/filters";
+import {
+  booleanColumn,
+  createTableBridge,
+  multiSelectColumn,
+  numberRangeColumn,
+  textColumn,
+} from "@xtandard/lib/filters/tanstack-table";
+import { parseAsCodec, parseAsInteger, parseAsString, type ValueCodec } from "@xtandard/lib/tanstack/server";
+
+export const productTable = createTableBridge({
+  columns: {
+    name: textColumn(),
+    category: multiSelectColumn(),
+    price: numberRangeColumn({ field: "priceCents" }),
+    inStock: booleanColumn(),
+  },
+  globalFilter: { fields: ["name", "sku"] },
+});
+
+const urlCodec = createFilterUrlCodec({ kinds: productTable.kinds });
+const filtersCodec: ValueCodec<FiltersRequest> = {
+  encode: (filters) => encode(urlCodec.encodeFilters(filters)),
+  decode: (token) => urlCodec.decodeFilters(decode(token)),
+};
+
+export const productSearch = {
+  filters: parseAsCodec(filtersCodec).withDefault([]),
+  q: parseAsString.withDefault(""),
+  sort: parseAsString.withDefault(""),
+  page: parseAsInteger.withDefault(1),
+  pageSize: parseAsInteger.withDefault(8),
+  after: parseAsString, // cursor mode: the request's `after` cursor
+};
+```
+
+And the server, the same code you would put behind `GET /api/products` with a real adapter:
+
+```ts
+import { parseSortParam } from "@xtandard/lib/filters";
+import {
+  booleanField,
+  buildFilterNodePredicate,
+  createMemoryPaginator,
+  enumField,
+  numberField,
+  textField,
+} from "@xtandard/lib/filters/memory";
+import { createLoader } from "@xtandard/lib/tanstack/server";
+
+const loadSearch = createLoader(productSearch);
+const spec = {
+  name: textField({ path: "name" }),
+  sku: textField({ path: "sku" }),
+  category: enumField({ path: "category" }),
+  priceCents: numberField({ path: "priceCents" }),
+  inStock: booleanField({ path: "inStock" }),
+};
+const sortable = new Set(["name", "category", "priceCents"]);
+
+export function listProducts(url: string, mode: "page" | "cursor") {
+  const search = loadSearch(url);
+
+  const node = productTable.toFilterNode({ filters: search.filters, globalFilter: search.q });
+  const rows = node ? products.filter(buildFilterNodePredicate({ spec, node }).predicate) : products;
+
+  const { sort } = parseSortParam({ value: search.sort });
+  const allowed = sort.filter((s) => sortable.has(s.field));
+  const paginator = createMemoryPaginator({
+    rows,
+    sort: [...allowed.map((s) => ({ key: s.field, order: s.dir })), { key: "id", order: "asc" }],
+  });
+
+  return mode === "cursor"
+    ? paginator.paginate({ type: "cursor", limit: search.pageSize, cursor: search.after })
+    : paginator.paginate({ type: "page", page: search.page, pageSize: search.pageSize });
+}
+```
+
+The table wiring (URL → state, state changes → URL) is in
+[Filters: TanStack Table](@BASE@/filters/tanstack-table/#table--url--server--table).

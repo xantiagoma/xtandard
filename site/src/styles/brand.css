@@ -271,3 +271,66 @@ pre.mermaid,
   font-size: var(--sl-text-sm);
   color: var(--sl-color-gray-3);
 }
+
+/* TanStack Table playground: paired inputs, category checkboxes, sortable headers, pager. */
+.xt-play .xt-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.xt-play .xt-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  font-size: var(--sl-text-sm);
+}
+.xt-play .xt-checks label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.xt-play .xt-checks input {
+  width: auto;
+}
+.xt-play .xt-sort {
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.xt-play .xt-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  font-size: var(--sl-text-sm);
+}
+.xt-play .xt-pager > button {
+  font: inherit;
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--sl-color-gray-5);
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+  cursor: pointer;
+}
+.xt-play .xt-pager > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.xt-play .xt-pager > span {
+  align-self: center;
+}
+.xt-play .xt-pager label {
+  width: auto;
+}
+.xt-play .xt-scroll {
+  overflow-x: auto;
+}

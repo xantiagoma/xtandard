@@ -62,6 +62,11 @@ function Table() {
 }
 ```
 
+Driving a server-side TanStack **Table** from the URL? `@xtandard/lib/filters/tanstack-table`
+converts its `columnFilters`, `globalFilter`, `sorting` and `pagination` to and from the
+filter model, which these hooks store through the compact filter codec (see
+[Filters: TanStack Table](./FILTERS.md#the-column-spec)).
+
 ## Options
 
 Defaults match nuqs: `{ history: "replace", shallow: true, scroll: false,
