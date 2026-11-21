@@ -175,10 +175,13 @@ def build_favicon():
 
 
 def build_symbol():
-    write(
-        "symbol.svg",
-        header(BW, BH) + f"<defs>{lime_grad('lime', LIME_SYMBOL_DARK)}</defs>\n" + symbol(0, 0, 1) + "</svg>\n",
-    )
+    # The mark alone, no tile: symbol.svg for dark surfaces, symbol-light.svg (deeper lime) for
+    # light ones. These are what pages show as a standalone logo (the docs site's home hero).
+    for name, stops in (("symbol.svg", LIME_SYMBOL_DARK), ("symbol-light.svg", LIME_SYMBOL_LIGHT)):
+        write(
+            name,
+            header(BW, BH) + f"<defs>{lime_grad('lime', stops)}</defs>\n" + symbol(0, 0, 1) + "</svg>\n",
+        )
 
 
 # ---------------------------------------------------------------- wordmark + lockups

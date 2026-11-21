@@ -17,19 +17,21 @@ colour, the tagline or a lockup's layout is a code change, not a hand edit of th
 
 ## Files
 
-| File                                                                  | What it is                                                                                                              | Use it for                                                                                                    |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `logo.svg`                                                            | App icon: the symbol and grey `<` `>` brackets on a near-black rounded square with faint orbit lines                    | The docs site's home page, avatars, the master for the Apple touch icon                                       |
-| `symbol.svg`                                                          | The symbol alone, transparent, lime for dark surfaces                                                                   | Inline UI, places that draw their own surface                                                                 |
-| `lockup-horizontal-dark.svg`                                          | Symbol + wordmark, `@xtandard/` in near-white                                                                           | Headers on dark backgrounds: the README in GitHub dark mode, the docs site in dark mode                       |
-| `lockup-horizontal-light.svg`                                         | Symbol + wordmark, `@xtandard/` in ink, deeper lime                                                                     | Headers on light backgrounds: the README in GitHub light mode, npm, the docs site in light mode               |
-| `lockup-stacked-{dark,light}.svg`                                     | Symbol left, `@xtandard/` over `lib`                                                                                    | Square-ish slots: slides, stickers, sidebars                                                                  |
-| `monochrome-white.svg`, `monochrome-black.svg`                        | One-colour horizontal lockup                                                                                            | Photos and busy backgrounds (white); print and engraving (black)                                              |
-| `favicon.svg`, `favicon.ico` (16/32/48), `apple-touch-icon.png` (180) | Favicon set: the symbol, larger, on the flat ink square, without orbits, brackets or shadow (they do not survive 16 px) | Browser tabs: the docs site                                                                                   |
-| `social.svg`, `social.png` (1280×640)                                 | Social card: icon, wordmark, tagline, `bun add` line                                                                    | The GitHub social preview (Settings → General → Social preview, uploaded by hand), the docs site's `og:image` |
+| File                                                                  | What it is                                                                                                                          | Use it for                                                                                                    |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `logo.svg`                                                            | App icon: the symbol and grey `<` `>` brackets on a near-black rounded square with faint orbit lines                                | Avatars and app-icon slots only (never shown as a logo on a page); the master for the Apple touch icon        |
+| `symbol.svg`, `symbol-light.svg`                                      | The symbol alone, transparent, no tile: lime for dark surfaces (`symbol.svg`) and a deeper lime for light ones (`symbol-light.svg`) | Any standalone mark in a UI (one per theme), inline UI                                                        |
+| `lockup-horizontal-dark.svg`                                          | Symbol + wordmark, `@xtandard/` in near-white                                                                                       | Headers on dark backgrounds: the README in GitHub dark mode, the docs site in dark mode                       |
+| `lockup-horizontal-light.svg`                                         | Symbol + wordmark, `@xtandard/` in ink, deeper lime                                                                                 | Headers on light backgrounds: the README in GitHub light mode, npm, the docs site in light mode               |
+| `lockup-stacked-{dark,light}.svg`                                     | Symbol left, `@xtandard/` over `lib`                                                                                                | Square-ish slots: the docs site's home hero (one per theme), slides, stickers, sidebars                       |
+| `monochrome-white.svg`, `monochrome-black.svg`                        | One-colour horizontal lockup                                                                                                        | Photos and busy backgrounds (white); print and engraving (black)                                              |
+| `favicon.svg`, `favicon.ico` (16/32/48), `apple-touch-icon.png` (180) | Favicon set: the symbol, larger, on the flat ink square, without orbits, brackets or shadow (they do not survive 16 px)             | Browser tabs: the docs site                                                                                   |
+| `social.svg`, `social.png` (1280×640)                                 | Social card: icon, wordmark, tagline, `bun add` line                                                                                | The GitHub social preview (Settings → General → Social preview, uploaded by hand), the docs site's `og:image` |
 
-**SVG only where people see the mark.** Every logo, lockup and icon shown on a page (the README,
-the docs site) is one of the SVGs above. There are exactly three rasters, each because a format needs
+**SVG only where people see the mark, and no tile on a page.** Every logo, lockup and icon shown on a page (the README,
+the docs site) is one of the SVGs above, and a standalone mark is the transparent symbol, never the
+tiled `logo.svg`. The tile appears only where an app-icon shape is expected: the favicon set, the Apple
+touch icon and the social card. There are exactly three rasters, each because a format needs
 one and nobody sees it as an image on a page: `social.png` (`og:image` must be a raster),
 `favicon.ico` and `apple-touch-icon.png` (`<head>` fallbacks). Don't add PNG copies of the logo or
 lockups.
@@ -91,7 +93,7 @@ generator of the newer siblings (xtandard-audit, xtandard-links), with the emble
 - **Docs site** (Starlight, `site/astro.config.ts`): `logo: { dark: lockup-horizontal-dark.svg,
 light: lockup-horizontal-light.svg, replacesTitle: true }`, `favicon: favicon.svg`, plus `head`
   entries for `favicon.ico` (with `sizes="16x16 32x32 48x48"`), `apple-touch-icon.png` and
-  `og:image` = `social.png` by absolute URL. The home page's hero image is `logo.svg`.
+  `og:image` = `social.png` by absolute URL. The home page's hero image is the stacked lockup, per theme: `image: { dark: lockup-stacked-dark.svg, light: lockup-stacked-light.svg }` (no tile).
 - **Favicon order** in any HTML head: `favicon.ico` (with `sizes`) first, then `favicon.svg`
   (`type="image/svg+xml"`, which modern browsers prefer), then `apple-touch-icon.png`.
 - **Social preview**: `social.png`.
