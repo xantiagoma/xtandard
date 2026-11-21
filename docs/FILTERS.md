@@ -324,8 +324,9 @@ type CompiledWhere =
 
 Every adapter exposes typed `dateField`/`textField`/`numberField`/`enumField`/
 `booleanField`/`arrayField` **spec builders** (the allow-list + column/path
-mapping) and `buildWhere` / `buildFilterNode`. They differ only in the column
-reference type and the WHERE representation.
+mapping) and `buildWhere` / `buildFilterNode` (the in-memory adapter's are
+`buildFilterPredicate` / `buildFilterNodePredicate`). They differ only in the
+column reference type and the WHERE representation.
 
 ### Drizzle — `@xtandard/lib/filters/drizzle` (peer `drizzle-orm` v0.45+ **or** v1, incl. `1.0.0-beta`)
 
@@ -527,24 +528,121 @@ so `like`/`ilike`/`notIlike` reduce to `contains`/`startsWith`/`endsWith` when
 the pattern allows (`%x%`/`x%`/`%x`); patterns with internal `%`/`_` throw (use
 `$queryRaw`). `arrayContained` has no Prisma operator and throws.
 
+### In memory — `@xtandard/lib/filters/memory` (no dependencies)
+
+Evaluates the AST in JavaScript: a plain `(row) => boolean` predicate, plus a sort
+comparator and synchronous offset/cursor pagination over arrays. Use it for
+client-side tables, tests, or an in-browser "server" that must answer exactly like
+the real one. Fields read a property key, a dot path (`"address.city"`) or a getter
+function.
+
+```ts
+import {
+  applyFiltersToArray,
+  buildComparator,
+  buildFilterPredicate,
+  createMemoryPaginator,
+  dateField,
+  numberField,
+  textField,
+} from "@xtandard/lib/filters/memory";
+
+const spec = {
+  name: textField({ path: "name" }),
+  city: textField({ path: "address.city" }),
+  total: numberField({ path: (o: Order) => o.cents / 100 }),
+  createdAt: dateField({ path: "createdAt" }), // Date, ISO string, epoch ms or Temporal.Instant
+};
+
+const { predicate } = buildFilterPredicate({ spec, filters, resolveDate }); // (row) => boolean
+const matching = applyFiltersToArray(orders, { spec, filters, resolveDate }); // same, as a new array
+
+const { compare } = buildComparator({ sort, paths: { name: "name", createdAt: "createdAt" } });
+const sorted = [...matching].sort(compare);
+
+const paginator = createMemoryPaginator({
+  rows: matching,
+  sort: [{ key: "createdAt", order: "desc" }, { key: "id" }], // unique tiebreaker last
+});
+const page = paginator.paginate({ type: "cursor", limit: 20, cursor }); // sync, no await
+```
+
+`buildFilterNodePredicate` takes a `FilterNode` tree and `toFilterPredicate({ where,
+paths })` renders a pre-compiled `CompiledWhere`. When no filter survives the
+allow-list, the predicate matches every row.
+
+**Same semantics as the SQL adapters** (a test runs one fixture through this
+adapter and through knex, kysely and drizzle on a real SQLite, and checks they pick
+the same rows):
+
+- **NULL is SQL's three-valued logic.** A comparison with NULL (or a missing
+  property) is UNKNOWN, `not` keeps it UNKNOWN, and a row matches only when the
+  whole tree is TRUE. So `ne`, `notInArray` and `notIlike` never match NULL,
+  `not (amount > 5)` doesn't match a NULL `amount`, and `x IN (1, NULL)` is TRUE
+  for 1 but UNKNOWN for 2 (`NOT IN` a list with a NULL never matches). An empty
+  `IN ()` is FALSE and `NOT IN ()` TRUE.
+- **Text** uses `LIKE` patterns over characters: `%`, `_`, and `\` escapes the
+  next character. `contains`/`startsWith`/`endsWith` escape the input
+  (`escapeLike`), so `contains "50%"` matches a literal `50%`. A number matches by
+  its text.
+- **Dates:** a `Date` value compares by time with a `Date`, an ISO-8601 string,
+  epoch milliseconds, or anything with a numeric `epochMilliseconds`
+  (`Temporal.Instant`, `Temporal.ZonedDateTime`). An unparsable value is UNKNOWN.
+- **Types aren't coerced.** `5` never equals `"5"` (a `bigint` compares with a
+  number numerically); mismatched types are UNKNOWN, even under `not`.
+- **Array ops** follow Postgres: `arrayContains` (`@>`), `arrayContained` (`<@`),
+  `arrayOverlaps` (`&&`), with typed elements (`2` isn't `"2"`).
+
+**`dialect`** (default `"postgres"`, like the kysely/knex option) picks the engine to
+copy where Postgres and SQLite disagree:
+
+| behaviour                | `postgres` (default)                      | `sqlite`                                                 |
+| ------------------------ | ----------------------------------------- | -------------------------------------------------------- |
+| `like`                   | case-sensitive                            | ignores ASCII case                                       |
+| `ilike`, `contains`, …   | ignores case, Unicode (`Á` = `á`)         | ignores ASCII case only (`Á` ≠ `á`)                      |
+| NULLs in a sort          | largest: last ascending, first descending | smallest: first ascending, last descending               |
+| array op on a NULL array | UNKNOWN (no match, even under `not`)      | an empty list (`json_each`): `arrayContained` matches it |
+
+There is no `mysql`: MySQL's `=` and `LIKE` follow the column collation (usually
+case- and accent-insensitive), which an evaluator can't know.
+
+**Sorting.** `buildComparator({ sort, paths, defaultSort })` is the in-memory
+`buildOrderBy`: fields missing from `paths` are dropped, `defaultSort` applies when
+nothing is left, keys apply in order and ties keep the input order
+(`Array.prototype.sort` is stable). Strings compare by code point (SQLite's `BINARY`,
+Postgres's `"C"` collation), not by locale; booleans `false` before `true`. NULLs
+follow `dialect`, or pass `nulls: "first" | "last"` for `NULLS FIRST`/`NULLS LAST`.
+
+**Pagination.** `createMemoryPaginator({ rows, sort })` is `createPaginator` from
+`@xtandard/lib/pagination` with array fetchers, so every input style works and
+`paginate` returns a plain value: page/offset requests slice the sorted rows and
+report `totalItems`; cursor requests seek with `createMemoryKeyset` (the in-memory
+`createDrizzleKeyset`: `keys()`, `compare(direction)`, `where(cursor, direction)`,
+`fromItem(row)`), forward or backward. The seek uses the comparator's order, NULLs
+included, so rows with a NULL sort key page correctly (SQL's `>` never matches NULL).
+
 ### Operator support matrix
 
-| op                                      | drizzle  |  kysely  |   knex   |       mongo       |        prisma        |
-| --------------------------------------- | :------: | :------: | :------: | :---------------: | :------------------: |
-| scalar, set, unary                      |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |
-| `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |
-| `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        |
-| `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |
-| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     |
-| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     |
-| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       |
-| date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |
+| op                                      | drizzle  |  kysely  |   knex   |       mongo       |        prisma        |  memory   |
+| --------------------------------------- | :------: | :------: | :------: | :---------------: | :------------------: | :-------: |
+| scalar, set, unary                      |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
+| `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
+| `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        | ✅ ILIKE  |
+| `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |    ✅     |
+| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     | ✅ PG/SQL |
+| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     | ✅ PG/SQL |
+| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       | ✅ PG/SQL |
+| date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
 
 > **`drizzle-rqb`** (the RQBv2 `where` object) supports every operator above
 > natively — RQBv2 has `ilike` + the array ops built in — so it matches the
 > `drizzle` column on Postgres (its text matches are Postgres-only, see
 > above). It's listed separately because it returns an object for `db.query`,
 > not a `SQL` for `db.select()`.
+
+> **memory** evaluates every operator with the SQL semantics of its `dialect`
+> (`postgres` or `sqlite`, see above); `PG/SQL` means the array ops follow Postgres
+> or SQLite's `json_each` reading of a NULL array.
 
 > **drizzle** emits the PG array operators only — its array helpers are
 > Postgres-specific. **kysely / knex** (`multi`) render the `array` ops for all
@@ -624,6 +722,9 @@ db.select()
   .from(t)
   .orderBy(...orderBy);
 ```
+
+In memory, `buildComparator` from `@xtandard/lib/filters/memory` takes the same
+`sort`/`defaultSort` with `paths` and returns `{ compare }` for `Array.prototype.sort`.
 
 > Use `buildOrderBy` with `db.select(...).orderBy(...)`, **not** the RQB query —
 > RQB aliases the root table and breaks column-referencing SQL.
@@ -909,6 +1010,7 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 | `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                                       |
 | `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                                   |
 | `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                                   |
+| `/memory`      | —                          | `buildFilterPredicate`, `buildFilterNodePredicate`, `toFilterPredicate`, `applyFiltersToArray`, `buildComparator`, `createMemoryKeyset`, `createMemoryPaginator`, `dateField`/…, `MemoryFilterSpec`, `MemoryDialect`                                 |
 
 ## Gotchas & FAQ
 

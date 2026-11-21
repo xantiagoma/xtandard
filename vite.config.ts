@@ -35,6 +35,7 @@ export default defineConfig({
           exclude: [
             "test/fetch-with-progress.test.ts",
             "test/filters-adapters.test.ts",
+            "test/filters-agreement.test.ts",
             "test/filters-build-where.test.ts",
             "test/filters-drizzle-rqb.test.ts",
             "test/intercept-http.test.ts",
@@ -91,6 +92,7 @@ export default defineConfig({
       "src/entry-filters-knex.ts",
       "src/entry-filters-mongo.ts",
       "src/entry-filters-prisma.ts",
+      "src/entry-filters-memory.ts",
       "src/entry-ulid.ts",
       "src/entry-temporal.ts",
       "src/entry-dataloader.ts",
