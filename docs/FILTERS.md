@@ -917,6 +917,247 @@ const metadata: ResourceMetadata = {
 };
 ```
 
+## TanStack Table
+
+`@xtandard/lib/filters/tanstack-table` connects a [TanStack Table](https://tanstack.com/table)
+to this model, so the table can filter, sort and paginate **on the server**
+(`manualFiltering`, `manualSorting`, `manualPagination`) with its state kept in
+the URL. It converts the table's state slices to and from the model:
+
+| Table state     | Model                                         | Functions                                                    |
+| --------------- | --------------------------------------------- | ------------------------------------------------------------ |
+| `columnFilters` | `ColumnFilter[]`                              | `bridge.toFilters` / `bridge.fromFilters`                    |
+| `globalFilter`  | an `or` of `text` filters (in a `FilterNode`) | `bridge.globalFilterNode` / `bridge.toFilterNode`            |
+| `sorting`       | `Sort`                                        | `bridge.toSort` / `bridge.fromSort` (or `toSort`/`fromSort`) |
+| `pagination`    | page/offset `PaginationInput`, or a cursor    | `toPagination` / `fromPagination`, `toCursorPagination`      |
+
+It has **no dependencies**. The table state is typed structurally
+(`TableColumnFiltersState`, `TableSortingState`, `TablePaginationState`), and
+those shapes are the same in `@tanstack/table-core` **v8 and v9** (a type test
+checks both), so it works with every TanStack Table adapter (React, Vue, Solid,
+Svelte, Angular, Lit).
+
+### The column spec
+
+A table column's filter value is `unknown` to TanStack: a text input stores a
+string, a range filter a `[min, max]` pair, a multi-select an array. The bridge
+needs to know, per column, how that value maps to a model filter and back. You
+declare it once with `createTableBridge` and a builder per filterable column:
+
+```ts
+import {
+  booleanColumn,
+  createTableBridge,
+  multiSelectColumn,
+  numberRangeColumn,
+  textColumn,
+} from "@xtandard/lib/filters/tanstack-table";
+
+export const productTable = createTableBridge({
+  columns: {
+    name: textColumn(), // "board" → { kind: "text", operator: "contains", value: "board" }
+    category: multiSelectColumn(), // ["games"] → { kind: "enum", operator: "inArray", values: ["games"] }
+    price: numberRangeColumn({ field: "priceCents" }), // [1000, ] → { kind: "number", operator: "gte", … }
+    inStock: booleanColumn(), // true → { kind: "boolean", operator: "eq", value: true }
+  },
+  globalFilter: { fields: ["name", "sku"] }, // the search box: name OR sku contains the text
+});
+
+productTable.kinds;
+// → { name: "text", category: "enum", priceCents: "number", inStock: "boolean", sku: "text" }
+```
+
+| Builder             | Table value                                       | Model filter                                                  |
+| ------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| `textColumn`        | `string`                                          | `text` `contains` (or `operator`)                             |
+| `numberColumn`      | `number` (or a numeric string)                    | `number` `eq` (or `operator`)                                 |
+| `numberRangeColumn` | `[min, max]`, either bound open                   | `between` / `gte` / `lte`                                     |
+| `selectColumn`      | one value                                         | `eq` on `enum` (or `kind: "text"`/`"number"`)                 |
+| `multiSelectColumn` | an array of values                                | `inArray` (or `notInArray`) on `enum`/`text`/`number`         |
+| `booleanColumn`     | `boolean`                                         | `boolean` `eq`                                                |
+| `dateColumn`        | a date preset without `kind` (`timeZone` default) | `date` preset (resolved later by your `resolveDate`)          |
+| `arrayColumn`       | an array of values                                | `arrayOverlaps` (has any), or `arrayContains` (has all)       |
+| `filterColumn`      | the filter minus `kind`: `{ operator, value }`…   | any operator of `kind` (for a column with an operator picker) |
+| `customColumn`      | yours                                             | your `toFilter` / `fromFilter`                                |
+
+- **`field`** renames: the table column `price` filters and sorts the model
+  field `priceCents`. `bridge.kinds` is keyed by model field, ready for
+  `compileFilters`, `createFilterUrlCodec` and the adapters' specs.
+- **Values are checked, not trusted.** A value of the wrong shape, an empty
+  string, `[ , ]` or `[]` means "no filter" for that column. Number builders
+  accept numeric strings (what an `<input>` gives you). `filterColumn` checks its
+  value the way the compact URL codec checks a leaf.
+- **Unknown column ids are dropped** by `toFilters`, and `fromFilters` drops a
+  filter no column can show (an unknown field, another kind, or an operator the
+  column doesn't produce, e.g. `startsWith` on a `textColumn()`), keeping the
+  first filter per column.
+- **Round trip.** `fromFilters(toFilters(columnFilters))` gives back the same
+  state, normalized (`"10"` → `10`, swapped range bounds put in order, empty
+  values removed), and `toFilters(fromFilters(filters))` gives back `filters` for
+  any filter the columns produce.
+- **Types are inferred** from the spec: `InferTableFilterValues<typeof bridge.columns>`
+  is each column's value type (`{ price: [number | undefined, number | undefined]; … }`),
+  and `bridge.kinds` has literal kinds.
+- `createTableBridge` throws if two columns map to the same field, or a
+  global-filter field is a column of a kind other than `text`.
+
+### Table → URL → server → table
+
+Keep the model in the URL, not the raw table state: column filters through the
+[compact codec](#compact-url-encoding), the global filter as a plain string, the
+sort as `field:dir`, and the page as a 1-based number. Then derive the table's
+state from the URL on every render, and write every change back to it:
+
+```mermaid
+flowchart LR
+  T["table state<br/>columnFilters, globalFilter,<br/>sorting, pagination"] -->|"toFilters, toSort"| M["model<br/>ColumnFilter[], Sort"]
+  M -->|"compact codec + Rison"| U["URL<br/>?filters=…&q=…&sort=…&page=…"]
+  U -->|"createLoader"| S["server: toFilterNode,<br/>then an adapter"]
+  S -->|"rows + PageInfo"| T
+  U -->|"fromFilters, fromSort"| T
+```
+
+The shared module, imported by the browser and the server:
+
+```ts
+// products/table.ts
+import { decode, encode } from "@effective/rison";
+import { createFilterUrlCodec, type FiltersRequest } from "@xtandard/lib/filters";
+import {
+  parseAsCodec,
+  parseAsInteger,
+  parseAsString,
+  type ValueCodec,
+} from "@xtandard/lib/tanstack/server";
+import { productTable } from "./bridge"; // the createTableBridge(...) above
+
+const urlCodec = createFilterUrlCodec({ kinds: productTable.kinds });
+const filtersCodec: ValueCodec<FiltersRequest> = {
+  encode: (filters) => encode(urlCodec.encodeFilters(filters)),
+  decode: (token) => urlCodec.decodeFilters(decode(token)),
+};
+
+export const productSearch = {
+  filters: parseAsCodec(filtersCodec).withDefault([]),
+  q: parseAsString.withDefault(""),
+  sort: parseAsString.withDefault(""),
+  page: parseAsInteger.withDefault(1),
+  pageSize: parseAsInteger.withDefault(20),
+};
+```
+
+The table (React here; any adapter works the same way):
+
+```tsx
+import { getCoreRowModel, useReactTable, functionalUpdate } from "@tanstack/react-table";
+import { parseSortParam, serializeSort } from "@xtandard/lib/filters";
+import {
+  fromPagination,
+  tablePaginationOptions,
+  toPagination,
+} from "@xtandard/lib/filters/tanstack-table";
+import { useQueryStates } from "@xtandard/lib/tanstack";
+
+const [search, setSearch] = useQueryStates(productSearch);
+
+// URL → table state
+const columnFilters = productTable.fromFilters(search.filters);
+const sorting = productTable.fromSort(parseSortParam({ value: search.sort }).sort);
+const { pagination } = fromPagination({
+  pagination: { type: "page", page: search.page, pageSize: search.pageSize },
+});
+
+const { data } = useQuery({ queryKey: ["products", search], queryFn: () => fetchProducts(search) });
+
+const table = useReactTable({
+  data: data?.items ?? [],
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  manualFiltering: true,
+  manualSorting: true,
+  manualPagination: true,
+  ...tablePaginationOptions({ pagination, pageInfo: data?.pageInfo }), // pageCount, rowCount
+  state: { columnFilters, globalFilter: search.q, sorting, pagination },
+  // table state → URL (a new filter or sort goes back to page 1)
+  onColumnFiltersChange: (updater) =>
+    setSearch({
+      filters: productTable.toFilters(functionalUpdate(updater, columnFilters)),
+      page: 1,
+    }),
+  onGlobalFilterChange: (q) => setSearch({ q: String(q ?? ""), page: 1 }),
+  onSortingChange: (updater) =>
+    setSearch({
+      sort: serializeSort({ sort: productTable.toSort(functionalUpdate(updater, sorting)) }),
+      page: 1,
+    }),
+  onPaginationChange: (updater) => {
+    const next = toPagination({ pagination: functionalUpdate(updater, pagination) }).pagination;
+    setSearch({ page: next.page, pageSize: next.pageSize });
+  },
+});
+```
+
+On the server, read the same URL, validate, and hand one `FilterNode` (column
+filters AND the global search) to any adapter:
+
+```ts
+import * as v from "valibot";
+import { parseSortParam } from "@xtandard/lib/filters";
+import { FiltersRequestSchema } from "@xtandard/lib/filters/valibot";
+import { buildFilterNode, buildOrderBy } from "@xtandard/lib/filters/drizzle";
+import { toOffsetWindow } from "@xtandard/lib/pagination";
+import { createLoader } from "@xtandard/lib/tanstack/server";
+
+const loadSearch = createLoader(productSearch);
+
+export async function listProducts(req: Request) {
+  const search = loadSearch(req.url);
+  const filters = v.parse(FiltersRequestSchema, search.filters);
+
+  const node = productTable.toFilterNode({ filters, globalFilter: search.q });
+  const { where } = node ? buildFilterNode({ spec, node }) : { where: undefined };
+  const { orderBy } = buildOrderBy({ sort: parseSortParam({ value: search.sort }).sort, columns });
+  const { limit, offset } = toOffsetWindow({
+    type: "page",
+    page: search.page,
+    pageSize: search.pageSize,
+  });
+  // … select where/orderBy/limit/offset, count, and answer { items, pageInfo }
+}
+```
+
+`spec` (here Drizzle's `textField`/`numberField`/…) and `columns` are the
+server's allow-lists, keyed by the same model fields as `productTable.kinds`
+(including the global-filter fields). Field names that aren't there are
+dropped, as everywhere else.
+
+### Cursor pagination
+
+TanStack Table pages by index; a cursor API pages by "after this row". Keep the
+cursors you have seen in component state: `cursors[i]` is the `after` cursor of
+page `i + 1`. `toCursorPagination` turns the table's `pagination` into a
+`CursorPagination` request, and `rememberCursor` records each response's
+`endCursor`:
+
+```ts
+import { rememberCursor, toCursorPagination } from "@xtandard/lib/filters/tanstack-table";
+
+const [cursors, setCursors] = useState<readonly string[]>([]); // reset on filter/sort/size change
+
+const request = toCursorPagination({ pagination, cursors });
+// → { pagination: { type: "cursor", limit: 20, cursor: cursors[pageIndex - 1] ?? null, direction: "forward" },
+//     pageIndex }   (clamped to the furthest page the cursors reach)
+
+// after the response:
+setCursors(rememberCursor({ cursors, pageIndex: request.pageIndex, pageInfo }).cursors);
+```
+
+Without a total, `tablePaginationOptions` sets `pageCount` to "this page, plus
+one while `hasNextPage`", so the table's `getCanNextPage()` follows the server.
+A page index the cursors can't reach yet (a reload on page 4) is clamped, and
+`request.pageIndex` tells you where you are. Store `pageIndex` in the URL only
+if that's acceptable; otherwise keep cursor pagination in component state.
+
 ## End-to-end: a REST list endpoint
 
 Validation + filters + sort + pagination, all from `@xtandard/lib`:
@@ -1050,6 +1291,17 @@ The four ready-made schema subpaths export the **same names**: `FieldFilterSchem
 `FiltersRequestSchema`, `FilterNodeSchema`, `SortItemSchema`, `SortSchema`. Peer is
 the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 `*.test-d.ts` asserts each schema's inferred output equals the model type.
+
+### `@xtandard/lib/filters/tanstack-table` (zero deps; TanStack Table v8 and v9)
+
+- **Bridge:** `createTableBridge` → `TableBridge` (`kinds`, `toFilters`, `fromFilters`,
+  `globalFilterNode`, `toFilterNode`, `toSort`, `fromSort`), `TableGlobalFilterOptions`.
+- **Column builders:** `textColumn`, `numberColumn`, `numberRangeColumn`, `selectColumn`,
+  `multiSelectColumn`, `booleanColumn`, `dateColumn`, `arrayColumn`, `filterColumn`,
+  `customColumn` → `TableColumnSpec`; inference: `InferTableFilterValues`, `InferTableKinds`.
+- **Sort / pagination:** `toSort`, `fromSort`, `toPagination`, `fromPagination`,
+  `tablePaginationOptions`, `toCursorPagination`, `rememberCursor`, `TableCursors`.
+- **State types:** `TableColumnFiltersState`, `TableSortingState`, `TablePaginationState`.
 
 ### Adapters
 

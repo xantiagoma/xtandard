@@ -97,6 +97,7 @@ export default defineConfig({
       "src/entry-filters-mongo.ts",
       "src/entry-filters-prisma.ts",
       "src/entry-filters-memory.ts",
+      "src/entry-filters-tanstack-table.ts",
       "src/entry-ulid.ts",
       "src/entry-temporal.ts",
       "src/entry-dataloader.ts",

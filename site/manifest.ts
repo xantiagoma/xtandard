@@ -211,6 +211,13 @@ export const sidebar: Item[] = [
         label: "Sorting, URLs & UI",
       },
       {
+        slug: "filters/tanstack-table",
+        src: "docs/FILTERS.md",
+        title: "Filters: TanStack Table",
+        sections: ["TanStack Table"],
+        label: "TanStack Table",
+      },
+      {
         slug: "filters/end-to-end",
         src: "docs/FILTERS.md",
         title: "Filters: a REST list endpoint, end to end",
