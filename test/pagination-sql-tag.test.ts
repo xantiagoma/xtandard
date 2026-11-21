@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createKeysetSpec } from "../src/keyset.ts";
 import { createPaginator } from "../src/pagination.ts";
 import { toSqlTagKeyset } from "../src/pagination-sql-tag.ts";
-import { fakeSqlTag, startPglite } from "./sql-tag-helpers.ts";
+import { fakeSqlTag, PGLITE_TIMEOUT, startPglite } from "./sql-tag-helpers.ts";
 
 describe("toSqlTagKeyset (recording tag)", () => {
   const keyset = createKeysetSpec({
@@ -77,10 +77,10 @@ describe("toSqlTagKeyset + createPaginator on a real Postgres (postgres.js + PGl
       const day = Math.ceil(id / 2);
       await pg.sql`insert into posts values (${id}, ${new Date(`2026-01-0${day}T00:00:00Z`)})`;
     }
-  });
+  }, PGLITE_TIMEOUT);
   afterAll(async () => {
     await pg?.stop();
-  });
+  }, PGLITE_TIMEOUT);
 
   const paginatorFor = (order: "asc" | "desc") => {
     const { sql } = pg;

@@ -16,7 +16,7 @@ import {
   textField,
   toSqlTagWhere,
 } from "../src/filters/sql-tag.ts";
-import { fakeSqlTag, startPglite } from "./sql-tag-helpers.ts";
+import { fakeSqlTag, PGLITE_TIMEOUT, startPglite } from "./sql-tag-helpers.ts";
 
 const resolveDate = ({ value }: { value: DatePreset }) => {
   const start = new Date(`${value.anchor}Z`);
@@ -350,10 +350,10 @@ describe("postgres.js on a real Postgres (PGlite)", () => {
         ${createdAt ? new Date(createdAt) : null}, ${tags ? [...tags] : null}
       )`;
     }
-  });
+  }, PGLITE_TIMEOUT);
   afterAll(async () => {
     await pg?.stop();
-  });
+  }, PGLITE_TIMEOUT);
 
   const ids = async (filters: ColumnFilter[]) => {
     const { sql } = pg;

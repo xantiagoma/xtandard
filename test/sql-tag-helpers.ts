@@ -53,6 +53,9 @@ export function fakeSqlTag(dialect: "postgres" | "mysql" | "sqlite" = "postgres"
   return { sql, render };
 }
 
+/** Hook timeout for booting PGlite (WASM Postgres): slow when the whole suite runs in parallel. */
+export const PGLITE_TIMEOUT = 60_000;
+
 /** An in-process Postgres (PGlite over a local socket) with a postgres.js v4 client. */
 export async function startPglite() {
   const db = await PGlite.create();
