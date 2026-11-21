@@ -62,6 +62,7 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/filters/knex`           | Knex raw-SQL WHERE builder from filters                  | none                                 |
 | `@xtandard/lib/filters/mongo`          | Mongo filter object from filters                         | none                                 |
 | `@xtandard/lib/filters/prisma`         | Prisma `where` object from filters                       | none                                 |
+| `@xtandard/lib/filters/memory`         | In-memory predicate, comparator + array pagination       | none                                 |
 | `@xtandard/lib/web`                    | Browser/FormData utilities                               | `up-fetch`                           |
 | `@xtandard/lib/tanstack`               | nuqs-style URL query state (TanStack Router)             | `react`, `@tanstack/react-router`    |
 | `@xtandard/lib/tanstack/server`        | Framework-free parsers/serializer/loader                 | none                                 |
@@ -429,6 +430,9 @@ resolveDate })` lowers a request to a **portable `CompiledWhere` AST**. Validate
 - **Adapters** render the AST per driver:
   `@xtandard/lib/filters/{drizzle,kysely,knex,mongo,prisma}` — each with typed
   `dateField`/`textField`/… spec builders (allow-list) + `buildWhere`.
+  `@xtandard/lib/filters/memory` evaluates the same AST in memory: a
+  `(row) => boolean` with SQL semantics, a sort comparator and synchronous
+  array pagination (client-side tables, tests, an in-browser "server").
 - The **`date` kind is injected** — its DST-aware `resolveDate` (→ `[gte, lt)`)
   and chip-label `describeDate` are passed in, so no date library is bundled.
 
@@ -459,6 +463,7 @@ db.select().from(t).where(where);
 | `@xtandard/lib/filters/knex`                         | `buildWhereSql`/`applyFiltersToKnex` (raw, parameterized)                                                   | [src](./src/filters/knex.ts)        |
 | `@xtandard/lib/filters/mongo`                        | `buildFilter` → Mongo filter object                                                                         | [src](./src/filters/mongo.ts)       |
 | `@xtandard/lib/filters/prisma`                       | `buildWhere` → Prisma `where` object                                                                        | [src](./src/filters/prisma.ts)      |
+| `@xtandard/lib/filters/memory`                       | `buildFilterPredicate` → `(row) => boolean` (SQL semantics), `buildComparator`, `createMemoryPaginator`     | [src](./src/filters/memory.ts)      |
 
 ## Recommended Libraries
 

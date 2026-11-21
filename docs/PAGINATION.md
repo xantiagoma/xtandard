@@ -313,7 +313,7 @@ the raw SQL helpers or plain fetcher examples directly.
 
 | Data source                           | Recommended path                                       |
 | ------------------------------------- | ------------------------------------------------------ |
-| In-memory arrays                      | `fetchOffset` with `slice`                             |
+| In-memory arrays                      | `createMemoryPaginator` (`filters/memory`)             |
 | Raw SQL drivers (`pg`, `mysql2`, etc) | `toKeysetWhereSql` + `toKeysetOrderBySql`              |
 | Prisma Client                         | `@xtandard/lib/pagination/prisma` or Prisma raw SQL    |
 | Drizzle ORM (`db.select`)             | `@xtandard/lib/pagination/drizzle`                     |
@@ -351,6 +351,29 @@ index names, and computed expressions must be server-owned constants.
 
 ### In-memory array — fully synchronous
 
+`createMemoryPaginator` from `@xtandard/lib/filters/memory` is `createPaginator` with
+array fetchers: it sorts the rows once, slices them for page/offset requests (with
+`totalItems`), and seeks with a keyset for cursor requests, forward or backward.
+Every fetcher is synchronous, so `paginate` returns plain values:
+
+```ts
+import { applyFiltersToArray, createMemoryPaginator } from "@xtandard/lib/filters/memory";
+
+const paginator = createMemoryPaginator({
+  rows: applyFiltersToArray(rows, { spec, filters }), // optional: filter first
+  sort: [{ key: "createdAt", order: "desc" }, { key: "id" }], // unique tiebreaker last
+  maxLimit: 100,
+});
+
+// all-sync tier: plain values, no await, usable in a render path
+const { items, pageInfo } = paginator.paginate({ type: "page", page: 1, pageSize: 10 });
+const next = paginator.paginate({ type: "cursor", limit: 10, cursor: pageInfo.endCursor });
+```
+
+Sort keys read `paths[key]` (a key, dot path or getter) or the key itself. NULL sort
+keys sort like Postgres (`dialect: "sqlite"` or `nulls: "first" | "last"` to change it)
+and page correctly. For offset only, a plain `slice` fetcher is enough:
+
 ```ts
 const paginator = createPaginator({
   fetchOffset: ({ limit, offset }) => ({
@@ -358,9 +381,6 @@ const paginator = createPaginator({
     totalItems: rows.length,
   }),
 });
-
-// all-sync tier: plain values, no await, usable in a render path
-const { items, pageInfo } = paginator.paginate({ type: "page", page: 1, pageSize: 10 });
 ```
 
 ### Raw SQL — composite keyset
@@ -1798,15 +1818,15 @@ The all-sync tier means client-side pagination of an in-memory list needs no
 effects, no suspense, no loading states:
 
 ```tsx
+import { applyFiltersToArray, createMemoryPaginator } from "@xtandard/lib/filters/memory";
+
 const paginator = useMemo(
   () =>
-    createPaginator({
-      fetchOffset: ({ limit, offset }) => ({
-        items: filtered.slice(offset, offset + limit),
-        totalItems: filtered.length,
-      }),
+    createMemoryPaginator({
+      rows: applyFiltersToArray(rows, { spec, filters }),
+      sort: [{ key: sortField, order: sortDir }, { key: "id" }],
     }),
-  [filtered],
+  [rows, filters, sortField, sortDir],
 );
 const { items, pageInfo } = paginator.paginate({ type: "page", page, pageSize: 10 }); // sync, in render
 ```

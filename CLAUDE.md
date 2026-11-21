@@ -75,6 +75,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 @xtandard/lib/filters/knex    → renders the AST to raw parameterized SQL (no driver dep)
 @xtandard/lib/filters/mongo   → renders the AST to a Mongo filter object (no driver dep)
 @xtandard/lib/filters/prisma  → renders the AST to a Prisma where object (no driver dep)
+@xtandard/lib/filters/memory  → evaluates the AST in memory: (row) => boolean with SQL semantics + sort comparator + sync array pagination (zero deps)
 @xtandard/lib/web          → browser/FormData + fetchWithProgress + keepSubDelims (peer: up-fetch)
 @xtandard/lib/tanstack     → nuqs-style URL query state for TanStack Router (peer: react, @tanstack/react-router)
 @xtandard/lib/tanstack/server   → framework-free parsers/serializer/loader/standard-schema (zero deps)
