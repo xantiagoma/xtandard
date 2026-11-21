@@ -6,6 +6,7 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 
 - **Package manager**: Bun (`bun install`, `bun run <script>`)
 - **Toolchain**: Vite+ (`vp`) — test, lint, fmt, build
+- **TypeScript**: the toolchain stays on 5.9 (`typescript` devDep; tsdown's `.d.ts` build needs the JS compiler API, which TypeScript 7 doesn't ship). The `typescript-v7` alias devDep type-checks the repo with TypeScript 7 so the `^5 || ^6 || ^7` peer stays honest.
 - **Node**: Managed via mise (requires >= 22.18.0 for TS config support)
 
 ## Scripts
@@ -15,7 +16,7 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 - `bun run test:coverage:open` — same + opens in browser
 - `bun run lint` — lint (oxlint via `vp lint`)
 - `bun run format` — format (oxfmt via `vp fmt`)
-- `bun run check` — lint + format check + typecheck
+- `bun run check` — lint + format check + typecheck (TypeScript 5.9 `tsc`, then TypeScript 7 via `bun run typecheck:ts7`)
 - `bun run build` — build library (tsdown via `vp pack`, outputs CJS + ESM + DTS to `dist/`)
 - `bun run release` — bump version, update changelog, tag, push (CI publishes)
 - `bun run docs:dev` / `docs:build` / `docs:preview` — the docs site (see below)
@@ -64,7 +65,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 - MSW setup in `test/setup-msw.ts` (node project only)
 - Real Postgres without Docker: `startPglite()` in `test/sql-tag-helpers.ts` (PGlite + pglite-socket,
   in-process, driven by postgres.js); such suites go in the browser project's `exclude`
-- Type tests: `test/*.test-d.ts` — compile-time assertions with `type-testing` (`Expect`/`Equal`/`NotEqual`/`IsNever`/`IsUnion`…), the standard for any module whose public type inference matters. They are NOT run by the test runner (the `.test-d.ts` suffix is excluded from the vitest `include`); they are enforced by `tsc --noEmit` in `bun run check`. `export` each assertion so it doesn't trip unused-decl lint; a wrong assertion fails as `error TS2344: Type 'false' does not satisfy the constraint 'true'`.
+- Type tests: `test/*.test-d.ts` — compile-time assertions with `type-testing` (`Expect`/`Equal`/`NotEqual`/`IsNever`/`IsUnion`…), the standard for any module whose public type inference matters. They are NOT run by the test runner (the `.test-d.ts` suffix is excluded from the vitest `include`); they are enforced by `tsc --noEmit` (and the TypeScript 7 `typecheck:ts7`) in `bun run check`. `export` each assertion so it doesn't trip unused-decl lint; a wrong assertion fails as `error TS2344: Type 'false' does not satisfy the constraint 'true'`.
 
 ## Entry Points
 

@@ -315,6 +315,10 @@ export interface RqbV1Sql<R> {
  * with its `sql` tag, binding the values through the column's encoder like drizzle's own
  * `arrayContains`/`arrayContained`/`arrayOverlaps` do. An operators object that does carry
  * those three uses them instead.
+ *
+ * `R` is inferred only from the return types (`NoInfer` on the `and`/`or`/`not` inputs):
+ * drizzle's inputs are the wider `SQLWrapper`, and TypeScript 7 would otherwise infer
+ * `R = SQLWrapper`, so the callback would no longer fit drizzle's `where`.
  */
 export interface RqbV1Operators<R> {
   eq(column: unknown, value: unknown): R;
@@ -330,9 +334,9 @@ export interface RqbV1Operators<R> {
   notInArray(column: unknown, values: unknown[]): R;
   isNull(column: unknown): R;
   isNotNull(column: unknown): R;
-  and(...conditions: (R | undefined)[]): R | undefined;
-  or(...conditions: (R | undefined)[]): R | undefined;
-  not(condition: R): R;
+  and(...conditions: (NoInfer<R> | undefined)[]): R | undefined;
+  or(...conditions: (NoInfer<R> | undefined)[]): R | undefined;
+  not(condition: NoInfer<R>): R;
   sql: RqbV1Sql<R>;
   arrayContains?(column: unknown, values: unknown[]): R;
   arrayContained?(column: unknown, values: unknown[]): R;
