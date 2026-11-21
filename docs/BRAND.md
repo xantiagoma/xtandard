@@ -6,7 +6,7 @@ and stands its emblem on it (audit a shield, links a chain link, entitlements a 
 webhooks a hook); the base library keeps the arm whole and carries no emblem. It sits on the
 family's near-black rounded tile between grey `<` `>` brackets with faint orbit lines.
 
-![The @xtandard/lib social card: the app icon, the wordmark, the tagline and the install command](../assets/social.png)
+![The @xtandard/lib social card: the app icon, the wordmark, the tagline and the install command](../assets/social.svg)
 
 The mark comes as an app icon, a bare symbol and wordmark lockups. Everything lives in
 [`assets/`](../assets/) at the repository root (not in `docs/`, which is published to npm). The SVGs
@@ -17,24 +17,29 @@ colour, the tagline or a lockup's layout is a code change, not a hand edit of th
 
 ## Files
 
-| File                                                                                      | What it is                                                                                                              | Use it for                                                                                                    |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `logo.svg`                                                                                | App icon: the symbol and grey `<` `>` brackets on a near-black rounded square with faint orbit lines                    | The master for every square raster; the docs site's home page                                                 |
-| `logo.png` (1024), `logo-256.png`, `logo-128.png`                                         | App icon rasters                                                                                                        | Avatars, the GitHub repository picture, places that need a square raster                                      |
-| `symbol.svg`, `symbol.png` (256 high)                                                     | The symbol alone, transparent, lime for dark surfaces                                                                   | Inline UI, places that draw their own surface                                                                 |
-| `lockup-horizontal-dark.svg` / `.png` (2×)                                                | Symbol + wordmark, `@xtandard/` in near-white                                                                           | Headers on dark backgrounds: the README in GitHub dark mode, the docs site in dark mode                       |
-| `lockup-horizontal-light.svg` / `.png` (2×)                                               | Symbol + wordmark, `@xtandard/` in ink, deeper lime                                                                     | Headers on light backgrounds: the README in GitHub light mode, npm, the docs site in light mode               |
-| `lockup-stacked-{dark,light}.svg` / `.png` (2×)                                           | Symbol left, `@xtandard/` over `lib`                                                                                    | Square-ish slots: slides, stickers, sidebars                                                                  |
-| `monochrome-white.svg`, `monochrome-black.svg`                                            | One-colour horizontal lockup                                                                                            | Photos and busy backgrounds (white); print and engraving (black)                                              |
-| `favicon.svg`, `favicon.ico` (16/32/48), `favicon.png` (32), `apple-touch-icon.png` (180) | Favicon set: the symbol, larger, on the flat ink square, without orbits, brackets or shadow (they do not survive 16 px) | Browser tabs: the docs site                                                                                   |
-| `social.svg`, `social.png` (1280×640)                                                     | Social card: icon, wordmark, tagline, `bun add` line                                                                    | The GitHub social preview (Settings → General → Social preview, uploaded by hand), the docs site's `og:image` |
+| File                                                                  | What it is                                                                                                              | Use it for                                                                                                    |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `logo.svg`                                                            | App icon: the symbol and grey `<` `>` brackets on a near-black rounded square with faint orbit lines                    | The docs site's home page, avatars, the master for the Apple touch icon                                       |
+| `symbol.svg`                                                          | The symbol alone, transparent, lime for dark surfaces                                                                   | Inline UI, places that draw their own surface                                                                 |
+| `lockup-horizontal-dark.svg`                                          | Symbol + wordmark, `@xtandard/` in near-white                                                                           | Headers on dark backgrounds: the README in GitHub dark mode, the docs site in dark mode                       |
+| `lockup-horizontal-light.svg`                                         | Symbol + wordmark, `@xtandard/` in ink, deeper lime                                                                     | Headers on light backgrounds: the README in GitHub light mode, npm, the docs site in light mode               |
+| `lockup-stacked-{dark,light}.svg`                                     | Symbol left, `@xtandard/` over `lib`                                                                                    | Square-ish slots: slides, stickers, sidebars                                                                  |
+| `monochrome-white.svg`, `monochrome-black.svg`                        | One-colour horizontal lockup                                                                                            | Photos and busy backgrounds (white); print and engraving (black)                                              |
+| `favicon.svg`, `favicon.ico` (16/32/48), `apple-touch-icon.png` (180) | Favicon set: the symbol, larger, on the flat ink square, without orbits, brackets or shadow (they do not survive 16 px) | Browser tabs: the docs site                                                                                   |
+| `social.svg`, `social.png` (1280×640)                                 | Social card: icon, wordmark, tagline, `bun add` line                                                                    | The GitHub social preview (Settings → General → Social preview, uploaded by hand), the docs site's `og:image` |
 
-Regenerate the masters, then rebuild every raster from them:
+**SVG only where people see the mark.** Every logo, lockup and icon shown on a page (the README,
+the docs site) is one of the SVGs above. There are exactly three rasters, each because a format needs
+one and nobody sees it as an image on a page: `social.png` (`og:image` must be a raster),
+`favicon.ico` and `apple-touch-icon.png` (`<head>` fallbacks). Don't add PNG copies of the logo or
+lockups.
+
+Regenerate the masters, then rebuild the three rasters from them:
 
 ```sh
 bun run brand:masters  # uv run scripts/brand/build.py: writes every SVG in assets/
 bun run brand:assets   # sh scripts/brand-assets.sh: rsvg-convert (librsvg) + magick (ImageMagick 7), oxipng when installed
-bun run brand:check    # rasters present, site/public copies equal to assets/ (part of bun run check)
+bun run brand:check    # the three rasters present, site/public copies equal to assets/ (part of bun run check)
 ```
 
 `brand-assets.sh` also copies the favicon set and `social.png` into `site/public/`, so the docs site
@@ -69,12 +74,12 @@ generator of the newer siblings (xtandard-audit, xtandard-links), with the emble
       <source
         media="(prefers-color-scheme: dark)"
         srcset="
-          https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-dark.png
+          https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-dark.svg
         "
       />
       <img
         alt="@xtandard/lib"
-        src="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-light.png"
+        src="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-light.svg"
         width="420"
       />
     </picture>

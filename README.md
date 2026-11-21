@@ -2,11 +2,11 @@
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
-      srcset="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-dark.png"
+      srcset="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-dark.svg"
     />
     <img
       alt="@xtandard/lib"
-      src="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-light.png"
+      src="https://raw.githubusercontent.com/xantiagoma/xtandard/main/assets/lockup-horizontal-light.svg"
       width="420"
     />
   </picture>

@@ -1,7 +1,9 @@
 #!/bin/sh
-# Rebuilds every brand raster in assets/ from the SVG masters next to them,
+# Rebuilds the few brand rasters in assets/ from the SVG masters next to them,
 # and copies the docs site's favicon set and social card into site/public/
-# (docs/BRAND.md).
+# (docs/BRAND.md). Everything people see as a logo on a page (README, docs
+# site) uses the SVGs; rasters exist only where a format requires one:
+# social.png (og:image), apple-touch-icon.png and favicon.ico (<head> fallbacks).
 #
 #   sh scripts/brand-assets.sh           rebuild (bun run brand:assets)
 #   sh scripts/brand-assets.sh --check   fail when a raster or master is
@@ -22,21 +24,12 @@ ui=site/public
 
 # target master [rsvg-convert args...]: every raster and the master it comes from.
 rasters='
-logo.png logo.svg -w 1024 -h 1024
-logo-256.png logo.svg -w 256 -h 256
-logo-128.png logo.svg -w 128 -h 128
 apple-touch-icon.png logo.svg
-symbol.png symbol.svg -h 256
-lockup-horizontal-dark.png lockup-horizontal-dark.svg -z 2
-lockup-horizontal-light.png lockup-horizontal-light.svg -z 2
-lockup-stacked-dark.png lockup-stacked-dark.svg -z 2
-lockup-stacked-light.png lockup-stacked-light.svg -z 2
 social.png social.svg -w 1280 -h 640
-favicon.png favicon.svg -w 32 -h 32
 favicon.ico favicon.svg
 '
 # The docs site serves these from its own origin (site/astro.config.ts).
-uifiles='favicon.svg favicon.ico favicon.png apple-touch-icon.png social.png'
+uifiles='favicon.svg favicon.ico apple-touch-icon.png social.png'
 
 if [ "${1:-}" = "--check" ]; then
   status=0
