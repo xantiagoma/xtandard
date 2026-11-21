@@ -393,7 +393,7 @@ For drizzle v1's **relational query builder** (`db.query.<table>.findMany`), the
 `where` is a plain OBJECT, not a `SQL`. This adapter renders the AST to that
 object so you can use the RQB (with its relation filters, nested `with`, etc.)
 instead of `db.select()`. It **emits a plain object** — no `drizzle-orm` import,
-no peer.
+no peer. Its typings need **TypeScript 5.4+** (they use `NoInfer`).
 
 ```ts
 import { buildWhere, textField, numberField, dateField } from "@xtandard/lib/filters/drizzle-rqb";
@@ -1084,7 +1084,8 @@ const metadata: ResourceMetadata = {
 `@xtandard/lib/filters/tanstack-table` connects a [TanStack Table](https://tanstack.com/table)
 to this model, so the table can filter, sort and paginate **on the server**
 (`manualFiltering`, `manualSorting`, `manualPagination`) with its state kept in
-the URL. It converts the table's state slices to and from the model:
+the URL. Its typings need **TypeScript 5.4+** (they use `NoInfer`). It converts the
+table's state slices to and from the model:
 
 | Table state     | Model                                         | Functions                                                    |
 | --------------- | --------------------------------------------- | ------------------------------------------------------------ |

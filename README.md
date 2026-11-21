@@ -39,6 +39,9 @@
 npm install @xtandard/lib
 ```
 
+TypeScript 5, 6 and 7 are supported. The typings of `@xtandard/lib/filters/drizzle-rqb` and
+`@xtandard/lib/filters/tanstack-table` need **TypeScript 5.4+** (they use `NoInfer`).
+
 Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Entry Points

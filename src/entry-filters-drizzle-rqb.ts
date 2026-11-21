@@ -25,7 +25,8 @@
  * pattern (no `ESCAPE`), and drizzle renders its `ilike` key as `ilike`, which SQLite and
  * MySQL don't have. On those databases use the v1 callback or `@xtandard/lib/filters/drizzle`.
  *
- * Import from `@xtandard/lib/filters/drizzle-rqb`.
+ * Import from `@xtandard/lib/filters/drizzle-rqb`. The typings need TypeScript 5.4+ (they use
+ * `NoInfer`).
  *
  * @example
  * ```ts

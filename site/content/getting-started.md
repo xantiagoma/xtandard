@@ -18,8 +18,10 @@ pnpm add @xtandard/lib
 yarn add @xtandard/lib
 ```
 
-The package ships ESM and CommonJS builds with type declarations for both. It is marked
-`sideEffects: false`, so bundlers drop whatever you don't import.
+The package ships ESM and CommonJS builds with type declarations for both, for TypeScript 5, 6
+and 7. The typings of `@xtandard/lib/filters/drizzle-rqb` and `@xtandard/lib/filters/tanstack-table`
+need **TypeScript 5.4+** (they use `NoInfer`). It is marked `sideEffects: false`, so bundlers drop
+whatever you don't import.
 
 ## Your first imports
 
