@@ -217,7 +217,7 @@ const [rates, error] = await tryCatch(policy.execute(() => fx.fetchRates("USD"))
     why: "The same code runs in browsers, Node.js and Workers, and you switch drivers by configuration. Drivers are tree-shakable and the core is tiny.",
     license: "MIT",
     caveat:
-      "npm's `latest` tag currently points at a v2 beta (2.0.0-beta.0). `@xtandard/lib/unstorage` targets v1, so install `unstorage@^1` with it.",
+      "npm's `latest` tag currently points at a v2 beta (2.0.0-beta.0). `@xtandard/lib/unstorage` targets v1 until 2.0 is stable, so install `unstorage@^1` with it.",
     pairsWith: [
       {
         module: "@xtandard/lib/unstorage",
@@ -404,8 +404,8 @@ const user = await bento.getOrSet({
     provides: "Small library for currency arithmetic and formatting.",
     why: "A tiny, simple API for adding, splitting and formatting money values.",
     license: "MIT",
-    caveat:
-      "No release since 2.0.4 (May 2021). Prefer dinero.js for new code; listed for existing users.",
+    stable:
+      "Feature-complete: 2.0.4 (May 2021) is still the current release. For new code that needs currencies and exact allocation, prefer dinero.js.",
   },
   {
     name: "xbytes",
@@ -416,7 +416,7 @@ const user = await bento.getOrSet({
       "Parse and format byte sizes (`4747` ↔ `'4.75 KB'`), in decimal and IEC (`KiB`) units.",
     why: "Converts in both directions and handles both unit systems.",
     license: "Apache-2.0",
-    caveat: "No release or commit since April 2024.",
+    stable: "Feature-complete: 1.9.1 (April 2024) is still the current release.",
   },
 
   // ---- Dates, time & scheduling -------------------------------------------------------------
@@ -847,29 +847,6 @@ TypeID.fromString(id.toString(), "user").toUUID(); // "01a1fc02-91d6-7ffd-…"`,
     license: "MIT",
   },
   {
-    name: "oslo",
-    npm: "oslo",
-    repo: "pilcrowonpaper/oslo",
-    category: "auth",
-    provides: "Auth utilities: hashing, JWT, OTP (HOTP/TOTP), cookies, encoding, password hashing.",
-    why: "Runtime-agnostic, typed primitives for building auth yourself.",
-    license: "MIT",
-    caveat:
-      "Deprecated and archived. Its README points to the Oslo project packages (`@oslojs/*`), which npm has also marked unsupported. Pending removal from this list.",
-  },
-  {
-    name: "arctic",
-    npm: "arctic",
-    repo: "pilcrowonpaper/arctic",
-    docs: "https://arcticjs.dev",
-    category: "auth",
-    provides: "OAuth 2.0 authorization-code clients for popular providers.",
-    why: "Light, typed and runtime-agnostic, built on `fetch`.",
-    license: "MIT",
-    caveat:
-      "Deprecated in July 2026: npm marks it unsupported, and the repository's README links the deprecation announcement and example code to replace it. Pending removal from this list.",
-  },
-  {
     name: "CASL",
     npm: "@casl/ability",
     repo: "stalniy/casl",
@@ -979,17 +956,18 @@ TypeID.fromString(id.toString(), "user").toUUID(); // "01a1fc02-91d6-7ffd-…"`,
     license: "Apache-2.0",
   },
   {
-    name: "AI Elements",
-    npm: "ai-elements",
-    repo: "vercel/ai-elements",
-    docs: "https://elements.ai-sdk.dev",
+    name: "AI Elements (shadcn/ui)",
+    npm: "shadcn",
+    repo: "shadcn-ui/ui",
+    docs: "https://ui.shadcn.com/docs/ai-elements",
     category: "ai",
     provides:
-      "React components for AI interfaces (conversations, messages, code blocks, reasoning…), installed into your project through a shadcn/ui registry.",
-    why: "Ready-made AI chat UI built on shadcn/ui and the AI SDK.",
-    license: "Apache-2.0",
+      "Patterns for agentic interfaces (chat, messages, reasoning, tool calls, plans, sources, prompt input…) built from shadcn/ui components and copied into your project with the `shadcn` CLI.",
+    why: "There is no package to install: the code is yours to change. The steps an agent takes share one `Trace` component, which works with the AI SDK's reasoning, tool and source parts. It replaces the AI SDK's own AI Elements (elements.ai-sdk.dev), which is deprecated in its favour.",
+    license: "MIT",
+    insteadOf: "ai-elements (elements.ai-sdk.dev)",
     caveat:
-      "Being deprecated at the end of November 2026 in favour of AI Elements in shadcn/ui; new projects should use that. Pending replacement in this list.",
+      "Copy-in components, not a dependency: `recs:check` tracks the `shadcn` CLI that installs them. Needs a project set up with shadcn/ui and Tailwind CSS.",
   },
   {
     name: "streamdown",
@@ -1212,16 +1190,16 @@ const { items } = await toastStream(() => importUsers(rows), {
     ],
   },
   {
-    name: "vaul",
-    npm: "vaul",
-    repo: "emilkowalski/vaul",
-    docs: "https://vaul.emilkowal.ski",
+    name: "Base UI",
+    npm: "@base-ui/react",
+    repo: "mui/base-ui",
+    docs: "https://base-ui.com",
     category: "react-ui",
-    provides: "A drawer component for React.",
-    why: "Native-feeling mobile drawers with drag to dismiss and snap points.",
+    provides:
+      "Unstyled, accessible React components (dialog, drawer, menu, popover, select, combobox, toast…) in one tree-shakable package.",
+    why: "From the creators of Radix, Floating UI and Material UI. Its Drawer (swipe to dismiss, snap points, nested drawers) is what shadcn/ui's Base UI drawer moved to from vaul, which is unmaintained.",
     license: "MIT",
-    caveat:
-      "Unmaintained: its README says so, and the last release was in December 2024. Pending removal from this list.",
+    insteadOf: "vaul (unmaintained) for drawers",
   },
   {
     name: "cmdk",

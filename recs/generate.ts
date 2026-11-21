@@ -76,6 +76,7 @@ function entry(lib: Recommendation): string[] {
   if (lib.insteadOf) lines.push(`  - Instead of: ${lib.insteadOf}`);
   for (const p of lib.pairsWith ?? []) lines.push(`  - Pairs with \`${p.module}\`: ${p.how}`);
   if (lib.caveat) lines.push(`  - Note: ${lib.caveat}`);
+  if (lib.stable) lines.push(`  - Stable: ${lib.stable}`);
   return lines;
 }
 
