@@ -273,6 +273,16 @@
         "default": "./dist/entry-filters-knex.cjs"
       }
     },
+    "./filters/sql-tag": {
+      "import": {
+        "types": "./dist/entry-filters-sql-tag.d.mts",
+        "default": "./dist/entry-filters-sql-tag.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-sql-tag.d.cts",
+        "default": "./dist/entry-filters-sql-tag.cjs"
+      }
+    },
     "./filters/mongo": {
       "import": {
         "types": "./dist/entry-filters-mongo.d.mts",
@@ -321,6 +331,16 @@
       "require": {
         "types": "./dist/entry-pagination-knex.d.cts",
         "default": "./dist/entry-pagination-knex.cjs"
+      }
+    },
+    "./pagination/sql-tag": {
+      "import": {
+        "types": "./dist/entry-pagination-sql-tag.d.mts",
+        "default": "./dist/entry-pagination-sql-tag.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-pagination-sql-tag.d.cts",
+        "default": "./dist/entry-pagination-sql-tag.cjs"
       }
     },
     "./pagination/kysely": {
@@ -494,6 +514,8 @@
   },
   "devDependencies": {
     "@effective/rison": "^2.0.1",
+    "@electric-sql/pglite": "^0.5.17",
+    "@electric-sql/pglite-socket": "^0.2.20",
     "@js-temporal/polyfill": "^0.5.1",
     "@tanstack/react-query": "^5.100.13",
     "@tanstack/react-router": "^1.170.13",
@@ -505,6 +527,7 @@
     "arktype": "^2.0.0",
     "big.js": "^7.0.1",
     "bignumber.js": "^11.1.4",
+    "bun-types": "1.4.4",
     "changelogen": "^0.6.2",
     "dataloader": "^2.2.3",
     "decimal.js": "^10.6.0",
@@ -519,6 +542,7 @@
     "msw": "^2.14.6",
     "ohash": "^2.0.11",
     "playwright": "^1.60.0",
+    "postgres": "^4.1.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "semver": "^7.8.5",
