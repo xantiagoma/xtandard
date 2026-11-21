@@ -40,6 +40,7 @@ export default defineConfig({
             "test/filters-drizzle-rqb.test.ts",
             "test/filters-sql-tag.test.ts",
             "test/filters-postgrest.test.ts",
+            "test/filters-search-live.test.ts",
             "test/intercept-http.test.ts",
             "test/pagination-sql-tag.test.ts",
           ],

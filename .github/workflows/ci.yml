@@ -31,3 +31,64 @@ jobs:
         run: bun run test
       - name: Build
         run: bun run build
+
+  # Real-engine agreement for the PostgREST and Elasticsearch filter adapters
+  # (test/filters-search-live.test.ts; skipped locally unless the URLs are set).
+  search-live:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
+      postgrest:
+        image: postgrest/postgrest:v14.1
+        env:
+          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
+          PGRST_DB_ANON_ROLE: anon
+          PGRST_DB_SCHEMAS: public
+        ports: ["3000:3000"]
+      elasticsearch:
+        image: elasticsearch:9.5.5
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+        ports: ["9200:9200"]
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200/_cluster/health" --health-interval 5s --health-timeout 5s --health-retries 40
+    env:
+      POSTGREST_URL: http://localhost:3000
+      ELASTICSEARCH_URL: http://localhost:9200
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: bun install
+      - name: Create the PostgREST schema
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create table items (id int primary key, name text, amount numeric, status text,
+            done boolean, tags text[], created_at timestamptz, "order" text);
+          grant select, insert, delete on items to anon;
+          notify pgrst, 'reload schema';
+          SQL
+      - name: Wait for PostgREST to see the table
+        run: |
+          for i in $(seq 1 60); do
+            curl -fs "$POSTGREST_URL/items?limit=0" && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Live search adapter tests
+        run: bunx vp test run --project node test/filters-search-live.test.ts
