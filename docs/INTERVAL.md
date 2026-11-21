@@ -356,6 +356,11 @@ NumberInterval.parse("(-Infinity,5]").contains(-Infinity); // false
 NumberInterval.parse("[3,+Infinity]").contains(Infinity); // true
 // factories produce OPEN infinity:
 NumberInterval.atLeast(0).contains(Infinity); // false
+// set operations keep an included ±∞ unless the other side includes it too:
+NumberInterval.parse("[-Infinity,5]").difference(NumberInterval.closed(3, 4)).map(String);
+// ["[-Infinity,3)", "(4,5]"]
+NumberInterval.parse("[-Infinity,5]").difference(NumberInterval.atMost(0)).map(String);
+// ["[-Infinity,-Infinity]", "(0,5]"]: atMost(0) is open at -∞, so the point -∞ remains
 ```
 
 Domains **without** an infinity value (`Date`, `bigint`, `Instant`, …) have no `±∞`
