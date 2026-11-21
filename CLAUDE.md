@@ -17,7 +17,7 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 - `bun run lint` — lint (oxlint via `vp lint`)
 - `bun run format` — format (oxfmt via `vp fmt`)
 - `bun run check` — lint + format check + typecheck (TypeScript 5.9 `tsc`, then TypeScript 7 via `bun run typecheck:ts7`)
-- `bun run build` — build library (tsdown via `vp pack`, outputs CJS + ESM + DTS to `dist/`)
+- `bun run build` — build library (tsdown via `vp pack`, outputs CJS + ESM + DTS to `dist/`), then `scripts/check-dist.ts` and `scripts/check-dist-types.ts` (type-checks every subpath's `.d.mts`/`.d.cts` as a `nodenext` consumer, ESM + CJS)
 - `bun run release` — bump version, update changelog, tag, push (CI publishes)
 - `bun run docs:dev` / `docs:build` / `docs:preview` — the docs site (see below)
 

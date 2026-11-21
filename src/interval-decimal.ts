@@ -13,7 +13,10 @@
  * **peer dependency**.
  */
 
-import Decimal from "decimal.js";
+// Named, not default: decimal.js ships one CJS-typed `.d.ts`, so under `nodenext` a default
+// import from an ES module is the whole module (TS2709 in our `.d.mts`). The named export is the
+// same class in every resolution mode, ESM and CJS.
+import { Decimal } from "decimal.js";
 
 import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from "./interval.ts";
 
@@ -24,7 +27,7 @@ import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from 
  *
  * @example
  * ```ts
- * import Decimal from "decimal.js";
+ * import { Decimal } from "decimal.js";
  * import { parseInterval } from "@xtandard/lib/interval";
  * import { decimalDomain } from "@xtandard/lib/decimal";
  *
@@ -47,7 +50,7 @@ export const decimalDomain: IntervalDomain<Decimal> = {
  *
  * @example
  * ```ts
- * import Decimal from "decimal.js";
+ * import { Decimal } from "decimal.js";
  * import { DecimalInterval } from "@xtandard/lib/decimal";
  *
  * const r = DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3"));

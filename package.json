@@ -548,7 +548,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "vp pack && bun scripts/check-dist.ts",
+    "build": "vp pack && bun scripts/check-dist.ts && bun scripts/check-dist-types.ts",
     "test": "vp test run",
     "test:coverage": "vp test run --coverage",
     "test:coverage:open": "vp test run --coverage && open coverage/index.html",

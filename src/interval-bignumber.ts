@@ -9,7 +9,10 @@
  * `±Infinity` are rejected by `contains`.
  */
 
-import { BigNumber } from "bignumber.js";
+// Default, not named: bignumber.js's `.d.cts` is `export = BigNumber`, where the named
+// `BigNumber` is only a (private static) value (TS2749 in our `.d.cts`). The default export is the
+// class in both its `.d.mts` and `.d.cts`.
+import BigNumber from "bignumber.js";
 
 import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from "./interval.ts";
 
@@ -20,7 +23,7 @@ import { type BoundIntervalType, defineIntervalType, type IntervalDomain } from 
  *
  * @example
  * ```ts
- * import { BigNumber } from "bignumber.js";
+ * import BigNumber from "bignumber.js";
  * import { parseInterval } from "@xtandard/lib/interval";
  * import { bigNumberDomain } from "@xtandard/lib/bignumber";
  *
@@ -44,7 +47,7 @@ export const bigNumberDomain: IntervalDomain<BigNumber> = {
  *
  * @example
  * ```ts
- * import { BigNumber } from "bignumber.js";
+ * import BigNumber from "bignumber.js";
  * import { BigNumberInterval } from "@xtandard/lib/bignumber";
  *
  * const r = BigNumberInterval.closed(new BigNumber("0.1"), new BigNumber("0.3"));
