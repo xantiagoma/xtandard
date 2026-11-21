@@ -1,5 +1,5 @@
 /**
- * Date/time and duration conversions plus Temporal intervals (peers `@js-temporal/polyfill`, `itty-time`).
+ * Date/time and duration conversions plus Temporal intervals (peer `@js-temporal/polyfill`).
  *
  * Import from `@xtandard/lib/temporal`.
  *

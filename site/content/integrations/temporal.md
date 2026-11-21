@@ -6,7 +6,7 @@ description: "Convert between Date, epoch numbers, strings and Temporal values, 
 `@xtandard/lib/temporal` helps code that sits between JavaScript `Date` and the TC39 `Temporal` API. It coerces the date-ish values you get from databases, JSON and users into a `Date` or a `Temporal.Instant`, converts durations to milliseconds, and exports `Interval` classes over the Temporal types.
 
 ```sh
-npm install @xtandard/lib @js-temporal/polyfill itty-time
+npm install @xtandard/lib @js-temporal/polyfill
 ```
 
 ```ts
@@ -20,7 +20,7 @@ import {
 } from "@xtandard/lib/temporal";
 ```
 
-`@js-temporal/polyfill` and `itty-time` are optional peer dependencies. The entry loads both, so install both even though none of `itty-time`'s functions are re-exported here.
+`@js-temporal/polyfill` is an optional peer dependency.
 
 ## `Date` and `Temporal.Instant`
 

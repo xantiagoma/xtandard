@@ -101,7 +101,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 @xtandard/lib/react        → StreamRenderer, useStream (peer: react, @tanstack/react-query)
 @xtandard/lib/sonner       → toastStream (peer: sonner, react)
 @xtandard/lib/ulid         → ULID generation + helpers (peer: ulid)
-@xtandard/lib/temporal     → datetime + duration + Temporal interval types (peer: @js-temporal/polyfill, itty-time)
+@xtandard/lib/temporal     → datetime + duration + Temporal interval types (peer: @js-temporal/polyfill)
 @xtandard/lib/dataloader   → createLoader factory (peer: dataloader)
 @xtandard/lib/unstorage    → withCache, createCache (peer: unstorage, ohash)
 @xtandard/lib/valibot      → TimeZone validation (peer: valibot)

@@ -1,5 +1,3 @@
-export * from "itty-time";
-
 import { Temporal } from "@js-temporal/polyfill";
 
 import { type DateLike, toInstant } from "./datetime-utils";
