@@ -63,11 +63,15 @@ A library goes on the list when all of these hold:
 
 Run `bun run recs:check` from time to time (before a release is a good moment). What it reports:
 
-| Level | Meaning                                                                                                                                                 |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| error | Deprecated on npm, archived or missing on GitHub, non-permissive license, license changed, or abandoned (no release for 24 months and no commit for 12) |
-| warn  | No release for 18 months, a weak-copyleft license, or the repository moved                                                                              |
-| info  | A quiet library marked `stable`                                                                                                                         |
+| Level | Meaning                                                                                                                                                  |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| error | Deprecated on npm, archived or missing on GitHub, non-permissive license, license changed, or abandoned (no release for 24 months and no commit for 12)  |
+| warn  | No release for 18 months, a weak-copyleft license, the repository moved, or npm's `latest` is a prerelease of a new major (e.g. `2.0.0-beta.0` over 1.x) |
+| info  | A quiet library marked `stable`                                                                                                                          |
+
+It also checks this package's own `peerDependencies` and warns when npm's `latest` is above a
+peer range: a prerelease of a new major to track, or a new stable major to test and widen the
+range for (see [Releasing](./RELEASING.md#peer-dependencies)).
 
 The check never edits the list. A package that needs replacing or removing gets a `caveat` saying
 so, and a maintainer decides in a pull request.

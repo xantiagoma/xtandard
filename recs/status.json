@@ -1,6 +1,15 @@
 {
   "checkedAt": "2026-11-21",
   "packages": {
+    "@base-ui/react": {
+      "version": "1.9.0",
+      "released": "2026-10-09",
+      "license": "MIT",
+      "repo": "mui/base-ui",
+      "archived": false,
+      "lastCommit": "2026-11-20",
+      "stars": 11461
+    },
     "@betternotify/core": {
       "version": "1.0.0-beta.12",
       "released": "2026-11-02",
@@ -71,7 +80,7 @@
       "repo": "formkit/auto-animate",
       "archived": false,
       "lastCommit": "2026-11-07",
-      "stars": 13976
+      "stars": 13977
     },
     "@gobrand/tiempo": {
       "version": "3.2.5",
@@ -134,7 +143,7 @@
       "repo": "TanStack/router",
       "archived": false,
       "lastCommit": "2026-11-19",
-      "stars": 15331
+      "stars": 15332
     },
     "@tanstack/react-table": {
       "version": "9.3.1",
@@ -188,7 +197,7 @@
       "repo": "triggerdotdev/trigger.dev",
       "archived": false,
       "lastCommit": "2026-11-20",
-      "stars": 16792
+      "stars": 16794
     },
     "@uppy/core": {
       "version": "6.3.2",
@@ -215,7 +224,7 @@
       "repo": "xyflow/xyflow",
       "archived": false,
       "lastCommit": "2026-11-17",
-      "stars": 39098
+      "stars": 39099
     },
     "ai": {
       "version": "7.0.179",
@@ -225,25 +234,6 @@
       "archived": false,
       "lastCommit": "2026-11-20",
       "stars": 28115
-    },
-    "ai-elements": {
-      "version": "1.9.1",
-      "released": "2026-10-14",
-      "license": "Apache-2.0",
-      "repo": "vercel/ai-elements",
-      "archived": false,
-      "lastCommit": "2026-10-14",
-      "stars": 2533
-    },
-    "arctic": {
-      "version": "3.7.0",
-      "released": "2025-05-21",
-      "license": "MIT",
-      "deprecated": "Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.",
-      "repo": "pilcrowonpaper/arctic",
-      "archived": false,
-      "lastCommit": "2026-11-10",
-      "stars": 1718
     },
     "bentocache": {
       "version": "1.6.1",
@@ -594,7 +584,7 @@
       "repo": "honojs/hono",
       "archived": false,
       "lastCommit": "2026-11-19",
-      "stars": 33001
+      "stars": 33002
     },
     "hono-idempotency": {
       "version": "0.9.1",
@@ -675,7 +665,7 @@
       "repo": "kysely-org/kysely",
       "archived": false,
       "lastCommit": "2026-11-20",
-      "stars": 14372
+      "stars": 14373
     },
     "liveline": {
       "version": "0.0.7",
@@ -693,7 +683,7 @@
       "repo": "lucide-icons/lucide",
       "archived": false,
       "lastCommit": "2026-11-20",
-      "stars": 25892
+      "stars": 25893
     },
     "masonic": {
       "version": "4.1.0",
@@ -711,7 +701,7 @@
       "repo": "motiondivision/motion",
       "archived": false,
       "lastCommit": "2026-11-19",
-      "stars": 35404
+      "stars": 35407
     },
     "mutative": {
       "version": "2.0.2",
@@ -775,16 +765,6 @@
       "archived": false,
       "lastCommit": "2026-08-14",
       "stars": 736
-    },
-    "oslo": {
-      "version": "1.2.1",
-      "released": "2024-06-26",
-      "license": "MIT",
-      "deprecated": "Package is no longer supported. Please see https://oslojs.dev for the successor project.",
-      "repo": "pilcrowonpaper/oslo",
-      "archived": true,
-      "lastCommit": "2025-01-20",
-      "stars": 1143
     },
     "p-map": {
       "version": "7.1.1",
@@ -903,6 +883,15 @@
       "lastCommit": "2026-11-02",
       "stars": 5475
     },
+    "shadcn": {
+      "version": "4.23.0",
+      "released": "2026-10-27",
+      "license": "MIT",
+      "repo": "shadcn-ui/ui",
+      "archived": false,
+      "lastCommit": "2026-11-20",
+      "stars": 128656
+    },
     "sonner": {
       "version": "2.0.8",
       "released": "2026-08-09",
@@ -1019,15 +1008,6 @@
       "archived": false,
       "lastCommit": "2026-10-20",
       "stars": 2665
-    },
-    "vaul": {
-      "version": "1.1.2",
-      "released": "2024-12-14",
-      "license": "MIT",
-      "repo": "emilkowalski/vaul",
-      "archived": false,
-      "lastCommit": "2025-10-03",
-      "stars": 8756
     },
     "workflow": {
       "version": "5.7.1",

@@ -5,8 +5,14 @@
 //   error  deprecated on npm, archived or missing on GitHub, a non-permissive license, a license
 //          that no longer matches recs/libraries.ts (relicensed), or abandoned: no release for
 //          `abandonedReleaseMonths` and no commit for `abandonedCommitMonths`
-//   warn   no release for `quietReleaseMonths`, a weak-copyleft license, a moved repository
+//   warn   no release for `quietReleaseMonths`, a weak-copyleft license, a moved repository, or
+//          npm's `latest` tag on a prerelease of a new major (e.g. 2.0.0-beta.0 while the newest
+//          stable release is 1.x)
 //   info   a quiet library marked `stable` (feature-complete), so its silence is expected
+//
+// It also checks this package's own peerDependencies: a warning when npm's `latest` (a new major's
+// prerelease, or a stable release) is above every version our peer range allows, so a maintainer
+// knows a new major is coming or has shipped.
 //
 // Exits 1 when there is an error. It never edits recs/libraries.ts: removals are a maintainer's
 // call (see docs/RECOMMENDING.md).
@@ -19,6 +25,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import semver from "semver";
 import { libraries } from "./libraries.ts";
 import {
   abandonedCommitMonths,
@@ -32,6 +39,7 @@ import {
 } from "./schema.ts";
 
 const statusPath = fileURLToPath(new URL("./status.json", import.meta.url));
+const packageJsonPath = fileURLToPath(new URL("../package.json", import.meta.url));
 const write = !process.argv.includes("--no-write");
 const today = new Date().toISOString().slice(0, 10);
 
@@ -70,7 +78,15 @@ async function pool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>
 // ---- npm ------------------------------------------------------------------------------------
 
 type NpmResult =
-  | { ok: true; version: string; released: string; license: string; deprecated?: string }
+  | {
+      ok: true;
+      version: string;
+      released: string;
+      license: string;
+      deprecated?: string;
+      /** Highest published non-prerelease version. */
+      latestStable?: string;
+    }
   | { ok: false; reason: string };
 
 function licenseOf(manifest: { license?: unknown; licenses?: unknown }): string {
@@ -101,7 +117,21 @@ async function npmInfo(pkg: string): Promise<NpmResult> {
     released: (doc.time?.[version] ?? "").slice(0, 10),
     license: licenseOf(manifest),
     deprecated: manifest.deprecated || undefined,
+    latestStable: semver.maxSatisfying(Object.keys(doc.versions ?? {}), "*") ?? undefined,
   };
+}
+
+/**
+ * npm's `latest` is a prerelease of a major above the newest stable release (e.g. 2.0.0-beta.0
+ * while stable is 1.17.1): installing without a range gets the prerelease. A package with no
+ * stable release yet (only betas) doesn't count: its entry's `caveat` should say it is a beta.
+ */
+function prereleaseOfNewMajor(npm: NpmResult & { ok: true }): boolean {
+  return (
+    semver.prerelease(npm.version) !== null &&
+    npm.latestStable !== undefined &&
+    semver.major(npm.version) > semver.major(npm.latestStable)
+  );
 }
 
 // ---- GitHub ---------------------------------------------------------------------------------
@@ -235,7 +265,8 @@ async function githubRest(repos: string[]): Promise<Map<string, RepoResult>> {
 // ---- policy ---------------------------------------------------------------------------------
 
 type Level = "error" | "warn" | "info";
-type Finding = { level: Level; lib: Recommendation; message: string };
+/** `subject` names what the finding is about: a recommendation, or one of our peer dependencies. */
+type Finding = { level: Level; subject: string; message: string };
 
 function assess(
   lib: Recommendation,
@@ -243,13 +274,19 @@ function assess(
   gh: RepoResult | undefined,
 ): { findings: Finding[]; status?: PackageStatus } {
   const findings: Finding[] = [];
-  const add = (level: Level, message: string) => findings.push({ level, lib, message });
+  const subject = `${lib.name} (${lib.npm})`;
+  const add = (level: Level, message: string) => findings.push({ level, subject, message });
 
   if (!npm.ok) {
     add("error", `${lib.npm}: ${npm.reason}`);
     return { findings };
   }
   if (npm.deprecated) add("error", `deprecated on npm: "${npm.deprecated}"`);
+  if (prereleaseOfNewMajor(npm))
+    add(
+      "warn",
+      `npm's latest is a prerelease of a new major: ${npm.version} (newest stable ${npm.latestStable}); say which major to install`,
+    );
   if (!npm.license) add("error", "npm reports no license");
   else {
     const cls = classifyLicense(npm.license);
@@ -303,14 +340,43 @@ function assess(
   };
 }
 
+/** Our own optional peers: is npm's latest (prerelease or stable) beyond the range we support? */
+function assessPeer(name: string, range: string, npm: NpmResult): Finding[] {
+  const subject = `peer ${name}@${range} (package.json)`;
+  if (!npm.ok) return [{ level: "warn", subject, message: npm.reason }];
+  if (!semver.validRange(range)) return [];
+  const findings: Finding[] = [];
+  if (npm.latestStable && semver.gtr(npm.latestStable, range))
+    findings.push({
+      level: "warn",
+      subject,
+      message: `a new stable major is out: ${npm.latestStable} is above our peer range; test it and widen the range`,
+    });
+  else if (prereleaseOfNewMajor(npm) && semver.gtr(npm.version, range))
+    findings.push({
+      level: "warn",
+      subject,
+      message: `npm's latest is a prerelease of a new major (${npm.version}), above our peer range; track it until it is stable`,
+    });
+  return findings;
+}
+
 // ---- run ------------------------------------------------------------------------------------
 
+const peers = Object.entries(
+  (
+    JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+      peerDependencies?: Record<string, string>;
+    }
+  ).peerDependencies ?? {},
+);
 const npmResults = new Map<string, NpmResult>();
-await pool(libraries, 8, async (lib) => {
+const npmNames = [...new Set([...libraries.map((l) => l.npm), ...peers.map(([name]) => name)])];
+await pool(npmNames, 8, async (pkg) => {
   try {
-    npmResults.set(lib.npm, await npmInfo(lib.npm));
+    npmResults.set(pkg, await npmInfo(pkg));
   } catch (error) {
-    npmResults.set(lib.npm, { ok: false, reason: `npm request failed: ${String(error)}` });
+    npmResults.set(pkg, { ok: false, reason: `npm request failed: ${String(error)}` });
   }
 });
 
@@ -342,6 +408,7 @@ for (const lib of libraries) {
   const status = result.status ?? previous?.packages[lib.npm];
   if (status) packages[lib.npm] = status;
 }
+for (const [name, range] of peers) findings.push(...assessPeer(name, range, npmResults.get(name)!));
 
 const order: Level[] = ["error", "warn", "info"];
 const icon: Record<Level, string> = { error: "✖", warn: "▲", info: "·" };
@@ -349,11 +416,11 @@ for (const level of order) {
   const these = findings.filter((f) => f.level === level);
   if (!these.length) continue;
   console.log(`\n${level.toUpperCase()} (${these.length})`);
-  for (const f of these) console.log(`  ${icon[level]} ${f.lib.name} (${f.lib.npm}): ${f.message}`);
+  for (const f of these) console.log(`  ${icon[level]} ${f.subject}: ${f.message}`);
 }
 const count = (l: Level) => findings.filter((f) => f.level === l).length;
 console.log(
-  `\nrecs:check: ${libraries.length} libraries, ${count("error")} error(s), ${count("warn")} warning(s), ${count("info")} note(s)`,
+  `\nrecs:check: ${libraries.length} libraries, ${peers.length} peer dependencies, ${count("error")} error(s), ${count("warn")} warning(s), ${count("info")} note(s)`,
 );
 
 if (write) {

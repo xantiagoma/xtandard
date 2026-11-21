@@ -147,6 +147,19 @@ Then create the intended release with an explicit version.
 If npm has already published the wrong version, do not delete or rewrite it.
 Publish a new corrected version instead.
 
+## Peer Dependencies
+
+Run `bun run recs:check` before a release. Besides the recommended libraries, it checks this
+package's own `peerDependencies` and warns when npm's `latest` is above a peer range: a
+prerelease of a new major (track it) or a new stable major (test it and widen the range).
+
+Tracked now:
+
+- **unstorage 2.0.** npm's `latest` is `2.0.0-beta.0`; the peer stays `^1.14.4` while 2.x is
+  beta. When 2.0 is stable, test `@xtandard/lib/unstorage` against it, widen the peer to
+  `^1.14.4 || ^2.0.0` (and the devDependency), and drop the `unstorage@^1` notes from the
+  unstorage integration page and the recommendation's caveat in `recs/libraries.ts`.
+
 ## Package Contents
 
 `package.json` controls published files. Keep `docs` in the `files` list because

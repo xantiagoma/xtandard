@@ -6,7 +6,7 @@ description: "Cache async function results in any unstorage driver (memory, Redi
 `@xtandard/lib/unstorage` caches the results of async functions in an [unstorage](https://unstorage.unjs.io/) `Storage`, so the same code can cache in memory during development and in Redis, Cloudflare KV or a database in production. Use it for slow, mostly-stable lookups: third-party API calls, expensive queries, computed reports.
 
 ```sh
-npm install @xtandard/lib unstorage ohash
+npm install @xtandard/lib unstorage@^1 ohash
 ```
 
 ```ts
@@ -14,6 +14,10 @@ import { withCache, createCache } from "@xtandard/lib/unstorage";
 ```
 
 `unstorage` (v1) and `ohash` (v2, used to hash arguments into keys) are optional peer dependencies.
+
+:::note[unstorage 2.0]
+npm's `latest` tag for unstorage points at a 2.0 beta, so a plain `npm install unstorage` gets the beta. `@xtandard/lib/unstorage` supports `unstorage@^1` until 2.0 is stable: install it with `@^1` as above. `bun run recs:check` warns while that is the case, and again once 2.0 stable ships, so the peer range gets widened then.
+:::
 
 ## `withCache`: wrap one function
 
