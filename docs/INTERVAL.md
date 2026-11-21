@@ -422,7 +422,7 @@ instance methods), so values from any TC39-compatible polyfill order correctly.
 
 ```ts
 import { DecimalInterval } from "@xtandard/lib/decimal";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 
 const d = (s: string) => new Decimal(s);
 

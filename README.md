@@ -268,7 +268,7 @@ membership, and the string form are exact arbitrary-precision; see
 
 ```ts
 import { DecimalInterval } from "@xtandard/lib/decimal";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 
 DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3")).length(); // 0.2 (not 0.19999999999999998)
 DecimalInterval.closed(new Decimal("0.1"), new Decimal("0.3")).toString(); // "[0.1,0.3]"
