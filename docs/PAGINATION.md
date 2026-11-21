@@ -341,7 +341,8 @@ the raw SQL helpers or plain fetcher examples directly.
 | Firestore                             | native ordered cursors (`startAfter`, `endBefore`)     |
 | DynamoDB                              | `LastEvaluatedKey` / `ExclusiveStartKey`               |
 | Redis sorted sets                     | `ZRANGE`/`ZREVRANGE` by score + member                 |
-| Elasticsearch / OpenSearch            | `search_after` with stable sort                        |
+| PostgREST / Supabase                  | `@xtandard/lib/filters/postgrest` keyset               |
+| Elasticsearch / OpenSearch            | `@xtandard/lib/filters/elasticsearch` keyset           |
 | Meilisearch / Typesense               | offset by default; cursor only if using stable filters |
 | ClickHouse                            | raw SQL helper params                                  |
 | BigQuery / Snowflake                  | raw SQL helper params for stable export pagination     |
@@ -1262,32 +1263,98 @@ const paginator = createPaginator({
 For strict no-duplicate behavior when scores collide, encode the tiebreaker in
 the score or use lexicographic sorted-set commands with a composite member.
 
-### Elasticsearch / OpenSearch
+### PostgREST / Supabase
 
-Use `search_after` with a deterministic `sort` array. Always include a unique
-tiebreaker field; Elasticsearch often uses a doc-values copy of `_id`.
+`createPostgrestKeyset` from `@xtandard/lib/filters/postgrest` renders the
+lexicographic seek as an `or=(…)` param and the sort as `order` terms; offset
+requests use PostgREST's `limit`/`offset` (`.range()` in supabase-js). Combine
+with `buildParams` filters: PostgREST ANDs every param.
 
 ```ts
-const sort = [
-  { createdAt: direction === "backward" ? "desc" : "asc" },
-  { idKeyword: direction === "backward" ? "desc" : "asc" },
-];
+import { createPaginator } from "@xtandard/lib/pagination";
+import {
+  applyParamsToPostgrest,
+  buildParams,
+  createPostgrestKeyset,
+} from "@xtandard/lib/filters/postgrest";
 
-const response = await elastic.search({
-  index: "posts",
-  size: limit,
-  sort,
-  search_after: cursor ? [cursor.createdAt, cursor.id] : undefined,
-  query: { bool: { filter: [{ term: { tenantId } }] } },
+const keyset = createPostgrestKeyset({
+  sort: [
+    { key: "createdAt", order: "desc" },
+    { key: "id", order: "desc" },
+  ],
+  columns: { createdAt: "created_at", id: "id" },
 });
+const { params: filterParams } = buildParams({ spec, filters, resolveDate });
 
-return {
-  items: response.hits.hits.map((hit) => ({ ...hit._source, sort: hit.sort })),
-};
+const paginator = createPaginator({
+  fetchOffset: async ({ limit, offset }) => {
+    const { data } = await applyParamsToPostgrest(supabase.from("posts").select("*"), filterParams)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + limit - 1);
+    return { items: data ?? [] };
+  },
+  fetchCursor: async ({ limit, cursor, direction }) => {
+    let query = applyParamsToPostgrest(supabase.from("posts").select("*"), [
+      ...filterParams,
+      ...keyset.where(cursor, direction),
+    ]);
+    for (const t of keyset.orderBy(direction)) query = query.order(t.column, t);
+    const { data } = await query.limit(limit);
+    return { items: data ?? [] };
+  },
+  cursor: { fromItem: (p) => ({ createdAt: p.created_at, id: p.id }) },
+});
 ```
 
-Cursor extraction should use the returned `hit.sort`, not `_source`, because
-the sort values are exactly what the next `search_after` call expects.
+Without supabase-js, send the same params with `fetch`:
+`new URLSearchParams([...filterParams, ...keyset.where(cursor, direction), ["order", formatOrder(keyset.orderBy(direction))!], ["limit", String(limit)]])`.
+
+### Elasticsearch / OpenSearch
+
+Use `search_after` with a deterministic `sort`. Always include a unique
+tiebreaker field; Elasticsearch often uses a doc-values (`keyword`) copy of
+`_id`. `createElasticsearchKeyset` from `@xtandard/lib/filters/elasticsearch`
+gives the `sort` for a direction (`"backward"` flips it; the paginator restores
+the order) and the matching `search_after` values, and `buildQuery` renders the
+filters.
+
+```ts
+import { createPaginator } from "@xtandard/lib/pagination";
+import { buildQuery, createElasticsearchKeyset } from "@xtandard/lib/filters/elasticsearch";
+
+const keyset = createElasticsearchKeyset({
+  sort: [
+    { key: "createdAt", order: "desc" },
+    { key: "id", order: "desc" },
+  ],
+  fields: { createdAt: "createdAt", id: "idKeyword" },
+});
+const { query } = buildQuery({ spec, filters, resolveDate });
+const filter = [{ term: { tenantId } }, ...(query ? [query] : [])];
+
+const paginator = createPaginator({
+  fetchCursor: async ({ limit, cursor, direction }) => {
+    const response = await elastic.search({
+      index: "posts",
+      size: limit,
+      query: { bool: { filter } },
+      sort: keyset.sort(direction),
+      search_after: keyset.searchAfter(cursor),
+    });
+    return { items: response.hits.hits.map((hit) => hit._source!) };
+  },
+  cursor: { fromItem: (p) => ({ createdAt: Date.parse(p.createdAt), id: p.id }) }, // epoch ms, like hit.sort
+});
+```
+
+`searchAfter(cursor)` returns the cursor values in sort order (a `Date` becomes
+epoch milliseconds, which is what a `date` field's `hit.sort` holds; keep date
+cursors as numbers so they survive the cursor codec's JSON). Keep
+`fields` complete: `search_after` must have one value per `sort` entry. For deep
+exports, pair `search_after` with a point in time (`pit`) so the snapshot stays
+consistent between pages.
 
 ### Meilisearch / Typesense
 

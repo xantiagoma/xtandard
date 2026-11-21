@@ -89,6 +89,8 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 @xtandard/lib/filters/prisma  → renders the AST to a Prisma where object (no driver dep)
 @xtandard/lib/filters/memory  → evaluates the AST in memory: (row) => boolean with SQL semantics + sort comparator + sync array pagination (zero deps)
 @xtandard/lib/filters/tanstack-table → TanStack Table state (columnFilters/globalFilter/sorting/pagination) ⇄ model/Sort/pagination + cursor stack (zero deps; structural types = table-core v8 & v9)
+@xtandard/lib/filters/postgrest → renders the AST to PostgREST/Supabase query params + order/keyset (no driver dep)
+@xtandard/lib/filters/elasticsearch → renders the AST to an Elasticsearch/OpenSearch Query DSL clause + sort/search_after keyset (no client dep)
 @xtandard/lib/web          → browser/FormData + fetchWithProgress + keepSubDelims (peer: up-fetch)
 @xtandard/lib/tanstack     → nuqs-style URL query state for TanStack Router (peer: react, @tanstack/react-router)
 @xtandard/lib/tanstack/server   → framework-free parsers/serializer/loader/standard-schema (zero deps)
