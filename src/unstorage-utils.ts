@@ -66,6 +66,13 @@ async function cacheSet<T extends StorageValue>(
  * Wrap an async function with a persistent cache layer backed by unstorage.
  * Supports functions with any number of arguments.
  *
+ * A plain TTL cache, kept small on purpose: no stale-while-revalidate, and
+ * concurrent misses for the same key each call the function. When you need
+ * those, use [`@epic-web/cachified`](https://github.com/epicweb-dev/cachified)
+ * (stale-while-revalidate, value validation, one fetch per key for concurrent
+ * misses) or [`bentocache`](https://bentocache.dev) (multi-tier cache with
+ * stampede protection and grace periods); see the recommended libraries.
+ *
  * @example Single arg
  * ```ts
  * const loadUser = withCache(
@@ -142,6 +149,13 @@ export interface Cache {
 
 /**
  * Create a reusable cache instance that can be used as a decorator or wrapper.
+ *
+ * A plain TTL cache, kept small on purpose: no stale-while-revalidate, and
+ * concurrent misses for the same key each call the function. When you need
+ * those, use [`@epic-web/cachified`](https://github.com/epicweb-dev/cachified)
+ * (stale-while-revalidate, value validation, one fetch per key for concurrent
+ * misses) or [`bentocache`](https://bentocache.dev) (multi-tier cache with
+ * stampede protection and grace periods); see the recommended libraries.
  *
  * @example As decorator
  * ```ts

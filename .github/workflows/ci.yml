@@ -25,6 +25,8 @@ jobs:
         run: bun run format:check
       - name: Type check
         run: npx tsc --noEmit
+      - name: Recommended libraries in sync with the README
+        run: bun recs/generate.ts --check
       - name: Test
         run: bun run test
       - name: Build

@@ -36,6 +36,15 @@ Lightweight, type-safe TypeScript utilities with zero deps for the core.
 - Playgrounds are React islands in `site/src/components/` importing the library from source.
 - Astro runs under Bun (`bun --bun astro …`); `.mdx` is excluded from `vp fmt` (oxfmt mangles MDX).
 
+## Recommended Libraries
+
+`recs/libraries.ts` (typed by `recs/schema.ts`) is the single source of truth for the README
+"Recommended Libraries" section (between `<!-- recs:start -->`/`<!-- recs:end -->`, written by
+`bun run recs:generate`; `bun run check` and CI fail when it is stale) and the site page
+`site/content/project/recommended-libraries.mdx` (React island `RecommendedLibraries.tsx`).
+`bun run recs:check` queries npm + GitHub, writes `recs/status.json`, and flags deprecated,
+archived, abandoned or relicensed packages. Criteria and steps: `docs/RECOMMENDING.md`.
+
 ## Release Process
 
 See `docs/RELEASING.md` before releasing. For planned pre-1.0 minor releases,

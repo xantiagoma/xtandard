@@ -66,11 +66,19 @@ The TTL is applied twice. It is passed to the driver as `{ ttl }`, so drivers wi
 
 :::caution[Things the cache does not do]
 
-- **No in-flight deduplication.** Two concurrent calls with the same arguments both miss and both call the function. For per-request batching and deduplication use [DataLoader](@BASE@/integrations/dataloader/).
+- **No in-flight deduplication.** Two concurrent calls with the same arguments both miss and both call the function. For per-request batching and deduplication use [DataLoader](@BASE@/integrations/dataloader/); for a cache that shares one fetch between concurrent misses, see below.
+- **No stale-while-revalidate.** An expired entry is a miss: the caller waits for the function.
 - **`null` is never a hit.** A function that resolves to `null` is called again every time.
 - **Results must be serializable.** Values go through the driver's serialization, so `Date`, `Map` or class instances come back as plain JSON on most drivers. Return plain data.
 
 :::
+
+### When to use cachified or bentocache instead
+
+`withCache` and `createCache` stay small on purpose: a TTL cache over any unstorage driver. When you need more, use a dedicated caching library (both are on the [recommended libraries](@BASE@/project/recommended-libraries/?category=caching) page):
+
+- [`@epic-web/cachified`](https://github.com/epicweb-dev/cachified) wraps any cache (lru-cache, Redis, SQLite, Cloudflare KV through adapters) with **stale-while-revalidate**, validation of cached values, and **one `getFreshValue` call for concurrent misses** of the same key (within a process).
+- [`bentocache`](https://bentocache.dev) is a multi-tier cache for Node.js: an in-memory tier in front of Redis or a database, kept in sync across instances by a bus, with **stampede protection**, grace periods (serve stale data when the store is down) and tag-based invalidation.
 
 ## `createCache`: one cache, many functions
 

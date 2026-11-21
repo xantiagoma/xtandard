@@ -1,0 +1,16 @@
+---
+title: Recommended libraries
+description: Libraries we use and recommend alongside xtandard, by category, with what each provides, why we pick it, its license and latest release, and how it pairs with xtandard modules.
+tableOfContents: false
+---
+
+{/* scripts/sync.ts copies this file to src/content/docs/project/, hence the import path. */}
+import RecommendedLibraries from "../../../components/RecommendedLibraries.tsx";
+
+xtandard holds the utilities we kept rewriting. When a well-maintained, permissively licensed library already does the job well, we recommend it instead of rebuilding it. None of these are re-exported: install the ones you need directly.
+
+Each card says what the library provides, why we pick it over the alternatives, and, where it applies, which xtandard entry point it pairs with, with an example. Licenses and latest releases come from the npm registry and GitHub, checked by `bun run recs:check`.
+
+The list lives in [`recs/libraries.ts`](@REPO@/blob/main/recs/libraries.ts), which also generates the README section. To suggest a library, see [How to add a recommendation](@BASE@/project/recommending/).
+
+<RecommendedLibraries client:load />

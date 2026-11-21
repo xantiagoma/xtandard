@@ -282,10 +282,14 @@ export const sidebar: Item[] = [
       },
       {
         slug: "project/recommended-libraries",
-        src: "README.md",
-        sections: ["Recommended Libraries"],
-        title: "Recommended libraries",
+        site: "project/recommended-libraries.mdx",
         label: "Recommended libraries",
+      },
+      {
+        slug: "project/recommending",
+        src: "docs/RECOMMENDING.md",
+        label: "Adding a recommendation",
+        internal: true,
       },
       { slug: "project/changelog", src: "CHANGELOG.md", label: "Changelog" },
       { slug: "project/releasing", src: "docs/RELEASING.md", label: "Releasing", internal: true },
