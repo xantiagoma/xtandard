@@ -25,6 +25,8 @@ jobs:
         run: bun run format:check
       - name: Type check
         run: npx tsc --noEmit
+      - name: Type check (TypeScript 7)
+        run: bun run typecheck:ts7
       - name: Recommended libraries in sync with the README
         run: bun recs/generate.ts --check
       - name: Test
