@@ -3,7 +3,8 @@
 A typed, end-to-end filtering system: one model spans **frontend ↔ API ↔ any
 query builder**. Built like [`pagination`](./PAGINATION.md) — a **portable core**
 lowers a request into a driver-agnostic AST, and thin **per-driver adapters**
-render it (Drizzle, Kysely, Knex, Mongo, Prisma, or your own).
+render it (Drizzle, Kysely, Knex, Bun.sql / postgres.js, Mongo, Prisma, or your
+own).
 
 - The **core** (`@xtandard/lib/filters`) is **validation-library-free** and
   **driver-free**: plain TS types + `compileFilters`.
@@ -14,7 +15,7 @@ render it (Drizzle, Kysely, Knex, Mongo, Prisma, or your own).
 
 ```bash
 npm install @xtandard/lib
-# + whichever adapter peer you use: drizzle-orm | kysely | (knex/mongo/prisma need no peer)
+# + whichever adapter peer you use: drizzle-orm | kysely | (knex/sql-tag/mongo/prisma need no peer)
 # + valibot for the optional ready-made schemas
 ```
 
@@ -31,6 +32,7 @@ flowchart LR
   AST --> RQB["drizzle-rqb: where object"]
   AST --> KYS["kysely: RawBuilder"]
   AST --> KNX["knex: { sql, bindings }"]
+  AST --> TAG["sql-tag: Bun.sql / postgres.js fragment"]
   AST --> MGO["mongo: filter object"]
   AST --> PRS["prisma: where object"]
 ```
@@ -485,6 +487,54 @@ const fragment = buildWhereSql({ spec, filters, resolveDate, dialect: "mysql" })
 if (fragment) query.whereRaw(fragment.sql, fragment.bindings);
 ```
 
+### Bun.sql / postgres.js — `@xtandard/lib/filters/sql-tag` (no driver dependency)
+
+For **tagged-template SQL clients**: [Bun.sql](https://bun.com/docs/runtime/sql)
+(`sql` / `new SQL(…)`, on Postgres, MySQL/MariaDB or SQLite) and
+[postgres.js](https://github.com/porsager/postgres) (v3 and v4, including the `sql` of a
+transaction or reserved connection). You pass your `sql`; the result is a **fragment of
+that client** that you embed in your own query, so there's no driver import and nothing
+to apply. Columns are strings (validated `col` / `table.col`, then quoted by your
+client's `sql(identifier)`) or any fragment of your `sql` (e.g. `` sql`lower(name)` ``).
+**Dialect-aware** via `dialect` (default `"postgres"`; `"mysql"` / `"sqlite"` for
+Bun.sql's other adapters) — see [SQL dialects](#sql-dialects-array-ops--ilike) below.
+
+```ts
+import postgres from "postgres"; // or: import { sql } from "bun";
+import { buildOrderBy, buildWhere, numberField, textField } from "@xtandard/lib/filters/sql-tag";
+
+const sql = postgres(process.env.DATABASE_URL);
+const spec = {
+  name: textField({ column: "tasks.name" }),
+  amount: numberField({ column: "tasks.amount" }),
+};
+
+const { where } = buildWhere({ sql, spec, filters, resolveDate }); // fragment | undefined
+const { orderBy } = buildOrderBy({ sql, sort, columns: { name: "tasks.name" } }); // ONE fragment
+const rows = await sql`
+  select * from tasks
+  ${where ? sql`where ${where}` : sql``}
+  order by ${orderBy ?? sql`id`}
+  limit ${limit}
+`;
+// select * from tasks where ("tasks"."name" ILIKE $1 AND "tasks"."amount" >= $2) order by …
+```
+
+Every keyword is fixed template text and every value a parameter: the adapter never
+calls `sql.unsafe`, and `IN` lists bind one parameter per value (`IN ($1, $2)`). It
+renders the same SQL as the Knex adapter, with the client numbering the placeholders
+(`$n` on Postgres, `?` on MySQL/SQLite) and quoting identifiers (backticks on MySQL).
+
+- The fragments are **lazy queries** (thenables): embed them; never `await` one on its
+  own or return it alone from an `async` function, since that runs it as a query.
+- `orderBy` is one comma-joined fragment rather than an array, because both clients
+  join an array of fragments with spaces.
+- A client `transform.column.to` (postgres.js `transform: postgres.camel`, Bun
+  `transform: SQL.camel`) also renames the column strings you map, like every
+  `sql("name")`.
+- Bun.sql's **SQLite** adapter can't bind a `Date` (it throws), so `date` presets need
+  Bun.sql on Postgres or MySQL (or another SQLite driver that accepts dates).
+
 ### Mongo / Mongoose — `@xtandard/lib/filters/mongo` (no driver dependency)
 
 Returns a plain Mongo filter object. Columns are dotted paths.
@@ -623,16 +673,16 @@ included, so rows with a NULL sort key page correctly (SQL's `>` never matches N
 
 ### Operator support matrix
 
-| op                                      | drizzle  |  kysely  |   knex   |       mongo       |        prisma        |  memory   |
-| --------------------------------------- | :------: | :------: | :------: | :---------------: | :------------------: | :-------: |
-| scalar, set, unary                      |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
-| `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
-| `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        | ✅ ILIKE  |
-| `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |    ✅     |
-| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     | ✅ PG/SQL |
-| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     | ✅ PG/SQL |
-| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       | ✅ PG/SQL |
-| date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
+| op                                      | drizzle  |  kysely  |   knex   | sql-tag  |       mongo       |        prisma        |  memory   |
+| --------------------------------------- | :------: | :------: | :------: | :------: | :---------------: | :------------------: | :-------: |
+| scalar, set, unary                      |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
+| `between`/`notBetween` (→ half-open)    |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
+| `contains`/`startsWith`/`endsWith`      | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE | ✅ ILIKE |     ✅ regex      |       ✅ mode        | ✅ ILIKE  |
+| `like`/`ilike`/`notIlike` (raw pattern) |    ✅    |    ✅    |    ✅    |    ✅    |     ✅ regex      | ⚠️ reduced or throws |    ✅     |
+| `arrayContains` (`@>`)                  |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi |     ✅ `$all`     |    ✅ `hasEvery`     | ✅ PG/SQL |
+| `arrayOverlaps` (`&&`)                  |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi |     ✅ `$in`      |     ✅ `hasSome`     | ✅ PG/SQL |
+| `arrayContained` (`<@`)                 |  ✅ PG   | ✅ multi | ✅ multi | ✅ multi | ✅ `$setIsSubset` |      ❌ throws       | ✅ PG/SQL |
+| date preset (→ gte/lt)                  |    ✅    |    ✅    |    ✅    |    ✅    |        ✅         |          ✅          |    ✅     |
 
 > **`drizzle-rqb`** (the RQBv2 `where` object) supports every operator above
 > natively — RQBv2 has `ilike` + the array ops built in — so it matches the
@@ -645,13 +695,13 @@ included, so rows with a NULL sort key page correctly (SQL's `>` never matches N
 > or SQLite's `json_each` reading of a NULL array.
 
 > **drizzle** emits the PG array operators only — its array helpers are
-> Postgres-specific. **kysely / knex** (`multi`) render the `array` ops for all
+> Postgres-specific. **kysely / knex / sql-tag** (`multi`) render the `array` ops for all
 > three SQL dialects via their `dialect` option — see below. For MySQL/SQLite the
 > "array" column is a **JSON column** (no native array type).
 
 ### SQL dialects (array ops + `ilike`)
 
-The kysely and knex adapters take an optional `dialect: "postgres" | "mysql" |
+The kysely, knex and sql-tag adapters take an optional `dialect: "postgres" | "mysql" |
 "sqlite"` (default `"postgres"`). It changes the ops with no portable
 spelling — the **array** ops and case-insensitive **`ilike`** — plus the `LIKE`
 escape clause and (knex only) identifier quoting; everything else is identical
@@ -694,7 +744,8 @@ Notes:
   wildcard on all three dialects.
 - **knex on MySQL** quotes identifiers with backticks (`` `tasks`.`status` ``);
   double quotes would be string literals unless `ANSI_QUOTES` is on. Kysely
-  quotes through its own dialect.
+  quotes through its own dialect, and sql-tag through your client's `sql(identifier)`
+  (Bun.sql uses backticks on MySQL).
 - **drizzle** has no `dialect` option: it reads the dialect from the spec's
   columns. On a SQLite or MySQL column, text matches render as
   `like ? escape '\'` / `like ? escape char(92)` (same reasoning as above); its
@@ -961,11 +1012,11 @@ fields, so an adapter only maps the 19 normalized leaf ops (`CompiledOp`) + and/
   in the spec (with a matching kind) are emitted — never a client-supplied
   column. Unknown fields are silently dropped.
 - **Server-owned identifiers.** Adapter column references (Drizzle/Kysely
-  columns, Knex identifier strings, Mongo paths, Prisma fields) come from your
-  code, not request data. Knex validates identifiers and **throws** on anything
-  outside `col` / `table.col`.
+  columns, Knex/sql-tag identifier strings, Mongo paths, Prisma fields) come from
+  your code, not request data. Knex and sql-tag validate identifier strings and
+  **throw** on anything outside `col` / `table.col`.
 - **Parameterized values.** Every value is bound (Drizzle/Kysely SQL params,
-  Knex `?`, Mongo/Prisma object values) — no string interpolation of user input.
+  Knex `?`, Bun.sql/postgres.js template parameters, Mongo/Prisma object values) — no string interpolation of user input.
 - **Validate the request shape** (valibot or your validator) before building.
 
 ## API reference
@@ -1008,6 +1059,7 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
 | `/drizzle-rqb` | —                          | v2 (object): `buildWhere`, `buildFilterNode`, `toDrizzleRqbWhere`, `DrizzleRqbWhere`. v1 (callback): `buildRqbV1Where`, `buildRqbV1FilterNode`, `toDrizzleRqbV1Callback`, `RqbV1Operators`, `RqbV1Sql`. Shared `dateField`/…, `DrizzleRqbFilterSpec` |
 | `/kysely`      | `kysely`                   | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toKyselyWhere`, `dateField`/…, `KyselyFilterSpec`, `SqlDialect`                                                                                                                                    |
 | `/knex`        | —                          | `buildWhereSql`, `buildFilterNodeSql`, `applyFiltersToKnex`, `toFilterWhereSql`, `dateField`/…, `KnexFilterSpec`, `SqlDialect`                                                                                                                       |
+| `/sql-tag`     | —                          | `buildWhere`, `buildFilterNode`, `buildOrderBy`, `toSqlTagWhere`, `dateField`/…, `SqlTagFilterSpec`, `SqlTag`, `SqlTagFragment`, `SqlDialect`                                                                                                        |
 | `/mongo`       | —                          | `buildFilter`, `buildFilterNode`, `toMongoFilter`, `dateField`/…, `MongoFilterSpec`, `MongoFilter`                                                                                                                                                   |
 | `/prisma`      | —                          | `buildWhere`, `buildFilterNode`, `toPrismaWhere`, `dateField`/…, `PrismaFilterSpec`, `PrismaWhere`                                                                                                                                                   |
 | `/memory`      | —                          | `buildFilterPredicate`, `buildFilterNodePredicate`, `toFilterPredicate`, `applyFiltersToArray`, `buildComparator`, `createMemoryKeyset`, `createMemoryPaginator`, `dateField`/…, `MemoryFilterSpec`, `MemoryDialect`                                 |
@@ -1024,7 +1076,7 @@ the matching validator (`valibot` / `zod` / `arktype` / `effect`). A
   `$queryRaw`.
 - **A filter "disappeared".** Its field isn't in the spec, or its kind doesn't
   match the spec's kind — it was dropped (by design; never trust client fields).
-- **Array ops need a `dialect` outside Postgres.** On `kysely`/`knex` they
+- **Array ops need a `dialect` outside Postgres.** On `kysely`/`knex`/`sql-tag` they
   default to PG `@>`/`<@`/`&&` (real `array` column); pass `dialect: "mysql"`
   (JSON column, `JSON_CONTAINS`/`JSON_OVERLAPS`) or `dialect: "sqlite"` (JSON1
   `json_each` subqueries) for those engines — see
