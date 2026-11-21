@@ -61,6 +61,10 @@ const libAliases = [...entries]
 
 const [apiReference, apiSidebarGroup] = createStarlightTypeDocPlugin();
 
+const tagline = "Lightweight, type-safe TypeScript utilities — zero dependencies for the core.";
+/** Absolute URL of the social card (assets/social.png, copied to public/), for og:image. */
+const socialImage = `${siteOrigin}${siteBase}/social.png`;
+
 export default defineConfig({
   site: siteOrigin,
   base: siteBase,
@@ -75,9 +79,33 @@ export default defineConfig({
     react(),
     starlight({
       title: "@xtandard/lib",
-      description: "Lightweight, type-safe TypeScript utilities — zero dependencies for the core.",
-      logo: { src: "../assets/logo.png", alt: "xtandard" },
-      favicon: "/favicon.png",
+      description: tagline,
+      // docs/BRAND.md: the horizontal lockup for each theme, in place of the text title.
+      logo: {
+        dark: "../assets/lockup-horizontal-dark.svg",
+        light: "../assets/lockup-horizontal-light.svg",
+        alt: "@xtandard/lib",
+        replacesTitle: true,
+      },
+      // The favicon set (assets/, copied to public/ by scripts/brand-assets.sh): the SVG, which
+      // modern browsers prefer, plus the ICO and the Apple touch icon.
+      favicon: "/favicon.svg",
+      head: [
+        {
+          tag: "link",
+          attrs: { rel: "icon", href: `${siteBase}/favicon.ico`, sizes: "16x16 32x32 48x48" },
+        },
+        {
+          tag: "link",
+          attrs: { rel: "apple-touch-icon", href: `${siteBase}/apple-touch-icon.png` },
+        },
+        { tag: "meta", attrs: { property: "og:image", content: socialImage } },
+        { tag: "meta", attrs: { property: "og:image:width", content: "1280" } },
+        { tag: "meta", attrs: { property: "og:image:height", content: "640" } },
+        { tag: "meta", attrs: { property: "og:image:alt", content: `@xtandard/lib — ${tagline}` } },
+        { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } },
+        { tag: "meta", attrs: { name: "twitter:image", content: socialImage } },
+      ],
       social: [
         { icon: "github", label: "GitHub", href: repoUrl },
         { icon: "npm", label: "npm", href: "https://www.npmjs.com/package/@xtandard/lib" },
