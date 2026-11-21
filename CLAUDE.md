@@ -104,6 +104,8 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 @xtandard/lib/dataloader   → createLoader factory (peer: dataloader)
 @xtandard/lib/unstorage    → withCache, createCache (peer: unstorage, ohash)
 @xtandard/lib/valibot      → TimeZone validation (peer: valibot)
+@xtandard/lib/effect       → TimeZone schema on effect 3 (peer: effect ^3)
+@xtandard/lib/effect/v4    → same on effect 4 (peer: effect ^4; src/*-v4.ts import the `effect-v4` dev alias, remapped to `effect` by the build; filters/effect/v4 likewise)
 ```
 
 All sub-entry deps are optional peer dependencies.

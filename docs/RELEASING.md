@@ -160,6 +160,15 @@ Tracked now:
   `^1.14.4 || ^2.0.0` (and the devDependency), and drop the `unstorage@^1` notes from the
   unstorage integration page and the recommendation's caveat in `recs/libraries.ts`.
 
+- **effect 3 → 4.** The peer is `^3.10.0 || ^4.0.0`. Effect 4 changed the Schema API, so one
+  source can't serve both: `@xtandard/lib/effect` and `@xtandard/lib/filters/effect` are built
+  on effect 3 (the `effect` devDependency), and `@xtandard/lib/effect/v4` and
+  `@xtandard/lib/filters/effect/v4` on effect 4 (sources `src/*-v4.ts` import the
+  `effect-v4` devDependency alias, which the build remaps to `effect`; `scripts/check-dist.ts`
+  guards it). At the **next breaking release**, flip it: move the `-v4` sources into
+  `/effect` and `/filters/effect` (importing `effect`), drop the `/v4` entries, the effect 3
+  sources and the `effect-v4` alias, and set the peer and devDependency to `^4`.
+
 ## Package Contents
 
 `package.json` controls published files. Keep `docs` in the `files` list because

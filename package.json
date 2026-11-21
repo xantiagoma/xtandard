@@ -233,6 +233,16 @@
         "default": "./dist/entry-filters-effect.cjs"
       }
     },
+    "./filters/effect/v4": {
+      "import": {
+        "types": "./dist/entry-filters-effect-v4.d.mts",
+        "default": "./dist/entry-filters-effect-v4.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-filters-effect-v4.d.cts",
+        "default": "./dist/entry-filters-effect-v4.cjs"
+      }
+    },
     "./filters/drizzle": {
       "import": {
         "types": "./dist/entry-filters-drizzle.d.mts",
@@ -503,6 +513,16 @@
         "default": "./dist/entry-effect.cjs"
       }
     },
+    "./effect/v4": {
+      "import": {
+        "types": "./dist/entry-effect-v4.d.mts",
+        "default": "./dist/entry-effect-v4.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-effect-v4.d.cts",
+        "default": "./dist/entry-effect-v4.cjs"
+      }
+    },
     "./sonner": {
       "import": {
         "types": "./dist/entry-sonner.d.mts",
@@ -528,7 +548,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "vp pack",
+    "build": "vp pack && bun scripts/check-dist.ts",
     "test": "vp test run",
     "test:coverage": "vp test run --coverage",
     "test:coverage:open": "vp test run --coverage && open coverage/index.html",
@@ -568,6 +588,7 @@
     "dinero.js": "^2.0.2",
     "drizzle-orm": "^0.45.2",
     "effect": "^3.10.0",
+    "effect-v4": "npm:effect@^4.1.5",
     "fraction.js": "^5.3.4",
     "husky": "^9.1.7",
     "ipaddr.js": "^2.4.0",
@@ -603,7 +624,7 @@
     "decimal.js": "^10.6.0",
     "dinero.js": "^2.0.2",
     "drizzle-orm": ">=0.45.0 || >=1.0.0-0",
-    "effect": "^3.10.0",
+    "effect": "^3.10.0 || ^4.0.0",
     "fraction.js": "^5.3.4",
     "ipaddr.js": "^2.4.0",
     "itty-time": "^1.0.6",

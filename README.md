@@ -56,7 +56,8 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/filters/valibot`        | Ready-made valibot schemas for the model                 | `valibot`, `@js-temporal/polyfill`   |
 | `@xtandard/lib/filters/zod`            | Ready-made Zod schemas for the model                     | `zod`, `@js-temporal/polyfill`       |
 | `@xtandard/lib/filters/arktype`        | Ready-made ArkType schemas for the model                 | `arktype`, `@js-temporal/polyfill`   |
-| `@xtandard/lib/filters/effect`         | Ready-made Effect schemas for the model                  | `effect`, `@js-temporal/polyfill`    |
+| `@xtandard/lib/filters/effect`         | Ready-made Effect schemas for the model (effect 3)       | `effect` 3, `@js-temporal/polyfill`  |
+| `@xtandard/lib/filters/effect/v4`      | Ready-made Effect schemas for the model (effect 4)       | `effect` 4, `@js-temporal/polyfill`  |
 | `@xtandard/lib/filters/drizzle`        | Drizzle WHERE builder + keyset from filters              | `drizzle-orm`                        |
 | `@xtandard/lib/filters/drizzle-rqb`    | Drizzle RQB v2 `where` object from filters (`db.query`)  | none                                 |
 | `@xtandard/lib/filters/kysely`         | Kysely WHERE builder from filters                        | `kysely`                             |
@@ -81,7 +82,8 @@ Release process notes live in [docs/RELEASING.md](./docs/RELEASING.md).
 | `@xtandard/lib/valibot`                | `TimeZone`, duration & Temporal schemas (valibot)        | `valibot`, `@js-temporal/polyfill`   |
 | `@xtandard/lib/zod`                    | Branded `TimeZone` schema (Zod)                          | `zod`                                |
 | `@xtandard/lib/arktype`                | Branded `TimeZone` schema (ArkType)                      | `arktype`                            |
-| `@xtandard/lib/effect`                 | Branded `TimeZone` schema (Effect)                       | `effect`                             |
+| `@xtandard/lib/effect`                 | Branded `TimeZone` schema (effect 3)                     | `effect` 3                           |
+| `@xtandard/lib/effect/v4`              | Branded `TimeZone` schema (effect 4)                     | `effect` 4                           |
 | `@xtandard/lib/sonner`                 | Toast streaming for iterables                            | `sonner`, `react`                    |
 | `@xtandard/lib/react`                  | React hooks + components                                 | `react`, `@tanstack/react-query`     |
 
@@ -458,8 +460,9 @@ resolveDate })` lowers a request to a **portable `CompiledWhere` AST**. Validate
   never imports one.
 - **Validation (optional):** ready-made schemas for **valibot, Zod, ArkType, and
   Effect** at `@xtandard/lib/filters/{valibot,zod,arktype,effect}` that validate
-  into the model types (a `*.test-d.ts` asserts each one has no drift). Or bring
-  your own Standard Schema.
+  into the model types (a `*.test-d.ts` asserts each one has no drift); on
+  effect 4 import `@xtandard/lib/filters/effect/v4`. Or bring your own Standard
+  Schema.
 - **Adapters** render the AST per driver:
   `@xtandard/lib/filters/{drizzle,kysely,knex,mongo,prisma}` — each with typed
   `dateField`/`textField`/… spec builders (allow-list) + `buildWhere`.
