@@ -371,21 +371,37 @@ describe.each([
       for (const set of Object.values(results)) checkNormalized(set);
       checkNormalized(a);
 
+      // Collect mismatches and assert once: thousands of `expect` calls are slow.
+      const mismatches: string[] = [];
       for (const x of probes) {
         const inA = member(rawA, x);
         const inB = b.contains(x);
-        expect(a.contains(x)).toBe(inA);
-        expect(results.union.contains(x)).toBe(inA || inB);
-        expect(results.intersection.contains(x)).toBe(inA && inB);
-        expect(results.difference.contains(x)).toBe(inA && !inB);
-        expect(results.symmetric.contains(x)).toBe(inA !== inB);
-        expect(results.complement.contains(x)).toBe(valid(x) && !inA);
+        const expected = {
+          of: inA,
+          union: inA || inB,
+          intersection: inA && inB,
+          difference: inA && !inB,
+          symmetric: inA !== inB,
+          complement: valid(x) && !inA,
+        };
+        const actual = {
+          of: a.contains(x),
+          union: results.union.contains(x),
+          intersection: results.intersection.contains(x),
+          difference: results.difference.contains(x),
+          symmetric: results.symmetric.contains(x),
+          complement: results.complement.contains(x),
+        };
+        for (const key of Object.keys(expected) as (keyof typeof expected)[]) {
+          if (expected[key] !== actual[key]) mismatches.push(`${key}(${x}) a=${a} b=${b}`);
+        }
       }
+      expect(mismatches).toEqual([]);
 
       expect(results.complement.complement().equals(a)).toBe(true);
       expect(IntervalSet.parse(domain, a.toString()).equals(a)).toBe(true);
     }
-  });
+  }, 30_000); // model checks: headroom when the whole suite runs in parallel
 
   test("encloses / intersects / subSet / gaps agree with membership", () => {
     for (let round = 0; round < 400; round++) {
@@ -409,7 +425,7 @@ describe.each([
       checkNormalized(gaps);
       expect(gaps.equals(a.complement().intersection(a.span()))).toBe(true);
     }
-  });
+  }, 30_000); // model checks: headroom when the whole suite runs in parallel
 });
 
 describe("IntervalSet — JSDoc examples", () => {

@@ -184,6 +184,14 @@ export class IntervalSet<T> implements Iterable<Interval<T>> {
    * pieces may be in any order and may overlap.
    *
    * @throws If a piece is not a valid interval for the domain.
+   *
+   * @example
+   * ```ts
+   * import { IntervalSet, NumberInterval } from "@xtandard/lib/interval";
+   *
+   * IntervalSet.parse(NumberInterval.domain, "[5,6] ∪ [0,2) ∪ [1,3]").toString(); // "[0,3] ∪ [5,6]"
+   * IntervalSet.parse(NumberInterval.domain, "∅").isEmpty; // true
+   * ```
    */
   static parse<T>(domain: IntervalDomain<T>, text: string): IntervalSet<T> {
     const trimmed = text.trim();

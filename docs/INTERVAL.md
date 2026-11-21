@@ -76,6 +76,9 @@ All instance methods. Operations return base `Interval<T>` values (still
   `withStart(value, closed)` / `withEnd(value, closed)` (immutable setters) ·
   `equals(other)`.
 - **Serialization:** `toString()` / `format({ negativeInfinity, positiveInfinity })`.
+- **Many intervals at once:** `mergeIntervals(domain, intervals)` merges a bag into sorted
+  disjoint pieces; for the full set algebra (complement, gaps, lookups) and interval → value
+  maps, see [Interval sets and maps](#interval-sets-and-maps).
 
 ```ts
 // difference respects open/closed boundaries exactly:
@@ -102,6 +105,152 @@ The canonical token `toString()` emits is `+Infinity` / `-Infinity`; `parse` is 
 and also accepts `-inf` / `infinity` / `∞` (case-insensitive), normalizing them to the
 canonical form on output. Round-trips through `toString()`. Safe to store in DB columns /
 URL params.
+
+## Interval sets and maps
+
+Two collections sit on top of `Interval<T>`, in the same zero-dependency entry and for every
+domain (built-in, Temporal, money, decimals, semver, IP, ordinal, your own):
+
+- **`IntervalSet<T>`** — a set of values stored as the minimal sorted list of disjoint
+  intervals (Guava's `RangeSet`).
+- **`IntervalMap<T, V>`** — a map from disjoint intervals to values (Guava's `RangeMap`).
+
+Both are **immutable**, like `Interval`: every operation returns a new set or map. Build
+them from the domain the intervals use; a bound class exposes it as a static
+(`NumberInterval.domain`, `InstantInterval.domain`, `UsdInterval.domain`, …).
+
+### `IntervalSet<T>`
+
+```ts
+import { IntegerInterval, IntervalSet } from "@xtandard/lib/interval";
+
+const set = IntervalSet.of(IntegerInterval.domain, [
+  IntegerInterval.closed(10, 12),
+  IntegerInterval.closed(1, 3),
+  IntegerInterval.closed(4, 6), // adjacent to [1,3] on the integers
+]);
+set.toString(); // "[1,6] ∪ [10,12]"
+set.contains(5); // true
+set.gaps().toString(); // "[7,9]"
+set.remove(IntegerInterval.closed(2, 4)).toString(); // "[1,1] ∪ [5,6] ∪ [10,12]"
+set.complement().toString(); // "(-Infinity,0] ∪ [7,9] ∪ [13,+Infinity)"
+```
+
+`IntervalSet.of` takes any bag of intervals (any order, overlapping, touching, empty) and
+**coalesces** everything that overlaps or touches, like Guava's `TreeRangeSet` — so it is
+`mergeIntervals` plus the set algebra. "Touches" follows the domain: on a discrete domain
+`[1,3]` and `[4,6]` merge; on a continuous one `[0,1)` and `[1,2]` merge but `(0,1)` and
+`(1,2)` stay apart (the point `1` is missing).
+
+- **Build:** `IntervalSet.of(domain, intervals)` · `IntervalSet.empty(domain)` ·
+  `IntervalSet.all(domain)` · `IntervalSet.parse(domain, text)`.
+- **Queries:** `contains(value)` · `intervalContaining(value)` (→ `Interval | null`) ·
+  `encloses(x)` (one interval of the set must cover `x` — never across a gap) ·
+  `intersects(x)` · `isSubsetOf` / `isSupersetOf` / `isDisjointFrom` · `isEmpty` · `size`
+  (number of intervals) · `span()` · `gaps()` · `length()` (total measure or element count;
+  `null` if unbounded).
+- **Algebra:** `union` · `intersection` · `difference` · `symmetricDifference` ·
+  `complement()` · `add(interval)` / `remove(interval)` · `subSet(window)`. The binary
+  operations take another set, a single interval, or an array of intervals.
+- **Out:** iteration / `toArray()` (sorted intervals) · `equals(other)` · `toString()` /
+  `format({ negativeInfinity, positiveInfinity })`.
+
+Lookups (`contains`, `intervalContaining`, `encloses`, `intersects`, `subSet`) binary-search
+the sorted list; `union` / `intersection` / `difference` / `complement` are linear in the
+sizes of the two sets.
+
+**String form.** The intervals joined by `∪` (`"[0,1) ∪ [5,+Infinity)"`), or `∅` when
+empty. `IntervalSet.parse` reads it back (each piece through `parseInterval`, so the same
+tokens apply; pieces may come in any order and overlap).
+
+**Complement.** `complement()` is relative to the domain's whole line, `IntervalSet.all(domain)`.
+For a domain that declares `±∞` values (`number`), that line includes them, so
+`complement` is an exact involution there too:
+
+```ts
+const s = IntervalSet.parse(NumberInterval.domain, "(-Infinity,0]");
+s.complement().toString(); // "[-Infinity,-Infinity] ∪ (0,+Infinity]"
+s.complement().complement().equals(s); // true
+```
+
+Domains have no minimum or maximum value, so the complement of an IP or ordinal set runs
+past the valid values. Clip it to the space you mean with `subSet`:
+
+```ts
+import { Ipv4Interval } from "@xtandard/lib/ip";
+
+const allow = IntervalSet.of(Ipv4Interval.domain, [Ipv4Interval.cidr("10.0.0.0/8")]);
+allow.complement().subSet(Ipv4Interval.cidr("0.0.0.0/0")).toString();
+// "[0.0.0.0,9.255.255.255] ∪ [11.0.0.0,255.255.255.255]"
+```
+
+### `IntervalMap<T, V>`
+
+```ts
+import { IntervalMap, NumberInterval } from "@xtandard/lib/interval";
+
+const tax = IntervalMap.of(NumberInterval.domain, [
+  [NumberInterval.closedOpen(0, 10_000), 0],
+  [NumberInterval.closedOpen(10_000, 40_000), 0.1],
+  [NumberInterval.atLeast(40_000), 0.2],
+]);
+tax.get(25_000); // 0.1
+tax.get(-5); // undefined
+
+// put overwrites the overlapped part and splits what it cuts through:
+tax.put(NumberInterval.closedOpen(5_000, 15_000), 0.05).toString();
+// "{[0,5000) => 0, [5000,15000) => 0.05, [15000,40000) => 0.1, [40000,+Infinity) => 0.2}"
+```
+
+Every value of `T` maps to at most one `V`.
+
+- **`put(interval, value)`** maps the whole interval to `value`. Parts of existing entries
+  under it are overwritten; an entry that straddles an end is split and keeps its old value
+  outside. `IntervalMap.of(domain, entries)` puts the entries in order, so later ones win
+  where they overlap. Like Guava, `put` never merges entries, even touching ones with equal
+  values.
+- **`putCoalescing(interval, value)`** first widens the interval to absorb the neighbouring
+  entries it overlaps or touches whose value is equal, then puts it. A map built only with
+  `putCoalescing` stays minimal.
+- **`valueEquals`** (option of `of` / `empty`, default `Object.is`) decides "equal value"
+  for `putCoalescing` and `equals`. Pass a structural check for object values:
+
+```ts
+import { IntegerInterval, IntervalMap } from "@xtandard/lib/interval";
+
+type Rate = { amount: number; currency: string };
+const rates = IntervalMap.empty<number, Rate>(IntegerInterval.domain, {
+  valueEquals: (a, b) => a.amount === b.amount && a.currency === b.currency,
+})
+  .putCoalescing(IntegerInterval.closed(1, 5), { amount: 100, currency: "USD" })
+  .putCoalescing(IntegerInterval.closed(6, 9), { amount: 100, currency: "USD" });
+rates.size; // 1: [1,9]
+```
+
+- **Lookups:** `get(value)` (→ `V | undefined`) · `getEntry(value)` (→ `[interval, value]`) ·
+  `has(value)` (for maps whose values may be `undefined`) — all binary searches.
+- **Updates:** `put` · `putCoalescing` · `remove(interval)` (splits straddling entries) ·
+  `subMap(window)` (entries clipped to the window).
+- **Whole map:** `span()` · `toIntervalSet()` (every mapped value, as an `IntervalSet`) ·
+  `size` · `isEmpty` · `equals(other)`.
+- **Out:** iteration / `entries()` yield `[interval, value]` pairs in order (so `new Map(map)`
+  works) · `keys()` · `values()` · `toArray()` · `toString()` / `format({ formatValue })`
+  → `"{[0,10) => a, [10,20) => b}"`.
+
+### Coming from Guava
+
+| Guava                                      | xtandard                                 |
+| ------------------------------------------ | ---------------------------------------- |
+| `TreeRangeSet.create(ranges)`              | `IntervalSet.of(domain, intervals)`      |
+| `rangeSet.add` / `remove` (mutating)       | `add` / `remove` (return a new set)      |
+| `rangeContaining`                          | `intervalContaining`                     |
+| `subRangeSet`                              | `subSet`                                 |
+| `asRanges()`                               | iteration / `toArray()`                  |
+| `addAll` / `removeAll` / `enclosesAll`     | `union` / `difference` / `encloses(set)` |
+| `TreeRangeMap.create()` + `put`            | `IntervalMap.of(domain, entries)`        |
+| `putCoalescing`, `get`, `getEntry`, `span` | same names                               |
+| `subRangeMap`                              | `subMap`                                 |
+| `asMapOfRanges()`                          | iteration / `entries()`                  |
 
 ## Discrete vs continuous (the "epsilon")
 

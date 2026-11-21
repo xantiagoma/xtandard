@@ -309,7 +309,8 @@ describe.each([
           expect(entries[i - 1]![0].isBefore(entries[i]![0])).toBe(true);
         }
 
-        for (const x of probes) expect(map.get(x)).toBe(model.get(x));
+        const wrong = probes.filter((x) => map.get(x) !== model.get(x));
+        expect(wrong).toEqual([]);
       }
 
       // a map built only by putCoalescing has no connected neighbours with equal values
@@ -329,9 +330,10 @@ describe.each([
 
       const window = randomInterval(domain, random);
       const sub = map.subMap(window);
-      for (const x of probes) {
-        expect(sub.get(x)).toBe(window.contains(x) ? map.get(x) : undefined);
-      }
+      const wrongSub = probes.filter(
+        (x) => sub.get(x) !== (window.contains(x) ? map.get(x) : undefined),
+      );
+      expect(wrongSub).toEqual([]);
     }
-  });
+  }, 30_000); // model checks: headroom when the whole suite runs in parallel
 });

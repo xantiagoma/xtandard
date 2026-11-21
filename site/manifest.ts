@@ -91,6 +91,13 @@ export const sidebar: Item[] = [
         label: "Overview",
       },
       {
+        slug: "interval/sets",
+        src: "docs/INTERVAL.md",
+        title: "Interval sets and maps",
+        sections: ["Interval sets and maps"],
+        label: "Sets & maps",
+      },
+      {
         slug: "interval/domains",
         src: "docs/INTERVAL.md",
         title: "Interval domains",

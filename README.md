@@ -170,6 +170,31 @@ NumberInterval.parse("(-Infinity,5]").contains(-3); // true
 IntegerInterval.closed(1, 5).union(IntegerInterval.closed(6, 10))?.toString(); // "[1,10]"
 ```
 
+`IntervalSet` and `IntervalMap` (Guava `RangeSet` / `RangeMap`) hold many intervals over any
+domain: a normalized set of disjoint intervals with the full set algebra, and a map from
+disjoint intervals to values — see
+[docs/INTERVAL.md](./docs/INTERVAL.md#interval-sets-and-maps).
+
+```ts
+import { IntervalMap, IntervalSet, NumberInterval } from "@xtandard/lib/interval";
+
+const busy = IntervalSet.of(NumberInterval.domain, [
+  NumberInterval.closedOpen(9, 11),
+  NumberInterval.closedOpen(10, 12), // overlaps → coalesced
+  NumberInterval.closedOpen(14, 15),
+]);
+busy.toString(); // "[9,12) ∪ [14,15)"
+busy.gaps().toString(); // "[12,14)"
+busy.complement().subSet(NumberInterval.closedOpen(8, 18)).toString(); // "[8,9) ∪ [12,14) ∪ [15,18)"
+
+const rate = IntervalMap.of(NumberInterval.domain, [
+  [NumberInterval.closedOpen(0, 24), 100],
+  [NumberInterval.closedOpen(18, 24), 150], // overwrites the evening
+]);
+rate.get(20); // 150
+rate.toString(); // "{[0,18) => 100, [18,24) => 150}"
+```
+
 | Export                                                                                      | Description                                             | Source                           | Tests                                    |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------- | ---------------------------------------- |
 | `Interval`                                                                                  | Immutable interval engine (set algebra over a domain)   | [src](./src/interval.ts)         | [tests](./test/interval.test.ts)         |
@@ -178,6 +203,8 @@ IntegerInterval.closed(1, 5).union(IntegerInterval.closed(6, 10))?.toString(); /
 | `numberDomain` / `integerDomain` / `bigIntDomain` / `dateDomain` / `stringDomain`           | Built-in `IntervalDomain<T>`s (zero-dep)                | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
 | `NumberInterval` / `IntegerInterval` / `BigIntInterval` / `DateInterval` / `StringInterval` | Ready-to-use classes (incl. lexicographic strings)      | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
 | `createOrdinalInterval(labels)`                                                             | Discrete intervals over an ordered label list (enums)   | [src](./src/interval-domains.ts) | [tests](./test/interval-domains.test.ts) |
+| `IntervalSet`                                                                               | Normalized set of disjoint intervals (Guava `RangeSet`) | [src](./src/interval-set.ts)     | [tests](./test/interval-set.test.ts)     |
+| `IntervalMap`                                                                               | Disjoint intervals → values (Guava `RangeMap`)          | [src](./src/interval-map.ts)     | [tests](./test/interval-map.test.ts)     |
 
 **Temporal intervals** (`@xtandard/lib/temporal`, peer `@js-temporal/polyfill`) — the
 same engine bound to the TC39 `Temporal` types:

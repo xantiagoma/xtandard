@@ -1,12 +1,13 @@
 ---
 title: "Availability with intervals"
-description: "Model meeting-room bookings with Interval<T>: detect conflicts, merge busy time, find free slots that fit, and classify room rates into money price bands."
+description: "Model meeting-room bookings with Interval<T>, IntervalSet and IntervalMap: detect conflicts, merge busy time, find free slots that fit, price time by period, and classify room rates into money price bands."
 ---
 
 In this tutorial you model a meeting room's day with `Interval<T>`: you store bookings as time ranges,
-detect conflicts, merge the busy time, find free slots long enough for a new meeting, and sort room
-rates into price bands with money intervals. Each step adds a small function. At the end they make up
-one availability module.
+detect conflicts, merge the busy time into an `IntervalSet`, find free slots long enough for a new
+meeting, price a booking with an `IntervalMap` of hourly rates, and sort room rates into price bands
+with money intervals. Each step adds a small function. At the end they make up one availability
+module.
 
 Intervals fit this problem well. A booking is a range of time, "is the room free?" asks whether two
 ranges overlap, and "when is it free?" is the opening hours minus the busy ranges. Writing these
@@ -17,12 +18,13 @@ npm install @xtandard/lib @js-temporal/polyfill dinero.js
 ```
 
 ```ts
-import { mergeIntervals, type Interval } from "@xtandard/lib/interval";
+import { IntervalMap, IntervalSet, type Interval } from "@xtandard/lib/interval";
 import { InstantInterval } from "@xtandard/lib/temporal";
 import { createDineroInterval } from "@xtandard/lib/dinero";
 ```
 
-`@xtandard/lib/interval` is the zero-dependency engine. `@xtandard/lib/temporal` adds intervals over the
+`@xtandard/lib/interval` is the zero-dependency engine, with the `IntervalSet` and `IntervalMap`
+collections. `@xtandard/lib/temporal` adds intervals over the
 TC39 `Temporal` types (peer `@js-temporal/polyfill`), and `@xtandard/lib/dinero` adds money intervals
 (peer `dinero.js` v2).
 
@@ -34,7 +36,7 @@ not overlap.
 
 ```ts title="availability.ts"
 import { Temporal } from "@js-temporal/polyfill";
-import { mergeIntervals, type Interval } from "@xtandard/lib/interval";
+import { IntervalMap, IntervalSet, type Interval } from "@xtandard/lib/interval";
 import { InstantInterval } from "@xtandard/lib/temporal";
 
 type Slot = Interval<Temporal.Instant>;
@@ -99,72 +101,101 @@ openingHours.encloses(slot("17:30", "18:30")); // false
 
 ## 3. Merge the busy time
 
-To answer "when is the room busy?", you want the smallest set of non-overlapping blocks.
-[`mergeIntervals`](@BASE@/api/interval/functions/mergeintervals/) takes a domain and a list of
-intervals. It sorts them and joins every pair that overlaps **or touches**, so b1 and b2 become one
-block, and b3 and b4 another.
+To answer "when is the room busy?", you want the smallest set of non-overlapping blocks. An
+[`IntervalSet`](@BASE@/api/interval/classes/intervalset/) is exactly that: give
+`IntervalSet.of` the domain and any bag of intervals,
+and it sorts them and joins every pair that overlaps **or touches**, so b1 and b2 become one block,
+and b3 and b4 another.
 
 ```ts title="availability.ts"
-export function busyTime(existing: Booking[]): Slot[] {
-  return mergeIntervals(
+export type Busy = IntervalSet<Temporal.Instant>;
+
+export function busyTime(existing: Booking[]): Busy {
+  return IntervalSet.of(
     InstantInterval.domain,
     existing.map((b) => b.when),
   );
 }
 
-busyTime(bookings).map(String);
-// ["[2026-03-02T09:30:00Z,2026-03-02T11:00:00Z)",
-//  "[2026-03-02T13:00:00Z,2026-03-02T15:00:00Z)"]
+const busy = busyTime(bookings);
+busy.toString();
+// "[2026-03-02T09:30:00Z,2026-03-02T11:00:00Z) ∪ [2026-03-02T13:00:00Z,2026-03-02T15:00:00Z)"
+busy.size; // 2 blocks
+busy.length()! / 60_000; // 210 busy minutes
 ```
 
-Each interval class exposes its domain as a static property (`InstantInterval.domain`). The result is
-sorted, and its pieces are disjoint, with gaps between them.
+Each interval class exposes its domain as a static property (`InstantInterval.domain`). The set is
+immutable, like an interval, and answers questions about the whole day in one call:
+
+```ts
+busy.contains(at("10:45")); // true: the room is in use at 10:45
+busy.intersects(slot("11:00", "12:00")); // false: that hour is free
+busy.intersects(slot("10:00", "10:45")); // true
+```
+
+`intersects` tells you _whether_ a request clashes. `conflicts` from step 2 still tells you _which_
+bookings it clashes with.
+
+:::tip
+Need only the merged blocks as an array? `mergeIntervals(InstantInterval.domain, intervals)` does the
+same coalescing without building a set.
+:::
 
 ## 4. Find the free slots
 
-Free time is the opening hours minus each busy block. `a.difference(b)` returns what is left of `a`
-after removing `b`: zero, one or two pieces. Remove each busy block from every remaining piece:
+Free time is the opening hours minus the busy time. Put the opening hours in a set and take the
+`difference`:
 
 ```ts title="availability.ts"
-export function freeSlots(window: Slot, busy: Slot[]): Slot[] {
-  let free = [window];
-  for (const block of busy) free = free.flatMap((piece) => piece.difference(block));
-  return free;
+export function freeSlots(window: Slot, busy: Busy): Busy {
+  return IntervalSet.of(InstantInterval.domain, [window]).difference(busy);
 }
 
-const free = freeSlots(openingHours, busyTime(bookings));
-free.map(String);
-// ["[2026-03-02T09:00:00Z,2026-03-02T09:30:00Z)",
-//  "[2026-03-02T11:00:00Z,2026-03-02T13:00:00Z)",
-//  "[2026-03-02T15:00:00Z,2026-03-02T18:00:00Z)"]
+const free = freeSlots(openingHours, busy);
+free.toString();
+// "[2026-03-02T09:00:00Z,2026-03-02T09:30:00Z) ∪ [2026-03-02T11:00:00Z,2026-03-02T13:00:00Z)
+//  ∪ [2026-03-02T15:00:00Z,2026-03-02T18:00:00Z)"
 ```
 
 `difference` keeps the open and closed ends exactly. Removing `[09:30, 11:00)` leaves `[09:00, 09:30)`,
 which ends right where the busy block starts, and `[11:00, …)`, which starts right where it ends. Nothing
-is lost or counted twice at the boundaries.
+is lost or counted twice at the boundaries. `busy.complement().subSet(openingHours)` gives the same
+set: everything that is not busy, clipped to the window.
 
-For just the hole between two disjoint blocks, use `gap`:
+For just the holes between busy blocks, use `gaps`:
 
 ```ts
-const [morning, afternoon] = busyTime(bookings);
-morning.gap(afternoon)?.toString(); // "[2026-03-02T11:00:00Z,2026-03-02T13:00:00Z)"
+busy.gaps().toString(); // "[2026-03-02T11:00:00Z,2026-03-02T13:00:00Z)"
+```
+
+A request can be booked when it fits inside **one** free slot. That is `encloses`, which checks
+opening hours and conflicts in one go:
+
+```ts title="availability.ts"
+export function canBook(request: Slot, free: Busy): boolean {
+  return free.encloses(request);
+}
+
+canBook(slot("11:30", "12:30"), free); // true
+canBook(slot("10:45", "11:30"), free); // false: overlaps b2
+canBook(slot("17:30", "18:30"), free); // false: past closing time
 ```
 
 ## 5. Fit a meeting into a free slot
 
 `length()` measures an interval. For Temporal instants it returns **milliseconds** (or `null` if the
 interval is unbounded). `fromStart(start, length)` builds the half-open interval `[start, start + length)`.
-Together they give a first-fit search:
+A set iterates its intervals in order, so a first-fit search is a `find`:
 
 ```ts title="availability.ts"
 const minutes = (n: number) => n * 60_000;
 
-export function firstFit(free: Slot[], duration: number): Slot | null {
-  const fit = free.find((piece) => (piece.length() ?? 0) >= duration);
+export function firstFit(free: Busy, duration: number): Slot | null {
+  const fit = free.toArray().find((piece) => (piece.length() ?? 0) >= duration);
   return fit ? InstantInterval.fromStart(fit.lowerValue()!, duration) : null;
 }
 
-free.map((piece) => piece.length()! / 60_000); // [30, 120, 180]
+free.toArray().map((piece) => piece.length()! / 60_000); // [30, 120, 180]
 firstFit(free, minutes(90))?.toString(); // "[2026-03-02T11:00:00Z,2026-03-02T12:30:00Z)"
 firstFit(free, minutes(240)); // null: no free stretch of 4 hours
 ```
@@ -180,52 +211,100 @@ and `fromStart` work in milliseconds, which is more than enough for calendars. S
 
 ## 6. Summarize the day
 
-`span` returns the smallest interval that covers both inputs, across any gaps between them. Folding it
-over the bookings gives the part of the day the room is in use, from the first meeting to the last:
+`span` returns the smallest interval that covers the whole set, across its gaps: the part of the day
+the room is in use, from the first meeting to the last.
 
 ```ts
-const inUse = bookings.map((b) => b.when).reduce((a, b) => a.span(b));
+const inUse = busy.span();
 inUse.toString(); // "[2026-03-02T09:30:00Z,2026-03-02T15:00:00Z)"
 inUse.length()! / 60_000; // 330 minutes
 inUse.middle()?.toString(); // "2026-03-02T12:15:00Z"
 ```
 
+Compare it with `busy.length()`, the 210 minutes the room is actually booked.
+
 ## 7. Store intervals as text
 
-`toString()` writes the standard interval notation, and the class's `parse` reads it back. That makes
-an interval easy to keep in a text column, a JSON payload or a URL parameter:
+`toString()` writes the standard interval notation, and `parse` reads it back. A set joins its
+intervals with `∪`. That makes the busy time easy to keep in a text column, a JSON payload or a URL
+parameter:
 
 ```ts
-const stored = busyTime(bookings)[0].toString(); // "[2026-03-02T09:30:00Z,2026-03-02T11:00:00Z)"
-InstantInterval.parse(stored).equals(busyTime(bookings)[0]); // true
+const stored = busy.toString();
+// "[2026-03-02T09:30:00Z,2026-03-02T11:00:00Z) ∪ [2026-03-02T13:00:00Z,2026-03-02T15:00:00Z)"
+IntervalSet.parse(InstantInterval.domain, stored).equals(busy); // true
+InstantInterval.parse("[2026-03-02T09:30:00Z,2026-03-02T11:00:00Z)"); // a single interval
 ```
 
 `parse` throws on input that does not parse (an invalid instant, for example), so validate stored or
 user-supplied text at the boundary.
 
-## 8. Price bands with money intervals
+## 8. Rates per period
+
+The room costs $50 an hour, except over lunch, when it costs $80. An
+[`IntervalMap`](@BASE@/api/interval/classes/intervalmap/) maps each period to its rate. `put`
+overwrites the part of the map it covers, so you write the base rate first and the exception on top:
+
+```ts title="availability.ts"
+const hourly = IntervalMap.of(InstantInterval.domain, [
+  [openingHours, 50],
+  [slot("12:00", "14:00"), 80], // splits the base rate in two
+]);
+hourly.toString();
+// "{[2026-03-02T09:00:00Z,2026-03-02T12:00:00Z) => 50,
+//   [2026-03-02T12:00:00Z,2026-03-02T14:00:00Z) => 80,
+//   [2026-03-02T14:00:00Z,2026-03-02T18:00:00Z) => 50}"
+hourly.get(at("12:30")); // 80
+hourly.get(at("08:00")); // undefined: before opening
+```
+
+To price a booking, clip the map to the request with `subMap` and add up each piece:
+
+```ts title="availability.ts"
+const HOUR = 60 * 60_000;
+
+export function price(request: Slot): number {
+  let total = 0;
+  for (const [piece, rate] of hourly.subMap(request)) total += (piece.length()! / HOUR) * rate;
+  return total;
+}
+
+price(slot("11:00", "13:00")); // 130: one hour at $50, one at $80
+price(slot("15:00", "15:30")); // 25
+```
+
+`put` keeps entries apart even when they touch and hold the same value. `putCoalescing` merges them,
+which keeps the map minimal when you set a period back to a rate its neighbours already have:
+
+```ts
+hourly.put(slot("16:00", "18:00"), 50).size; // 4
+hourly.putCoalescing(slot("16:00", "18:00"), 50).size; // 3
+```
+
+## 9. Price bands with money intervals
 
 Rooms also have hourly rates, and the booking page groups them into bands. Money is **discrete**: the
 smallest step is one minor unit (one cent for USD). Because a `Dinero` value carries its currency, you
 create one interval class per currency with
-[`createDineroInterval`](@BASE@/api/dinero/functions/createdinerointerval/):
+[`createDineroInterval`](@BASE@/api/dinero/functions/createdinerointerval/). A band table is an
+`IntervalMap` from price ranges to band names:
 
 ```ts title="pricing.ts"
 import { createDineroInterval } from "@xtandard/lib/dinero";
-import { mergeIntervals } from "@xtandard/lib/interval";
+import { IntervalMap, IntervalSet } from "@xtandard/lib/interval";
 import { dinero, USD } from "dinero.js";
 
 const UsdInterval = createDineroInterval(USD);
 const usd = (cents: number) => dinero({ amount: cents, currency: USD });
 type Usd = ReturnType<typeof usd>;
 
-const bands = [
-  { name: "budget", range: UsdInterval.closedOpen(usd(0), usd(100_00)) }, // $0 – $99.99
-  { name: "standard", range: UsdInterval.closedOpen(usd(100_00), usd(250_00)) }, // $100 – $249.99
-  { name: "premium", range: UsdInterval.atLeast(usd(250_00)) }, // $250 and up
-];
+const bands = IntervalMap.of(UsdInterval.domain, [
+  [UsdInterval.closedOpen(usd(0), usd(100_00)), "budget"], // $0 – $99.99
+  [UsdInterval.closedOpen(usd(100_00), usd(250_00)), "standard"], // $100 – $249.99
+  [UsdInterval.atLeast(usd(250_00)), "premium"], // $250 and up
+]);
 
-export const bandOf = (rate: Usd) => bands.find((b) => b.range.contains(rate))?.name;
+export const bandOf = (rate: Usd) => bands.get(rate);
 
 bandOf(usd(99_99)); // "budget"
 bandOf(usd(100_00)); // "standard"
@@ -233,33 +312,32 @@ bandOf(usd(1_000_00)); // "premium"
 ```
 
 Because the domain is discrete, `[0, 10000)` and `[0, 9999]` (in cents) are the same set, and the
-interval prints in its closed form:
+intervals print in their closed form:
 
 ```ts
-bands[0].range.toString(); // "[0,9999]": minor units
-bands[0].range.equals(UsdInterval.closed(usd(0), usd(99_99))); // true
-bands[0].range.length(); // 10000: the number of distinct amounts in the band
+bands.toString();
+// "{[0,9999] => budget, [10000,24999] => standard, [25000,+Infinity) => premium}"
+const [budgetBand] = bands.keys();
+budgetBand.equals(UsdInterval.closed(usd(0), usd(99_99))); // true
+budgetBand.length(); // 10000: the number of distinct amounts in the band
 ```
 
-`mergeIntervals` checks that the band table has no gaps. Discrete ranges that end and start one cent
-apart are adjacent, so they merge. A table with a hole does not merge into one piece:
+`toIntervalSet` checks that the band table has no holes. Discrete ranges that end and start one cent
+apart are adjacent, so they coalesce, and `gaps` lists whatever is left uncovered:
 
 ```ts
-mergeIntervals(
-  UsdInterval.domain,
-  bands.map((b) => b.range),
-).map(String);
-// ["[0,+Infinity)"]: every rate from $0 up falls into exactly one band
+bands.toIntervalSet().toString(); // "[0,+Infinity)": every rate from $0 up has a band
 
-const typo = [
+const typo = IntervalSet.of(UsdInterval.domain, [
   UsdInterval.closed(usd(0), usd(99_99)),
   UsdInterval.closed(usd(100_00), usd(249_99)),
   UsdInterval.closed(usd(250_01), usd(500_00)), // should start at 250_00
-];
-mergeIntervals(UsdInterval.domain, typo).map(String); // ["[0,24999]", "[25001,50000]"]
+]);
+typo.toString(); // "[0,24999] ∪ [25001,50000]"
+typo.gaps().toString(); // "[25000,25000]": $250.00 has no band
 ```
 
-A guest's budget is an interval too. `contains` filters rooms by rate, and `overlaps` tells you which
+A guest's budget is an interval too. `contains` filters rooms by rate, and `subMap` tells you which
 bands to show:
 
 ```ts
@@ -271,7 +349,7 @@ const rooms = [
   { name: "cosmos", rate: usd(300_00) },
 ];
 rooms.filter((r) => budget.contains(r.rate)).map((r) => r.name); // ["atlas"]
-bands.filter((b) => b.range.overlaps(budget)).map((b) => b.name); // ["budget", "standard"]
+[...bands.subMap(budget).values()]; // ["budget", "standard"]
 ```
 
 The string form of a money interval is in **minor units**, so `UsdInterval.parse("[10000,25000)")` is
@@ -282,54 +360,64 @@ than a cent is ordered exactly, but it is rounded to the cent for `length()` and
 
 ```ts title="availability.ts"
 import { Temporal } from "@js-temporal/polyfill";
-import { mergeIntervals, type Interval } from "@xtandard/lib/interval";
+import { IntervalMap, IntervalSet, type Interval } from "@xtandard/lib/interval";
 import { InstantInterval } from "@xtandard/lib/temporal";
 
 export type Slot = Interval<Temporal.Instant>;
+export type Busy = IntervalSet<Temporal.Instant>;
 export type Booking = { id: string; room: string; when: Slot };
 
 export const minutes = (n: number) => n * 60_000;
+const HOUR = minutes(60);
 
 /** Bookings that share at least one instant with the request. */
 export function conflicts(request: Slot, existing: Booking[]): Booking[] {
   return existing.filter((b) => b.when.overlaps(request));
 }
 
-/** Busy time as sorted, disjoint blocks (overlapping and back-to-back bookings merged). */
-export function busyTime(existing: Booking[]): Slot[] {
-  return mergeIntervals(
+/** Busy time as a set of disjoint blocks (overlapping and back-to-back bookings merged). */
+export function busyTime(existing: Booking[]): Busy {
+  return IntervalSet.of(
     InstantInterval.domain,
     existing.map((b) => b.when),
   );
 }
 
 /** The parts of `window` not covered by any busy block. */
-export function freeSlots(window: Slot, busy: Slot[]): Slot[] {
-  let free = [window];
-  for (const block of busy) free = free.flatMap((piece) => piece.difference(block));
-  return free;
+export function freeSlots(window: Slot, busy: Busy): Busy {
+  return IntervalSet.of(InstantInterval.domain, [window]).difference(busy);
+}
+
+/** Whether `request` fits inside one free slot (inside opening hours, clashing with nothing). */
+export function canBook(request: Slot, free: Busy): boolean {
+  return free.encloses(request);
 }
 
 /** The earliest slot of `duration` ms that fits in one free piece, or null. */
-export function firstFit(free: Slot[], duration: number): Slot | null {
-  const fit = free.find((piece) => (piece.length() ?? 0) >= duration);
+export function firstFit(free: Busy, duration: number): Slot | null {
+  const fit = free.toArray().find((piece) => (piece.length() ?? 0) >= duration);
   return fit ? InstantInterval.fromStart(fit.lowerValue()!, duration) : null;
 }
 
-/** Book `request` if it is inside opening hours and clashes with nothing. */
-export function canBook(request: Slot, openingHours: Slot, existing: Booking[]): boolean {
-  return openingHours.encloses(request) && conflicts(request, existing).length === 0;
+/** The cost of `request` under per-period hourly rates. */
+export function price(request: Slot, hourly: IntervalMap<Temporal.Instant, number>): number {
+  let total = 0;
+  for (const [piece, rate] of hourly.subMap(request)) total += (piece.length()! / HOUR) * rate;
+  return total;
 }
 
 // usage
 // const free = freeSlots(openingHours, busyTime(bookingsForRoom));
 // const proposal = firstFit(free, minutes(45));
+// if (proposal && canBook(proposal, free)) price(proposal, hourlyRates);
 ```
 
 ## Where next
 
 - [Interval overview](@BASE@/interval/): every factory and operation, including `union`,
   `symmetricDifference` and `isConnected`.
+- [Interval sets and maps](@BASE@/interval/sets/): every `IntervalSet` and `IntervalMap` operation,
+  `complement` on bounded domains, and the mapping from Guava's `RangeSet` / `RangeMap`.
 - [Interval domains](@BASE@/interval/domains/): `PlainDateInterval` for whole-day bookings (calendar
   days are discrete, so consecutive stays merge), `ZonedDateTimeInterval`, and the decimal, semver and
   IP domains.

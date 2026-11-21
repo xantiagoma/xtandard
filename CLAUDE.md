@@ -59,7 +59,7 @@ Do NOT create separate config files for vitest, oxlint, or oxfmt.
 
 ```
 @xtandard/lib              → isomorphic core (zero deps)
-@xtandard/lib/interval     → generic Interval<T> + number/integer/bigint/Date/string domains + createOrdinalInterval (Guava Range/DiscreteDomain, zero deps)
+@xtandard/lib/interval     → generic Interval<T> + number/integer/bigint/Date/string domains + createOrdinalInterval + IntervalSet/IntervalMap (Guava Range/DiscreteDomain/RangeSet/RangeMap, zero deps)
 @xtandard/lib/dinero       → money intervals (Interval of dinero.js values) (peer: dinero.js)
 @xtandard/lib/decimal      → exact-decimal intervals (Interval of decimal.js values) (peer: decimal.js)
 @xtandard/lib/big          → exact-decimal intervals (Interval of big.js values) (peer: big.js)
