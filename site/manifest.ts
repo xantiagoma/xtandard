@@ -19,9 +19,13 @@ export const branch = "main";
 /**
  * Where the site is served: the project site of xantiagoma.github.io, under the account's custom
  * domain. pages.yml passes what actions/configure-pages reports (SITE_ORIGIN, SITE_BASE), so a
- * domain change needs no code change.
+ * domain change needs no code change. configure-pages reports the custom domain as http://, while
+ * the site is served over https, so the scheme is upgraded (og:url, og:image and the sitemap).
  */
-export const siteOrigin = process.env.SITE_ORIGIN || "https://me.xantiagoma.com";
+export const siteOrigin = (process.env.SITE_ORIGIN || "https://me.xantiagoma.com").replace(
+  /^http:\/\//,
+  "https://",
+);
 export const siteBase = (process.env.SITE_BASE || "/xtandard").replace(/\/+$/, "");
 
 export type Page = {
